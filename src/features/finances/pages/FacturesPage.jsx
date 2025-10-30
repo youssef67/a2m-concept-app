@@ -3,8 +3,8 @@
  * MVP version with simplified UI
  */
 
-import React, { useState, useMemo } from 'react'
-import { Euro, Plus, Search, FileText, Calendar, User } from 'lucide-react'
+import React, { useState, useMemo, useRef } from 'react'
+import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
@@ -14,6 +14,7 @@ import Modal from '../../../shared/components/ui/Modal'
 import Input from '../../../shared/components/ui/Input'
 import { useFactures } from '../hooks/useFactures'
 import { useContacts } from '../hooks/useContacts'
+import { useDocuments } from '../hooks/useDocuments'
 import { useToast } from '../../../shared/hooks/useToast'
 import {
   formatDate,
@@ -31,10 +32,14 @@ export default function FacturesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingFacture, setEditingFacture] = useState(null)
+  const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false)
+  const [selectedFacture, setSelectedFacture] = useState(null)
+  const fileInputRef = useRef(null)
 
   // Hooks
   const { factures, loading, error, createFacture, updateFacture, deleteFacture } = useFactures()
   const { contacts } = useContacts()
+  const { documents, loading: docsLoading, uploading, upload, download, remove } = useDocuments(selectedFacture?.id)
   const { showToast } = useToast()
 
   // Tabs configuration with counts
@@ -131,6 +136,81 @@ export default function FacturesPage() {
   const handleCreate = () => {
     setEditingFacture(null)
     setIsModalOpen(true)
+  }
+
+  /**
+   * Open documents modal
+   */
+  const handleViewDocuments = (facture) => {
+    setSelectedFacture(facture)
+    setIsDocumentsModalOpen(true)
+  }
+
+  /**
+   * Handle file upload
+   */
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const result = await upload(file)
+
+    if (result.success) {
+      showToast('Document ajouté avec succès', 'success')
+    } else {
+      showToast(result.error || 'Erreur lors de l\'upload', 'error')
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  /**
+   * Handle view document inline (open in new tab)
+   */
+  const handleViewDocument = async (doc) => {
+    const result = await download(doc.storage_path)
+
+    if (result.success && result.url) {
+      // Open PDF in new tab for inline viewing
+      window.open(result.url, '_blank')
+    } else {
+      showToast(result.error || 'Erreur lors de l\'ouverture du document', 'error')
+    }
+  }
+
+  /**
+   * Handle document download (force download)
+   */
+  const handleDownload = async (doc) => {
+    const result = await download(doc.storage_path)
+
+    if (result.success && result.url) {
+      // Force download instead of inline view
+      const link = document.createElement('a')
+      link.href = result.url
+      link.download = doc.nom_original
+      link.click()
+    } else {
+      showToast(result.error || 'Erreur lors du téléchargement', 'error')
+    }
+  }
+
+  /**
+   * Handle document delete
+   */
+  const handleDeleteDocument = async (doc) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) return
+
+    const result = await remove(doc.id, doc.storage_path)
+
+    if (result.success) {
+      showToast('Document supprimé avec succès', 'success')
+    } else {
+      showToast(result.error || 'Erreur lors de la suppression', 'error')
+    }
   }
 
   return (
@@ -241,7 +321,15 @@ export default function FacturesPage() {
                   </div>
 
                   {/* Right: Actions */}
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleViewDocuments(facture)}
+                      className="flex-1 md:flex-none"
+                    >
+                      <Paperclip className="w-4 h-4 md:mr-2" />
+                      <span className="hidden md:inline">Documents</span>
+                    </Button>
                     <Button
                       variant="outline"
                       onClick={() => handleEdit(facture)}
@@ -390,6 +478,114 @@ export default function FacturesPage() {
               </Button>
             </div>
           </form>
+        </Modal>
+
+        {/* Modal Documents */}
+        <Modal
+          isOpen={isDocumentsModalOpen}
+          onClose={() => {
+            setIsDocumentsModalOpen(false)
+            setSelectedFacture(null)
+          }}
+          title={`Documents - ${selectedFacture?.numero_facture || ''}`}
+          size="lg"
+        >
+          <div className="space-y-4">
+            {/* Upload section */}
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="w-full sm:w-auto"
+              >
+                <Upload className="w-5 h-5 mr-2" />
+                {uploading ? 'Upload en cours...' : 'Ajouter un PDF'}
+              </Button>
+              <p className="text-sm text-gray-500 mt-2">
+                Formats acceptés: PDF uniquement (max 10 MB)
+              </p>
+            </div>
+
+            {/* Documents list */}
+            {docsLoading && (
+              <div className="flex items-center justify-center py-8">
+                <Spinner />
+              </div>
+            )}
+
+            {!docsLoading && documents.length === 0 && (
+              <div className="text-center py-8">
+                <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-600">Aucun document pour cette facture</p>
+              </div>
+            )}
+
+            {!docsLoading && documents.length > 0 && (
+              <div className="space-y-3">
+                {documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <FileText className="w-5 h-5 text-red-600 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {doc.nom_original}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {(doc.taille_fichier / 1024).toFixed(1)} KB • {formatDate(doc.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => handleViewDocument(doc)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Voir le PDF"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDownload(doc)}
+                        className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        title="Télécharger"
+                      >
+                        <Download className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDocument(doc)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Close button */}
+            <div className="flex items-center justify-end pt-4 border-t border-gray-200">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsDocumentsModalOpen(false)
+                  setSelectedFacture(null)
+                }}
+              >
+                Fermer
+              </Button>
+            </div>
+          </div>
         </Modal>
       </div>
     </AppLayout>
