@@ -7,6 +7,8 @@ import { useAuth } from './features/auth/hooks/useAuth'
 import LoginPage from './features/auth/pages/LoginPage'
 import AdminDashboard from './features/dashboard/pages/AdminDashboard'
 import ViewerDashboard from './features/dashboard/pages/ViewerDashboard'
+import ContactsPage from './features/contacts/pages/ContactsPage'
+import ChantiersPage from './features/chantiers/pages/ChantiersPage'
 
 // Route protection
 import RoleProtectedRoute from './shared/components/routing/RoleProtectedRoute'
@@ -53,6 +55,24 @@ function App() {
             element={
               <RoleProtectedRoute requiredRole="viewer">
                 <ViewerDashboard />
+              </RoleProtectedRoute>
+            }
+          />
+
+          {/* Module routes - Admin only */}
+          <Route
+            path="/dashboard/contacts"
+            element={
+              <RoleProtectedRoute requiredRole="admin">
+                <ContactsPage />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/chantiers"
+            element={
+              <RoleProtectedRoute requiredRole="admin">
+                <ChantiersPage />
               </RoleProtectedRoute>
             }
           />

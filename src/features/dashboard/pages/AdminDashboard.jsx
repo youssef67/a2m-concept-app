@@ -1,13 +1,13 @@
 import React from 'react'
 import { useAuth } from '../../auth/hooks/useAuth'
-import DashboardLayout from '../components/DashboardLayout'
+import AppLayout from '../../../shared/components/layout/AppLayout'
 import Card from '../../../shared/components/ui/Card'
 
 export default function AdminDashboard() {
   const { profile } = useAuth()
 
   return (
-    <DashboardLayout>
+    <AppLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
@@ -58,6 +58,6 @@ export default function AdminDashboard() {
           </div>
         </Card>
       </div>
-    </DashboardLayout>
+    </AppLayout>
   )
 }
