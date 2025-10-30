@@ -50,6 +50,24 @@ git push origin dev
 
 URL : https://github.com/youssef67/a2m-concept-app.git
 
+## Infrastructure
+
+**Vercel (Déploiement) :**
+- Projet : a2m-concept-app
+- Dashboard : https://vercel.com/youssef-moudnis-projects/a2m-concept-app
+- Production Branch : `prod`
+- Configuration détaillée : Voir `VERCEL_SETUP.md`
+
+**Supabase (Base de données) :**
+- Environnement DEV : https://ypiirktgsihzdvbouetr.supabase.co
+- Environnement PROD : https://lynokogmbphznaobjaqo.supabase.co
+- Migrations : Utiliser `./run-migration-dev.sh` et `./run-migration-prod.sh`
+- Documentation : Voir `database/README.md`
+
+**Déploiement automatique :**
+- Push sur `prod` → Déploiement Vercel automatique
+- Variables d'environnement PROD configurées dans Vercel
+
 ## Project Status
 
 Le projet est en phase d'initialisation. Ce fichier sera enrichi au fur et à mesure avec :
