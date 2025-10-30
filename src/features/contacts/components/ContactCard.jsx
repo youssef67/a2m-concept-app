@@ -131,10 +131,10 @@ export default function ContactCard({ contact, onView, onEdit, onDelete }) {
               e.stopPropagation()
               onEdit(contact)
             }}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 px-2 sm:px-3"
           >
-            <Edit2 className="w-4 h-4" />
-            Modifier
+            <Edit2 className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Modifier</span>
           </Button>
           <Button
             variant="outline"
@@ -143,10 +143,10 @@ export default function ContactCard({ contact, onView, onEdit, onDelete }) {
               e.stopPropagation()
               onDelete(contact)
             }}
-            className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="flex items-center gap-1 px-2 sm:px-3 text-red-600 hover:text-red-700 hover:bg-red-50"
           >
-            <Trash2 className="w-4 h-4" />
-            Supprimer
+            <Trash2 className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Supprimer</span>
           </Button>
         </div>
       </div>
