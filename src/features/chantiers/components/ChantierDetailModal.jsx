@@ -7,6 +7,7 @@ import React from 'react'
 import { Pencil, MapPin, Calendar, Euro, User, FileText } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
+import DocumentsSection from './DocumentsSection'
 import {
   formatDate,
   formatCurrency,
@@ -145,6 +146,11 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit 
             </div>
           </div>
         )}
+
+        {/* Documents Section */}
+        <div className="border-t border-gray-200 pt-6">
+          <DocumentsSection chantierId={chantier.id} />
+        </div>
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">

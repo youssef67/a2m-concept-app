@@ -4,13 +4,16 @@
  */
 
 import React, { useState, useEffect } from 'react'
+import { Upload, FileText, X } from 'lucide-react'
 import Input from '../../../shared/components/ui/Input'
 import { getAllContacts } from '../../contacts/services/contactsService'
 import { getClientDisplayName } from '../utils/chantierHelpers'
+import { validatePDFFile, formatFileSize } from '../services/documentsService'
 
-export default function ChantierForm({ chantier, onChange, errors = {} }) {
+export default function ChantierForm({ chantier, onChange, errors = {}, onFileChange, selectedFile }) {
   const [clients, setClients] = useState([])
   const [loadingClients, setLoadingClients] = useState(true)
+  const [fileError, setFileError] = useState(null)
 
   // Initial form data
   const formData = chantier || {
@@ -55,6 +58,32 @@ export default function ChantierForm({ chantier, onChange, errors = {} }) {
   const handleChange = (e) => {
     const { name, value } = e.target
     onChange({ ...formData, [name]: value })
+  }
+
+  /**
+   * Handle file selection
+   */
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate PDF
+    const validation = validatePDFFile(file)
+    if (!validation.valid) {
+      setFileError(validation.error)
+      return
+    }
+
+    setFileError(null)
+    onFileChange?.(file)
+  }
+
+  /**
+   * Handle file removal
+   */
+  const handleRemoveFile = () => {
+    setFileError(null)
+    onFileChange?.(null)
   }
 
   return (
@@ -265,6 +294,73 @@ export default function ChantierForm({ chantier, onChange, errors = {} }) {
             placeholder="Informations complémentaires..."
           />
         </div>
+      </div>
+
+      {/* Document PDF (optionnel) */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-gray-900">Document PDF (optionnel)</h3>
+
+        {/* File Input */}
+        {!selectedFile && (
+          <div>
+            <label
+              htmlFor="pdf-upload"
+              className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <Upload className="w-10 h-10 text-gray-400 mb-3" />
+                <p className="mb-2 text-sm text-gray-700 font-medium">
+                  Cliquez pour ajouter un PDF
+                </p>
+                <p className="text-xs text-gray-500">
+                  ou glissez-déposez le fichier ici
+                </p>
+                <p className="text-xs text-gray-400 mt-2">
+                  PDF uniquement · Maximum 10 MB
+                </p>
+              </div>
+              <input
+                id="pdf-upload"
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </label>
+            {fileError && (
+              <p className="mt-2 text-sm text-red-600">{fileError}</p>
+            )}
+          </div>
+        )}
+
+        {/* Selected File */}
+        {selectedFile && (
+          <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex-shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                <FileText className="w-5 h-5 text-red-600" />
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-medium text-gray-900 truncate">
+                {selectedFile.name}
+              </h4>
+              <p className="text-xs text-gray-500 mt-1">
+                {formatFileSize(selectedFile.size)}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleRemoveFile}
+              className="flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+              title="Retirer le fichier"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

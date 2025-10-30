@@ -9,12 +9,14 @@ import Button from '../../../shared/components/ui/Button'
 import Alert from '../../../shared/components/ui/Alert'
 import ChantierForm from './ChantierForm'
 import { validateChantierData, prepareChantierData } from '../utils/chantierHelpers'
+import { uploadDocument } from '../services/documentsService'
 
 export default function ChantierModal({ isOpen, onClose, chantier, onSubmit }) {
   const [formData, setFormData] = useState(null)
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState(null)
+  const [selectedFile, setSelectedFile] = useState(null)
 
   const isEditMode = !!chantier
 
@@ -64,6 +66,7 @@ export default function ChantierModal({ isOpen, onClose, chantier, onSubmit }) {
       }
       setErrors({})
       setErrorMessage(null)
+      setSelectedFile(null)
     }
   }, [isOpen, chantier])
 
@@ -90,15 +93,31 @@ export default function ChantierModal({ isOpen, onClose, chantier, onSubmit }) {
     setErrorMessage(null)
 
     try {
+      // STEP 1: Create chantier
       const result = await onSubmit(preparedData)
 
-      if (result && result.success) {
-        // Success: close modal
-        handleClose()
-      } else {
-        // Error from API
+      if (!result || !result.success) {
+        // Error creating chantier
         setErrorMessage(result?.error?.message || 'Une erreur est survenue lors de l\'enregistrement')
+        return
       }
+
+      const createdChantier = result.data
+
+      // STEP 2: Upload PDF if file is selected
+      if (selectedFile && createdChantier) {
+        const uploadResult = await uploadDocument(createdChantier.id, selectedFile)
+
+        if (uploadResult.error) {
+          // PDF upload failed, but chantier is created
+          console.warn('PDF upload failed:', uploadResult.error)
+          // Show warning but still close modal (Option A)
+          alert('Chantier créé avec succès, mais le PDF n\'a pas pu être uploadé. Vous pouvez l\'ajouter depuis les détails du chantier.')
+        }
+      }
+
+      // Success: close modal
+      handleClose()
     } catch (error) {
       console.error('Error submitting chantier:', error)
       setErrorMessage('Une erreur est survenue lors de l\'enregistrement')
@@ -115,6 +134,7 @@ export default function ChantierModal({ isOpen, onClose, chantier, onSubmit }) {
       setFormData(null)
       setErrors({})
       setErrorMessage(null)
+      setSelectedFile(null)
       onClose()
     }
   }
@@ -140,6 +160,8 @@ export default function ChantierModal({ isOpen, onClose, chantier, onSubmit }) {
             chantier={formData}
             onChange={setFormData}
             errors={errors}
+            onFileChange={setSelectedFile}
+            selectedFile={selectedFile}
           />
         )}
 
