@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo, useRef } from 'react'
-import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye } from 'lucide-react'
+import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
@@ -34,6 +34,7 @@ export default function FacturesPage() {
   const [editingFacture, setEditingFacture] = useState(null)
   const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false)
   const [selectedFacture, setSelectedFacture] = useState(null)
+  const [openMenuId, setOpenMenuId] = useState(null)
   const fileInputRef = useRef(null)
 
   // Hooks
@@ -321,7 +322,7 @@ export default function FacturesPage() {
                   </div>
 
                   {/* Right: Actions */}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       onClick={() => handleViewDocuments(facture)}
@@ -330,20 +331,52 @@ export default function FacturesPage() {
                       <Paperclip className="w-4 h-4 md:mr-2" />
                       <span className="hidden md:inline">Documents</span>
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleEdit(facture)}
-                      className="flex-1 md:flex-none"
-                    >
-                      Modifier
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleDelete(facture.id)}
-                      className="flex-1 md:flex-none text-red-600 hover:bg-red-50 hover:border-red-300"
-                    >
-                      Supprimer
-                    </Button>
+
+                    {/* Menu dropdown */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setOpenMenuId(openMenuId === facture.id ? null : facture.id)}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        aria-label="Plus d'actions"
+                      >
+                        <MoreVertical className="w-5 h-5 text-gray-600" />
+                      </button>
+
+                      {/* Dropdown menu */}
+                      {openMenuId === facture.id && (
+                        <>
+                          {/* Backdrop pour fermer le menu */}
+                          <div
+                            className="fixed inset-0 z-10"
+                            onClick={() => setOpenMenuId(null)}
+                          />
+
+                          {/* Menu items */}
+                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                            <button
+                              onClick={() => {
+                                handleEdit(facture)
+                                setOpenMenuId(null)
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                            >
+                              <Edit className="w-4 h-4" />
+                              <span>Modifier</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleDelete(facture.id)
+                                setOpenMenuId(null)
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                            >
+                              <Trash className="w-4 h-4" />
+                              <span>Supprimer</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
