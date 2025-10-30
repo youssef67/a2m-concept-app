@@ -9,11 +9,20 @@ import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Alert from '../../../shared/components/ui/Alert'
 
-export default function DeleteConfirmModal({ isOpen, onClose, chantier, onConfirm }) {
+export default function DeleteConfirmModal({
+  isOpen,
+  onClose,
+  chantier,
+  onConfirm,
+  title,
+  message,
+  error: externalError
+}) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  if (!chantier) return null
+  // Use external error if provided, otherwise use local error
+  const displayError = externalError || error
 
   /**
    * Handle delete confirmation
@@ -23,18 +32,21 @@ export default function DeleteConfirmModal({ isOpen, onClose, chantier, onConfir
     setError(null)
 
     try {
-      const result = await onConfirm(chantier.id)
+      // If chantier is provided, pass chantier.id, otherwise just call onConfirm
+      const result = chantier
+        ? await onConfirm(chantier.id)
+        : await onConfirm()
 
       if (result && result.success) {
         // Success: close modal
         handleClose()
       } else {
         // Error from API
-        setError(result?.error?.message || 'Une erreur est survenue lors de la suppression')
+        setError(result?.error?.message || 'Une erreur est survenue')
       }
     } catch (err) {
-      console.error('Error deleting chantier:', err)
-      setError('Une erreur est survenue lors de la suppression')
+      console.error('Error in confirmation:', err)
+      setError('Une erreur est survenue')
     } finally {
       setLoading(false)
     }
@@ -50,11 +62,15 @@ export default function DeleteConfirmModal({ isOpen, onClose, chantier, onConfir
     }
   }
 
+  // Use custom title/message if provided, otherwise use default delete messages
+  const modalTitle = title || 'Confirmer la suppression'
+  const isDeleteMode = !!chantier && !title && !message
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Confirmer la suppression"
+      title={modalTitle}
       size="md"
     >
       <div className="space-y-6">
@@ -66,23 +82,35 @@ export default function DeleteConfirmModal({ isOpen, onClose, chantier, onConfir
         </div>
 
         {/* Error Alert */}
-        {error && (
+        {displayError && (
           <Alert variant="error">
-            {error}
+            {displayError}
           </Alert>
         )}
 
         {/* Message */}
         <div className="text-center">
-          <p className="text-lg text-gray-900 mb-2">
-            Êtes-vous sûr de vouloir supprimer ce chantier ?
-          </p>
-          <p className="text-base font-semibold text-gray-900 mb-4">
-            {chantier.titre}
-          </p>
-          <p className="text-sm text-gray-600">
-            Cette action est irréversible. Toutes les données associées à ce chantier seront définitivement supprimées.
-          </p>
+          {message ? (
+            // Custom message
+            <p className="text-base text-gray-900">
+              {message}
+            </p>
+          ) : (
+            // Default delete message
+            <>
+              <p className="text-lg text-gray-900 mb-2">
+                Êtes-vous sûr de vouloir supprimer ce chantier ?
+              </p>
+              {chantier && (
+                <p className="text-base font-semibold text-gray-900 mb-4">
+                  {chantier.titre}
+                </p>
+              )}
+              <p className="text-sm text-gray-600">
+                Cette action est irréversible. Toutes les données associées à ce chantier seront définitivement supprimées.
+              </p>
+            </>
+          )}
         </div>
 
         {/* Actions */}
@@ -96,12 +124,12 @@ export default function DeleteConfirmModal({ isOpen, onClose, chantier, onConfir
           </Button>
 
           <Button
-            variant="danger"
+            variant={isDeleteMode ? 'danger' : 'primary'}
             onClick={handleConfirm}
             loading={loading}
             disabled={loading}
           >
-            Supprimer
+            {isDeleteMode ? 'Supprimer' : 'Confirmer'}
           </Button>
         </div>
       </div>

@@ -3,11 +3,13 @@
  * Display chantier details in read-only mode
  */
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Pencil, MapPin, Calendar, Euro, User, FileText } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
+import Alert from '../../../shared/components/ui/Alert'
 import DocumentsSection from './DocumentsSection'
+import DeleteConfirmModal from './DeleteConfirmModal'
 import {
   formatDate,
   formatCurrency,
@@ -16,8 +18,73 @@ import {
   getClientDisplayName
 } from '../utils/chantierHelpers'
 
-export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit }) {
+export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit, onUpdateStatut }) {
+  const [currentStatut, setCurrentStatut] = useState(chantier?.statut || 'devis')
+  const [pendingStatut, setPendingStatut] = useState(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [successMessage, setSuccessMessage] = useState(null)
+
+  // Sync currentStatut with chantier.statut when it changes
+  useEffect(() => {
+    if (chantier?.statut) {
+      setCurrentStatut(chantier.statut)
+    }
+  }, [chantier?.statut])
+
   if (!chantier) return null
+
+  /**
+   * Handle statut selection change
+   */
+  const handleStatutChange = (e) => {
+    const newStatut = e.target.value
+
+    if (newStatut === chantier.statut) {
+      return // No change
+    }
+
+    // Update UI immediately for visual feedback
+    setCurrentStatut(newStatut)
+    setPendingStatut(newStatut)
+    setShowConfirmModal(true)
+  }
+
+  /**
+   * Confirm statut change
+   */
+  const handleConfirmStatutChange = async () => {
+    if (!pendingStatut || !onUpdateStatut) return
+
+    setIsUpdating(true)
+    setShowConfirmModal(false)
+
+    const result = await onUpdateStatut(chantier.id, { statut: pendingStatut })
+
+    setIsUpdating(false)
+
+    if (result && result.success) {
+      setCurrentStatut(pendingStatut)
+      setSuccessMessage(`Statut changé en "${getStatutLabel(pendingStatut)}" avec succès`)
+      setTimeout(() => setSuccessMessage(null), 3000) // Hide after 3s
+    } else {
+      alert('Erreur lors du changement de statut')
+      // Reset to original status on error
+      setCurrentStatut(chantier.statut)
+    }
+
+    setPendingStatut(null)
+  }
+
+  /**
+   * Cancel statut change
+   */
+  const handleCancelStatutChange = () => {
+    setShowConfirmModal(false)
+    setPendingStatut(null)
+    // Reset to original status on cancel
+    setCurrentStatut(chantier.statut)
+  }
 
   return (
     <Modal
@@ -27,6 +94,13 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit 
       size="lg"
     >
       <div className="space-y-6">
+        {/* Success Message */}
+        {successMessage && (
+          <Alert variant="success" onClose={() => setSuccessMessage(null)}>
+            {successMessage}
+          </Alert>
+        )}
+
         {/* Titre et Statut */}
         <div className="flex items-start justify-between gap-4">
           <h2 className="text-2xl font-bold text-gray-900 flex-1">
@@ -35,6 +109,24 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit 
           <span className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${getStatutColor(chantier.statut)}`}>
             {getStatutLabel(chantier.statut)}
           </span>
+        </div>
+
+        {/* Changement de statut rapide */}
+        <div>
+          <label htmlFor="statut-select" className="block text-sm font-medium text-gray-700 mb-2">
+            Changer le statut
+          </label>
+          <select
+            id="statut-select"
+            value={currentStatut}
+            onChange={handleStatutChange}
+            disabled={isUpdating}
+            className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+          >
+            <option value="devis">Devis</option>
+            <option value="planifie">Planifié</option>
+            <option value="en_cours">En cours</option>
+          </select>
         </div>
 
         {/* Description */}
@@ -173,6 +265,19 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit 
           </Button>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={showConfirmModal}
+        onClose={handleCancelStatutChange}
+        onConfirm={handleConfirmStatutChange}
+        title="Changer le statut"
+        message={
+          pendingStatut
+            ? `Êtes-vous sûr de vouloir changer le statut de "${getStatutLabel(chantier.statut)}" à "${getStatutLabel(pendingStatut)}" ?`
+            : ''
+        }
+      />
     </Modal>
   )
 }

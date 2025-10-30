@@ -19,17 +19,19 @@ export default function ChantierCard({ chantier, onView, onEdit, onDelete }) {
   if (!chantier) return null
 
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-200">
-      <div className="space-y-4">
-        {/* Header - Titre + Badge Statut */}
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 flex-1">
-            {chantier.titre}
-          </h3>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatutColor(chantier.statut)}`}>
-            {getStatutLabel(chantier.statut)}
-          </span>
-        </div>
+    <Card className="hover:shadow-lg transition-shadow duration-200 h-full">
+      <div className="flex flex-col h-full">
+        {/* Content - grows to fill space */}
+        <div className="flex-1 space-y-4">
+          {/* Header - Titre + Badge Statut */}
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 flex-1">
+              {chantier.titre}
+            </h3>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatutColor(chantier.statut)}`}>
+              {getStatutLabel(chantier.statut)}
+            </span>
+          </div>
 
         {/* Client */}
         <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -68,15 +70,16 @@ export default function ChantierCard({ chantier, onView, onEdit, onDelete }) {
           </div>
         )}
 
-        {/* Description (extrait) */}
-        {chantier.description && (
-          <p className="text-sm text-gray-600 line-clamp-2">
-            {chantier.description}
-          </p>
-        )}
+          {/* Description (extrait) */}
+          {chantier.description && (
+            <p className="text-sm text-gray-600 line-clamp-2">
+              {chantier.description}
+            </p>
+          )}
+        </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
+        {/* Actions - stays at bottom */}
+        <div className="flex items-center gap-2 pt-4 border-t border-gray-200 mt-4">
           <Button
             variant="outline"
             onClick={() => onView(chantier)}

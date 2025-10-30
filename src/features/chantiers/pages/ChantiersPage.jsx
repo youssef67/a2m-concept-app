@@ -85,6 +85,14 @@ export default function ChantiersPage() {
   }
 
   /**
+   * Handle update statut (quick change from detail modal)
+   */
+  const handleUpdateStatut = async (chantierId, data) => {
+    const result = await updateChantier(chantierId, data)
+    return result
+  }
+
+  /**
    * Handle view chantier details
    */
   const handleView = (chantier) => {
@@ -211,6 +219,7 @@ export default function ChantiersPage() {
           onClose={() => setIsDetailModalOpen(false)}
           chantier={selectedChantier}
           onEdit={handleEdit}
+          onUpdateStatut={handleUpdateStatut}
         />
 
         <DeleteConfirmModal
