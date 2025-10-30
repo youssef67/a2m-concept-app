@@ -1,6 +1,6 @@
 import React from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Users, Construction, LogOut } from 'lucide-react'
+import { Users, Construction, Euro, LogOut } from 'lucide-react'
 import { useAuth } from '../../../features/auth/hooks/useAuth'
 import Logo from '../ui/Logo'
 import Button from '../ui/Button'
@@ -19,6 +19,13 @@ const MODULES = [
     label: 'Chantiers',
     icon: Construction,
     path: '/dashboard/chantiers',
+    roles: ['admin']
+  },
+  {
+    id: 'finances',
+    label: 'Finances',
+    icon: Euro,
+    path: '/dashboard/finances',
     roles: ['admin']
   }
 ]
