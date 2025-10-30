@@ -7,9 +7,9 @@ import React, { useState, useEffect } from 'react'
 import { Pencil, MapPin, Calendar, Euro, User, FileText } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
-import Alert from '../../../shared/components/ui/Alert'
 import DocumentsSection from './DocumentsSection'
 import DeleteConfirmModal from './DeleteConfirmModal'
+import { useToast } from '../../../shared/hooks/useToast'
 import {
   formatDate,
   formatCurrency,
@@ -23,7 +23,7 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
   const [pendingStatut, setPendingStatut] = useState(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
-  const [successMessage, setSuccessMessage] = useState(null)
+  const { showToast } = useToast()
 
   // Sync currentStatut with chantier.statut when it changes
   useEffect(() => {
@@ -65,15 +65,15 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
 
     if (result && result.success) {
       setCurrentStatut(pendingStatut)
-      setSuccessMessage(`Statut changé en "${getStatutLabel(pendingStatut)}" avec succès`)
-      setTimeout(() => setSuccessMessage(null), 3000) // Hide after 3s
+      showToast(`Statut changé en "${getStatutLabel(pendingStatut)}" avec succès`, 'success')
+      setPendingStatut(null)
+      onClose() // Fermer la modal immédiatement
     } else {
-      alert('Erreur lors du changement de statut')
+      showToast('Erreur lors du changement de statut', 'error')
       // Reset to original status on error
       setCurrentStatut(chantier.statut)
+      setPendingStatut(null)
     }
-
-    setPendingStatut(null)
   }
 
   /**
@@ -94,13 +94,6 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
       size="lg"
     >
       <div className="space-y-6">
-        {/* Success Message */}
-        {successMessage && (
-          <Alert variant="success" onClose={() => setSuccessMessage(null)}>
-            {successMessage}
-          </Alert>
-        )}
-
         {/* Titre et Statut */}
         <div className="flex items-start justify-between gap-4">
           <h2 className="text-2xl font-bold text-gray-900 flex-1">

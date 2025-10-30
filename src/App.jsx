@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './shared/contexts/AuthContext'
+import { ToastProvider } from './shared/contexts/ToastContext'
 import { useAuth } from './features/auth/hooks/useAuth'
 
 // Pages
@@ -37,7 +38,8 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
+        <ToastProvider>
+          <Routes>
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
 
@@ -82,7 +84,8 @@ function App() {
 
           {/* Catch all - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+          </Routes>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   )

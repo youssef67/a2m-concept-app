@@ -16,6 +16,7 @@ import ChantierDetailModal from '../components/ChantierDetailModal'
 import DeleteConfirmModal from '../components/DeleteConfirmModal'
 import { useChantiers } from '../hooks/useChantiers'
 import { searchChantiers } from '../utils/chantierHelpers'
+import { useToast } from '../../../shared/hooks/useToast'
 
 export default function ChantiersPage() {
   // State
@@ -27,8 +28,9 @@ export default function ChantiersPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [selectedChantier, setSelectedChantier] = useState(null)
 
-  // Hook
+  // Hooks
   const { chantiers, loading, error, createChantier, updateChantier, deleteChantier } = useChantiers()
+  const { showToast } = useToast()
 
   // Tabs configuration with counts
   const tabs = useMemo(() => {
@@ -81,6 +83,13 @@ export default function ChantiersPage() {
    */
   const handleDelete = async (chantierId) => {
     const result = await deleteChantier(chantierId)
+
+    if (result && result.success) {
+      showToast('Chantier supprimé avec succès', 'success')
+    } else {
+      showToast('Erreur lors de la suppression du chantier', 'error')
+    }
+
     return result
   }
 
