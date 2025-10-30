@@ -6,7 +6,7 @@
 import { supabase } from '../../../lib/supabaseClient'
 
 /**
- * Get all factures with contact information
+ * Get all factures with contact information and payment totals
  * @param {string|null} type - Optional filter by type (client, fournisseur)
  * @returns {Promise<{data: Array|null, error: any}>}
  */
@@ -33,11 +33,34 @@ export async function getAllFactures(type = null) {
       query = query.eq('type', type)
     }
 
-    const { data, error } = await query
+    const { data: factures, error } = await query
 
     if (error) throw error
 
-    return { data, error: null }
+    // Fetch all paiements for these factures
+    const { data: paiements, error: paiementsError } = await supabase
+      .from('paiements')
+      .select('facture_id, montant')
+
+    if (paiementsError) {
+      console.error('Error fetching paiements:', paiementsError)
+      // Continue without payment data
+    }
+
+    // Calculate montant_paye for each facture
+    const facturesWithPaiements = factures.map(facture => {
+      const facturePaiements = paiements?.filter(p => p.facture_id === facture.id) || []
+      const montantPaye = facturePaiements.reduce((sum, p) => sum + parseFloat(p.montant), 0)
+      const montantRestant = parseFloat(facture.montant) - montantPaye
+
+      return {
+        ...facture,
+        montant_paye: montantPaye,
+        montant_restant: Math.max(0, montantRestant) // Ensure not negative
+      }
+    })
+
+    return { data: facturesWithPaiements, error: null }
   } catch (error) {
     console.error('Error fetching factures:', error)
     return { data: null, error }
@@ -105,7 +128,14 @@ export async function createFacture(factureData) {
 
     if (error) throw error
 
-    return { data, error: null, success: true }
+    // New factures have no payments yet
+    const factureWithPaiements = {
+      ...data,
+      montant_paye: 0,
+      montant_restant: parseFloat(data.montant)
+    }
+
+    return { data: factureWithPaiements, error: null, success: true }
   } catch (error) {
     console.error('Error creating facture:', error)
     return { data: null, error, success: false }
@@ -141,7 +171,22 @@ export async function updateFacture(factureId, factureData) {
 
     if (error) throw error
 
-    return { data, error: null, success: true }
+    // Fetch paiements for this facture to calculate totals
+    const { data: paiements } = await supabase
+      .from('paiements')
+      .select('montant')
+      .eq('facture_id', factureId)
+
+    const montantPaye = paiements?.reduce((sum, p) => sum + parseFloat(p.montant), 0) || 0
+    const montantRestant = parseFloat(data.montant) - montantPaye
+
+    const factureWithPaiements = {
+      ...data,
+      montant_paye: montantPaye,
+      montant_restant: Math.max(0, montantRestant)
+    }
+
+    return { data: factureWithPaiements, error: null, success: true }
   } catch (error) {
     console.error('Error updating facture:', error)
     return { data: null, error, success: false }

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo, useRef } from 'react'
-import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash } from 'lucide-react'
+import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
@@ -12,6 +12,7 @@ import Spinner from '../../../shared/components/ui/Spinner'
 import Alert from '../../../shared/components/ui/Alert'
 import Modal from '../../../shared/components/ui/Modal'
 import Input from '../../../shared/components/ui/Input'
+import PaiementModal from '../components/PaiementModal'
 import { useFactures } from '../hooks/useFactures'
 import { useContacts } from '../hooks/useContacts'
 import { useDocuments } from '../hooks/useDocuments'
@@ -34,11 +35,13 @@ export default function FacturesPage() {
   const [editingFacture, setEditingFacture] = useState(null)
   const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false)
   const [selectedFacture, setSelectedFacture] = useState(null)
+  const [isPaiementModalOpen, setIsPaiementModalOpen] = useState(false)
+  const [selectedPaiementFacture, setSelectedPaiementFacture] = useState(null)
   const [openMenuId, setOpenMenuId] = useState(null)
   const fileInputRef = useRef(null)
 
   // Hooks
-  const { factures, loading, error, createFacture, updateFacture, deleteFacture } = useFactures()
+  const { factures, loading, error, createFacture, updateFacture, deleteFacture, refreshFactures } = useFactures()
   const { contacts } = useContacts()
   const { documents, loading: docsLoading, uploading, upload, download, remove } = useDocuments(selectedFacture?.id)
   const { showToast } = useToast()
@@ -145,6 +148,21 @@ export default function FacturesPage() {
   const handleViewDocuments = (facture) => {
     setSelectedFacture(facture)
     setIsDocumentsModalOpen(true)
+  }
+
+  /**
+   * Open payment modal
+   */
+  const handleOpenPaiement = (facture) => {
+    setSelectedPaiementFacture(facture)
+    setIsPaiementModalOpen(true)
+  }
+
+  /**
+   * Handle payment change (refresh factures to update status and amounts)
+   */
+  const handlePaiementChange = () => {
+    refreshFactures()
   }
 
   /**
@@ -319,6 +337,24 @@ export default function FacturesPage() {
                     <div className="text-2xl font-bold text-primary-600">
                       {formatCurrency(facture.montant)}
                     </div>
+
+                    {/* Payment Progress - Always shown per Option A */}
+                    {facture.montant_paye !== undefined && (
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium text-green-600">
+                          {formatCurrency(facture.montant_paye || 0)}
+                        </span>
+                        {' payé sur '}
+                        <span className="font-medium">
+                          {formatCurrency(facture.montant)}
+                        </span>
+                        {facture.montant_restant > 0 && (
+                          <span className="text-orange-600 ml-2">
+                            (reste: {formatCurrency(facture.montant_restant)})
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Right: Actions */}
@@ -331,6 +367,18 @@ export default function FacturesPage() {
                       <Paperclip className="w-4 h-4 md:mr-2" />
                       <span className="hidden md:inline">Documents</span>
                     </Button>
+
+                    {/* Paiement button - Only shown if en_attente or partiellement_payee */}
+                    {(facture.statut === 'en_attente' || facture.statut === 'partiellement_payee') && (
+                      <Button
+                        variant="outline"
+                        onClick={() => handleOpenPaiement(facture)}
+                        className="flex-1 md:flex-none"
+                      >
+                        <CreditCard className="w-4 h-4 md:mr-2" />
+                        <span className="hidden md:inline">Paiement</span>
+                      </Button>
+                    )}
 
                     {/* Menu dropdown */}
                     <div className="relative">
@@ -620,6 +668,17 @@ export default function FacturesPage() {
             </div>
           </div>
         </Modal>
+
+        {/* Modal Paiement */}
+        <PaiementModal
+          isOpen={isPaiementModalOpen}
+          onClose={() => {
+            setIsPaiementModalOpen(false)
+            setSelectedPaiementFacture(null)
+          }}
+          facture={selectedPaiementFacture}
+          onPaiementChange={handlePaiementChange}
+        />
       </div>
     </AppLayout>
   )
