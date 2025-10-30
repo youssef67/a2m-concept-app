@@ -1,3 +1,4 @@
+import React from 'react'
 import { useAuth } from '../../auth/hooks/useAuth'
 import DashboardLayout from '../components/DashboardLayout'
 import Card from '../../../shared/components/ui/Card'

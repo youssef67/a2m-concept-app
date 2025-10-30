@@ -1,3 +1,4 @@
+import React from 'react'
 export default function Spinner({ size = 'md', color = 'primary' }) {
   const sizes = {
     sm: 'h-4 w-4',

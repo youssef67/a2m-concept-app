@@ -1,3 +1,4 @@
+import React from 'react'
 import Logo from '../../../shared/components/ui/Logo'
 
 export default function AuthLayout({ children }) {

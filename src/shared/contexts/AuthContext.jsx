@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useRef } from 'react'
+import React, { createContext, useState, useEffect, useRef } from 'react'
 import { authService } from '../../features/auth/services/authService'
 import { waitForSupabaseReady } from '../../lib/supabaseClient'
 

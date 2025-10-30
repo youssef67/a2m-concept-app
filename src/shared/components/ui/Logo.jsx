@@ -1,3 +1,4 @@
+import React from 'react'
 export default function Logo({ size = 'md', className = '' }) {
   const sizes = {
     sm: 'w-12 h-12 text-2xl',
