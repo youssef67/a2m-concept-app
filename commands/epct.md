@@ -9,7 +9,7 @@ Tu vas suivre un workflow structuré en 4 phases pour implémenter une nouvelle 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  DEV (développement)                                            │
-│  └─ Branche : develop ou feature/xxx                           │
+│  └─ Branche : dev ou feature/xxx                               │
 │  └─ Base de données : DEV (.env.dev)                           │
 │  └─ Code : Développement + tests en local                      │
 │  └─ Migration DB : run-migration-dev.sh                        │
@@ -17,10 +17,10 @@ Tu vas suivre un workflow structuré en 4 phases pour implémenter une nouvelle 
 │  VALIDATION (en DEV)                                            │
 │  └─ Tests manuels complets en DEV                              │
 │  └─ Vérification DB en DEV                                     │
-│  └─ Commit sur develop                                         │
+│  └─ Commit sur dev                                             │
 ├─────────────────────────────────────────────────────────────────┤
 │  PROD (production)                                              │
-│  └─ Branche : main (merge depuis develop)                      │
+│  └─ Branche : prod (merge depuis dev)                          │
 │  └─ Base de données : PROD (.env.prod)                         │
 │  └─ Migration DB : run-migration-prod.sh                       │
 │  └─ Déploiement automatique : Vercel                           │
@@ -260,9 +260,9 @@ Synthétise toutes les étapes ci-dessus dans un plan structuré :
 - Tests DB en DEV : [points à vérifier]
 
 ### 7. Plan de déploiement PROD (après validation DEV)
-- Merge feature → develop
+- Merge feature → dev
 - Exécution migration PROD : `./run-migration-prod.sh`
-- Merge develop → main
+- Merge dev → prod
 - Déploiement Vercel automatique
 - Tests PROD
 
@@ -299,7 +299,7 @@ Présente le plan complet à l'utilisateur et :
 
 ✅ Le plan a été validé par l'utilisateur
 ✅ Toutes les questions ont été clarifiées
-✅ Tu travailles sur une branche feature ou develop
+✅ Tu travailles sur une branche feature ou dev
 ✅ L'environnement DEV est configuré (`.env.dev`)
 
 **⚠️ RAPPEL CRITIQUE : Tout le code se fait en DEV. Pas de modifications en PROD pendant cette phase.**
@@ -308,8 +308,8 @@ Présente le plan complet à l'utilisateur et :
 
 **Créer la branche Git :**
 ```bash
-git checkout develop
-git pull origin develop
+git checkout dev
+git pull origin dev
 git checkout -b feature/[nom-fonctionnalite]
 ```
 
@@ -662,19 +662,19 @@ source .env.prod
 - Vérifie que les données existantes ne sont pas corrompues
 - Teste manuellement une requête simple
 
-### Étape 5.2 : Merge develop → main
+### Étape 5.2 : Merge dev → prod
 
 **Une fois la migration PROD exécutée (si applicable) :**
 
 ```bash
-# Merger develop sur main
-git checkout main
-git pull origin main
-git merge develop
-git push origin main
+# Merger dev sur prod
+git checkout prod
+git pull origin prod
+git merge dev
+git push origin prod
 ```
 
-**⚠️ ATTENTION : Le push sur main déclenche automatiquement le déploiement Vercel.**
+**⚠️ ATTENTION : Le push sur prod déclenche automatiquement le déploiement Vercel.**
 
 ### Étape 5.3 : Vérification du déploiement Vercel
 
@@ -746,10 +746,10 @@ La fonctionnalité est [DÉPLOYÉE EN PROD AVEC SUCCÈS / NÉCESSITE DES CORRECT
 
 **Option 1 : Rollback Git (recommandé)**
 ```bash
-# Revenir à l'état précédent sur main
-git checkout main
+# Revenir à l'état précédent sur prod
+git checkout prod
 git revert HEAD
-git push origin main
+git push origin prod
 ```
 
 **Option 2 : Rollback base de données (si nécessaire)**
@@ -757,10 +757,10 @@ git push origin main
 - L'exécuter avec `./run-migration-prod.sh`
 
 **Option 3 : Hotfix immédiat**
-- Créer une branche `hotfix/[nom]` depuis main
+- Créer une branche `hotfix/[nom]` depuis prod
 - Corriger le bug
 - Tester en DEV
-- Merger hotfix → main directement
+- Merger hotfix → prod directement
 
 ---
 
@@ -836,8 +836,8 @@ DÉPLOIEMENT PROD 🚀 (après validation DEV)
 12. **Migrations SQL obligatoires** : Jamais de modifications manuelles dans Supabase UI
 13. **run-migration-dev.sh EN PREMIER** : Toujours tester les migrations en DEV
 14. **run-migration-prod.sh APRÈS validation** : Exécuter en PROD seulement après tests DEV
-15. **Git workflow strict** : feature → develop → main (jamais de raccourci)
-16. **Merge sur main = déploiement** : Le push sur main déclenche Vercel automatiquement
+15. **Git workflow strict** : feature → dev → prod (jamais de raccourci)
+16. **Merge sur prod = déploiement** : Le push sur prod déclenche Vercel automatiquement
 17. **Tests PROD obligatoires** : Toujours tester en PROD après déploiement
 18. **Rollback prévu** : Toujours avoir un plan de rollback en cas de problème
 
