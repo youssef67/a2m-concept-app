@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import globals from 'globals'
 
 export default [
-  { ignores: ['dist'] },
+  { ignores: ['dist', 'node_modules', '.vite'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
@@ -34,6 +34,10 @@ export default [
         'warn',
         { allowConstantExport: true },
       ],
+      // Allow React import in JSX files even if unused (needed for JSX transform)
+      'no-unused-vars': ['error', {
+        varsIgnorePattern: '^React$'
+      }],
     },
   },
 ]
