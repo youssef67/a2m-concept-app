@@ -235,7 +235,7 @@ export default function AdminDashboard() {
               <AlertTriangle className="w-5 h-5 text-red-600" />
             </div>
             <h2 className="text-xl font-semibold text-gray-800">
-              Chantiers en retard
+              RG et finalisation 95% en retard
             </h2>
           </div>
 
