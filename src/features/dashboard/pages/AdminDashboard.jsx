@@ -1,10 +1,57 @@
-import React from 'react'
+import React, { useMemo } from 'react'
+import { Clock, CheckCircle } from 'lucide-react'
 import { useAuth } from '../../auth/hooks/useAuth'
+import { useFactures } from '../../finances/hooks/useFactures'
+import { formatCurrency } from '../../finances/utils/factureHelpers'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Card from '../../../shared/components/ui/Card'
+import Spinner from '../../../shared/components/ui/Spinner'
+import Alert from '../../../shared/components/ui/Alert'
 
 export default function AdminDashboard() {
   const { profile } = useAuth()
+  const { factures, loading, error } = useFactures()
+
+  // Calculs des statistiques
+  const stats = useMemo(() => {
+    if (!factures || factures.length === 0) {
+      return {
+        clientsEnAttente: { montant: 0, count: 0 },
+        clientsPayes: { montant: 0, count: 0 },
+        fournisseursEnAttente: { montant: 0, count: 0 },
+        fournisseursPayes: { montant: 0, count: 0 }
+      }
+    }
+
+    // Factures CLIENTS (exclure annulées)
+    const facturesClients = factures.filter(f => f.type === 'client' && f.statut !== 'annulee')
+    const clientsEnAttente = facturesClients.filter(f => f.statut === 'en_attente')
+    const clientsPayees = facturesClients.filter(f => f.statut === 'payee' || f.statut === 'partiellement_payee')
+
+    // Factures FOURNISSEURS (exclure annulées)
+    const facturesFournisseurs = factures.filter(f => f.type === 'fournisseur' && f.statut !== 'annulee')
+    const fournisseursEnAttente = facturesFournisseurs.filter(f => f.statut === 'en_attente')
+    const fournisseursPayees = facturesFournisseurs.filter(f => f.statut === 'payee' || f.statut === 'partiellement_payee')
+
+    return {
+      clientsEnAttente: {
+        montant: clientsEnAttente.reduce((sum, f) => sum + parseFloat(f.montant || 0), 0),
+        count: clientsEnAttente.length
+      },
+      clientsPayes: {
+        montant: clientsPayees.reduce((sum, f) => sum + parseFloat(f.montant_paye || 0), 0),
+        count: clientsPayees.length
+      },
+      fournisseursEnAttente: {
+        montant: fournisseursEnAttente.reduce((sum, f) => sum + parseFloat(f.montant || 0), 0),
+        count: fournisseursEnAttente.length
+      },
+      fournisseursPayes: {
+        montant: fournisseursPayees.reduce((sum, f) => sum + parseFloat(f.montant_paye || 0), 0),
+        count: fournisseursPayees.length
+      }
+    }
+  }, [factures])
 
   return (
     <AppLayout>
@@ -18,35 +65,98 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              Accès complet
-            </h3>
-            <p className="text-gray-600">
-              Vous avez accès à toutes les fonctionnalités de l&apos;application.
-            </p>
-          </Card>
+        {/* Error State */}
+        {error && (
+          <Alert variant="error">
+            Erreur lors du chargement des statistiques financières.
+          </Alert>
+        )}
 
-          <Card>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              Gestion des utilisateurs
-            </h3>
-            <p className="text-gray-600">
-              Créez et gérez les utilisateurs via le dashboard Supabase.
-            </p>
-          </Card>
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <Spinner />
+          </div>
+        )}
 
-          <Card>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              Configuration
-            </h3>
-            <p className="text-gray-600">
-              Accédez aux paramètres et à la configuration de l&apos;application.
-            </p>
-          </Card>
-        </div>
+        {/* Statistics Cards */}
+        {!loading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Card 1 - Clients À Recevoir */}
+            <Card>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-lg flex-shrink-0">
+                  <Clock className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-600 font-medium">Clients - À recevoir</p>
+                  <p className="text-2xl font-bold text-gray-900 truncate">
+                    {formatCurrency(stats.clientsEnAttente.montant)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {stats.clientsEnAttente.count} facture{stats.clientsEnAttente.count > 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+            </Card>
 
+            {/* Card 2 - Clients Reçu */}
+            <Card>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-100 rounded-lg flex-shrink-0">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-600 font-medium">Clients - Reçu</p>
+                  <p className="text-2xl font-bold text-gray-900 truncate">
+                    {formatCurrency(stats.clientsPayes.montant)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {stats.clientsPayes.count} facture{stats.clientsPayes.count > 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Card 3 - Fournisseurs À Payer */}
+            <Card>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-orange-100 rounded-lg flex-shrink-0">
+                  <Clock className="w-6 h-6 text-orange-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-600 font-medium">Fournisseurs - À payer</p>
+                  <p className="text-2xl font-bold text-gray-900 truncate">
+                    {formatCurrency(stats.fournisseursEnAttente.montant)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {stats.fournisseursEnAttente.count} facture{stats.fournisseursEnAttente.count > 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Card 4 - Fournisseurs Payé */}
+            <Card>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-emerald-100 rounded-lg flex-shrink-0">
+                  <CheckCircle className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-600 font-medium">Fournisseurs - Payé</p>
+                  <p className="text-2xl font-bold text-gray-900 truncate">
+                    {formatCurrency(stats.fournisseursPayes.montant)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {stats.fournisseursPayes.count} facture{stats.fournisseursPayes.count > 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Profile Information Card */}
         <Card>
           <h2 className="text-xl font-semibold text-gray-800 mb-4">
             Informations
