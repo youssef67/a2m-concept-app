@@ -466,3 +466,38 @@ export function calculateSumAvenants(avenants) {
     return sum + (parseFloat(avenant.montant_ht) || 0)
   }, 0)
 }
+
+/**
+ * Calculate total montant TTC avec avenants
+ * Applique le même ratio TTC/HT du chantier initial aux avenants
+ * @param {number} montantHT - Montant HT initial du chantier
+ * @param {number} montantTTC - Montant TTC initial du chantier
+ * @param {Array} avenants - Array of avenants
+ * @returns {number} Total montant TTC (initial + avenants TTC)
+ */
+export function calculateTotalTTCAvecAvenants(montantHT, montantTTC, avenants) {
+  const initialTTC = parseFloat(montantTTC) || 0
+  const initialHT = parseFloat(montantHT) || 0
+
+  // Si pas de montant TTC initial, on ne peut pas calculer
+  if (initialTTC === 0 || initialHT === 0) {
+    return initialTTC
+  }
+
+  if (!avenants || !Array.isArray(avenants) || avenants.length === 0) {
+    return initialTTC
+  }
+
+  // Calculer le ratio TTC/HT du chantier initial
+  const ratioTTCHT = initialTTC / initialHT
+
+  // Calculer la somme des avenants HT
+  const totalAvenantsHT = avenants.reduce((sum, avenant) => {
+    return sum + (parseFloat(avenant.montant_ht) || 0)
+  }, 0)
+
+  // Appliquer le même ratio aux avenants
+  const avenantsTTC = totalAvenantsHT * ratioTTCHT
+
+  return initialTTC + avenantsTTC
+}

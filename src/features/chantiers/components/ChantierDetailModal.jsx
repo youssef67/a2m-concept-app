@@ -18,7 +18,8 @@ import {
   getStatutLabel,
   getStatutColor,
   getClientDisplayName,
-  calculateTotalAvecAvenants
+  calculateTotalAvecAvenants,
+  calculateTotalTTCAvecAvenants
 } from '../utils/chantierHelpers'
 
 export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit, onUpdateStatut }) {
@@ -57,6 +58,9 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
 
   // Calculate total montant HT avec avenants
   const totalMontantHT = calculateTotalAvecAvenants(chantier.montant_ht, avenants)
+
+  // Calculate total montant TTC avec avenants
+  const totalMontantTTC = calculateTotalTTCAvecAvenants(chantier.montant_ht, chantier.montant_ttc, avenants)
 
   /**
    * Handle statut selection change
@@ -253,7 +257,7 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
                   )}
                   {chantier.montant_ttc && (
                     <div>
-                      <p className="text-xs text-gray-500">Montant TTC</p>
+                      <p className="text-xs text-gray-500">Montant TTC initial</p>
                       <p className="text-lg font-semibold text-gray-900">
                         {formatCurrency(chantier.montant_ttc)}
                       </p>
@@ -262,15 +266,29 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
                 </div>
 
                 {/* Montant total avec avenants */}
-                {avenants.length > 0 && chantier.montant_ht && (
+                {avenants.length > 0 && (chantier.montant_ht || chantier.montant_ttc) && (
                   <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-gray-700">
-                        Montant HT total (avec avenants)
-                      </p>
-                      <p className="text-xl font-bold text-blue-600">
-                        {formatCurrency(totalMontantHT)}
-                      </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {chantier.montant_ht && (
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">
+                            Montant HT total (avec avenants)
+                          </p>
+                          <p className="text-xl font-bold text-blue-600">
+                            {formatCurrency(totalMontantHT)}
+                          </p>
+                        </div>
+                      )}
+                      {chantier.montant_ttc && (
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">
+                            Montant TTC total (avec avenants)
+                          </p>
+                          <p className="text-xl font-bold text-blue-600">
+                            {formatCurrency(totalMontantTTC)}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
