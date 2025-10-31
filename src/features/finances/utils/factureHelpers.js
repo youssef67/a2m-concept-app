@@ -114,6 +114,46 @@ export function calculateDateEcheance(dateEmission, delaiPaiement) {
 }
 
 /**
+ * Check if facture is overdue
+ * @param {Object} facture - Facture object
+ * @returns {boolean} True if overdue
+ */
+export function isFactureOverdue(facture) {
+  if (!facture.date_echeance) return false
+  if (facture.statut === 'payee' || facture.statut === 'annulee') return false
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0) // Reset time to midnight
+
+  const echeance = new Date(facture.date_echeance)
+  echeance.setHours(0, 0, 0, 0)
+
+  return echeance < today
+}
+
+/**
+ * Calculate days overdue
+ * @param {string} dateEcheance - Date échéance ISO format
+ * @returns {number} Number of days overdue (0 if not overdue)
+ */
+export function calculateDaysOverdue(dateEcheance) {
+  if (!dateEcheance) return 0
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const echeance = new Date(dateEcheance)
+  echeance.setHours(0, 0, 0, 0)
+
+  if (echeance >= today) return 0
+
+  const diffTime = today - echeance
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  return diffDays
+}
+
+/**
  * Validate facture form data
  */
 export function validateFactureData(data) {

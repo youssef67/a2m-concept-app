@@ -4,11 +4,12 @@
  */
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings } from 'lucide-react'
+import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings, AlertCircle, XCircle } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
 import SubTabs from '../../../shared/components/ui/SubTabs'
+import Select from '../../../shared/components/ui/Select'
 import Pagination from '../../../shared/components/ui/Pagination'
 import Spinner from '../../../shared/components/ui/Spinner'
 import Alert from '../../../shared/components/ui/Alert'
@@ -25,12 +26,12 @@ import { useToast } from '../../../shared/hooks/useToast'
 import {
   formatDate,
   formatCurrency,
-  getStatutLabel,
-  getStatutColor,
   getContactDisplayName,
   searchFactures,
   validateFactureData,
-  calculateDateEcheance
+  calculateDateEcheance,
+  isFactureOverdue,
+  calculateDaysOverdue
 } from '../utils/factureHelpers'
 import { canFactureBePaid, canFactureBeDeleted } from '../utils/factureValidation'
 
@@ -39,6 +40,8 @@ export default function FacturesPage() {
   const [activeStatut, setActiveStatut] = useState('en_attente')
   const [activeType, setActiveType] = useState('client')
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedContactFilter, setSelectedContactFilter] = useState('')
+  const [showOverdueOnly, setShowOverdueOnly] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingFacture, setEditingFacture] = useState(null)
   const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false)
@@ -130,6 +133,33 @@ export default function FacturesPage() {
     ]
   }, [factures, activeStatut])
 
+  // Available contacts filtered by current type
+  const availableContacts = useMemo(() => {
+    return contacts.filter(c => c.type === activeType)
+  }, [contacts, activeType])
+
+  // Contact filter options for Select component
+  const contactFilterOptions = useMemo(() => {
+    const allOption = {
+      value: '',
+      label: activeType === 'client' ? 'Tous les clients' : 'Tous les fournisseurs'
+    }
+
+    const contactOptions = availableContacts.map(contact => ({
+      value: contact.id,
+      label: getContactDisplayName(contact)
+    }))
+
+    return [allOption, ...contactOptions]
+  }, [availableContacts, activeType])
+
+  // Calculate overdue count (for button badge)
+  const overdueCount = useMemo(() => {
+    const statutFiltered = factures.filter(f => f.statut === activeStatut)
+    const typeFiltered = statutFiltered.filter(f => f.type === activeType)
+    return typeFiltered.filter(f => isFactureOverdue(f)).length
+  }, [factures, activeStatut, activeType])
+
   // Filter and search factures
   const filteredFactures = useMemo(() => {
     // 1. Filtrer par statut
@@ -138,9 +168,19 @@ export default function FacturesPage() {
     // 2. Filtrer par type
     const typeFiltered = statutFiltered.filter(facture => facture.type === activeType)
 
-    // 3. Appliquer la recherche
-    return searchFactures(typeFiltered, searchQuery)
-  }, [factures, activeStatut, activeType, searchQuery])
+    // 3. Filtrer par factures en retard (si activé)
+    const overdueFiltered = showOverdueOnly
+      ? typeFiltered.filter(facture => isFactureOverdue(facture))
+      : typeFiltered
+
+    // 4. Filtrer par contact (si un contact est sélectionné)
+    const contactFiltered = selectedContactFilter
+      ? overdueFiltered.filter(facture => facture.contact_id === selectedContactFilter)
+      : overdueFiltered
+
+    // 5. Appliquer la recherche
+    return searchFactures(contactFiltered, searchQuery)
+  }, [factures, activeStatut, activeType, showOverdueOnly, selectedContactFilter, searchQuery])
 
   // Pagination logic
   const paginatedFactures = useMemo(() => {
@@ -151,10 +191,22 @@ export default function FacturesPage() {
 
   const totalPages = Math.ceil(filteredFactures.length / ITEMS_PER_PAGE)
 
+  // Clear all filters function
+  const handleClearFilters = () => {
+    setSearchQuery('')
+    setSelectedContactFilter('')
+    setShowOverdueOnly(false)
+  }
+
+  // Reset contact filter when type changes
+  useEffect(() => {
+    setSelectedContactFilter('')
+  }, [activeType])
+
   // Reset page when filter or search changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [activeStatut, activeType, searchQuery])
+  }, [activeStatut, activeType, selectedContactFilter, searchQuery, showOverdueOnly])
 
   // Page change handler
   const handlePageChange = (page) => {
@@ -522,16 +574,71 @@ export default function FacturesPage() {
         {/* Tabs - Niveau 2 : Type */}
         <SubTabs tabs={typeTabs} activeTab={activeType} onChange={setActiveType} />
 
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Rechercher une facture..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-12 pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
-          />
+        {/* Search Bar and Filters */}
+        <div className="flex flex-col gap-3">
+          {/* Search Bar - Full width on all screens */}
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Rechercher une facture..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-12 pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+            />
+          </div>
+
+          {/* Filters Row - Contact Filter, Overdue Button, Clear Button */}
+          <div className="flex flex-col md:flex-row gap-3 md:items-center">
+            {/* Contact Filter */}
+            <div className="flex-1">
+              <Select
+                value={selectedContactFilter}
+                onChange={setSelectedContactFilter}
+                options={contactFilterOptions}
+                placeholder={activeType === 'client' ? 'Tous les clients' : 'Tous les fournisseurs'}
+              />
+            </div>
+
+            {/* Overdue Filter Button */}
+            <button
+              onClick={() => setShowOverdueOnly(!showOverdueOnly)}
+              className={`
+                h-12 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
+                ${showOverdueOnly
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                }
+              `}
+            >
+              <AlertCircle className="w-5 h-5" />
+              <span>En retard</span>
+              {overdueCount > 0 && (
+                <span className={`
+                  px-2 py-0.5 rounded-full text-xs font-semibold
+                  ${showOverdueOnly ? 'bg-red-800 text-white' : 'bg-red-100 text-red-800'}
+                `}>
+                  {overdueCount}
+                </span>
+              )}
+            </button>
+
+            {/* Clear Filters Button */}
+            <button
+              onClick={handleClearFilters}
+              disabled={!searchQuery && !selectedContactFilter && !showOverdueOnly}
+              className={`
+                h-12 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
+                ${(!searchQuery && !selectedContactFilter && !showOverdueOnly)
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                }
+              `}
+            >
+              <XCircle className="w-5 h-5" />
+              <span>Effacer</span>
+            </button>
+          </div>
         </div>
 
         {/* Bulk Actions Toolbar */}
@@ -605,19 +712,14 @@ export default function FacturesPage() {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                       {/* Left: Main info */}
                       <div className="flex-1 space-y-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {facture.numero_facture}
-                            </h3>
-                            <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-                              <User className="w-4 h-4" />
-                              <span>{getContactDisplayName(facture.contact)}</span>
-                            </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {facture.numero_facture}
+                          </h3>
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                            <User className="w-4 h-4" />
+                            <span>{getContactDisplayName(facture.contact)}</span>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatutColor(facture.statut)}`}>
-                            {getStatutLabel(facture.statut)}
-                          </span>
                         </div>
 
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
@@ -630,6 +732,16 @@ export default function FacturesPage() {
                         <span>Échéance: {formatDate(facture.date_echeance)}</span>
                       </div>
                     </div>
+
+                    {/* Badge de retard */}
+                    {isFactureOverdue(facture) && (
+                      <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
+                        <AlertCircle className="w-3 h-3" />
+                        <span>
+                          En retard de {calculateDaysOverdue(facture.date_echeance)} {calculateDaysOverdue(facture.date_echeance) === 1 ? 'jour' : 'jours'}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="text-2xl font-bold text-primary-600">
                       {formatCurrency(facture.montant)}
