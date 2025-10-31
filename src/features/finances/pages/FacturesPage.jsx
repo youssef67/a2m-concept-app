@@ -8,6 +8,7 @@ import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Downlo
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
+import SubTabs from '../../../shared/components/ui/SubTabs'
 import Pagination from '../../../shared/components/ui/Pagination'
 import Spinner from '../../../shared/components/ui/Spinner'
 import Alert from '../../../shared/components/ui/Alert'
@@ -16,6 +17,7 @@ import PaiementModal from '../components/PaiementModal'
 import BulkActionsToolbar from '../components/BulkActionsToolbar'
 import MultiPaiementModal from '../components/MultiPaiementModal'
 import DeleteMultipleModal from '../components/DeleteMultipleModal'
+import DeleteFactureModal from '../components/DeleteFactureModal'
 import { useFactures } from '../hooks/useFactures'
 import { useContacts } from '../hooks/useContacts'
 import { useDocuments } from '../hooks/useDocuments'
@@ -34,7 +36,8 @@ import { canFactureBePaid, canFactureBeDeleted } from '../utils/factureValidatio
 
 export default function FacturesPage() {
   // State
-  const [activeTab, setActiveTab] = useState('client')
+  const [activeStatut, setActiveStatut] = useState('en_attente')
+  const [activeType, setActiveType] = useState('client')
   const [searchQuery, setSearchQuery] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingFacture, setEditingFacture] = useState(null)
@@ -52,6 +55,10 @@ export default function FacturesPage() {
   const [isMultiPaiementModalOpen, setIsMultiPaiementModalOpen] = useState(false)
   const [isDeleteMultipleModalOpen, setIsDeleteMultipleModalOpen] = useState(false)
   const [showBulkMenu, setShowBulkMenu] = useState(false)
+
+  // Delete single facture modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [factureToDelete, setFactureToDelete] = useState(null)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -79,27 +86,61 @@ export default function FacturesPage() {
     }
   }, [selectedContactId, dateEmission, contacts, isModalOpen, editingFacture])
 
-  // Tabs configuration with counts
-  const tabs = useMemo(() => {
+  // Tabs configuration with counts - Niveau 1 : Statut
+  const statutTabs = useMemo(() => {
     return [
       {
-        id: 'client',
-        label: 'Clients',
-        count: factures.filter(f => f.type === 'client').length
+        id: 'en_attente',
+        label: 'En attente',
+        count: factures.filter(f => f.statut === 'en_attente').length
       },
       {
-        id: 'fournisseur',
-        label: 'Fournisseurs',
-        count: factures.filter(f => f.type === 'fournisseur').length
+        id: 'partiellement_payee',
+        label: 'Partiellement payées',
+        count: factures.filter(f => f.statut === 'partiellement_payee').length
+      },
+      {
+        id: 'payee',
+        label: 'Payées',
+        count: factures.filter(f => f.statut === 'payee').length
+      },
+      {
+        id: 'annulee',
+        label: 'Annulées',
+        count: factures.filter(f => f.statut === 'annulee').length
       }
     ]
   }, [factures])
 
+  // Tabs configuration with counts - Niveau 2 : Type (basé sur statut actif)
+  const typeTabs = useMemo(() => {
+    const statutFiltered = factures.filter(f => f.statut === activeStatut)
+
+    return [
+      {
+        id: 'client',
+        label: 'Clients',
+        count: statutFiltered.filter(f => f.type === 'client').length
+      },
+      {
+        id: 'fournisseur',
+        label: 'Fournisseurs',
+        count: statutFiltered.filter(f => f.type === 'fournisseur').length
+      }
+    ]
+  }, [factures, activeStatut])
+
   // Filter and search factures
   const filteredFactures = useMemo(() => {
-    const typeFiltered = factures.filter(facture => facture.type === activeTab)
+    // 1. Filtrer par statut
+    const statutFiltered = factures.filter(facture => facture.statut === activeStatut)
+
+    // 2. Filtrer par type
+    const typeFiltered = statutFiltered.filter(facture => facture.type === activeType)
+
+    // 3. Appliquer la recherche
     return searchFactures(typeFiltered, searchQuery)
-  }, [factures, activeTab, searchQuery])
+  }, [factures, activeStatut, activeType, searchQuery])
 
   // Pagination logic
   const paginatedFactures = useMemo(() => {
@@ -113,7 +154,7 @@ export default function FacturesPage() {
   // Reset page when filter or search changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [activeTab, searchQuery])
+  }, [activeStatut, activeType, searchQuery])
 
   // Page change handler
   const handlePageChange = (page) => {
@@ -248,15 +289,26 @@ export default function FacturesPage() {
   }
 
   /**
-   * Handle delete facture
+   * Open delete confirmation modal
    */
-  const handleDelete = async (factureId) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette facture ?')) return
+  const handleDelete = (factureId) => {
+    const facture = factures.find(f => f.id === factureId)
+    if (facture) {
+      setFactureToDelete(facture)
+      setIsDeleteModalOpen(true)
+    }
+  }
 
+  /**
+   * Confirm and execute delete
+   */
+  const handleConfirmDelete = async (factureId) => {
     const result = await deleteFacture(factureId)
 
     if (result.success) {
       showToast('Facture supprimée avec succès', 'success')
+      setIsDeleteModalOpen(false)
+      setFactureToDelete(null)
     } else {
       showToast('Erreur lors de la suppression', 'error')
     }
@@ -464,8 +516,11 @@ export default function FacturesPage() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        {/* Tabs - Niveau 1 : Statut */}
+        <Tabs tabs={statutTabs} activeTab={activeStatut} onChange={setActiveStatut} />
+
+        {/* Tabs - Niveau 2 : Type */}
+        <SubTabs tabs={typeTabs} activeTab={activeType} onChange={setActiveType} />
 
         {/* Search Bar */}
         <div className="relative">
@@ -514,7 +569,7 @@ export default function FacturesPage() {
             <h3 className="text-lg font-semibold text-gray-700 mb-2">
               {searchQuery
                 ? 'Aucune facture trouvée'
-                : `Aucune facture ${activeTab === 'client' ? 'client' : 'fournisseur'}`}
+                : `Aucune facture ${activeType === 'client' ? 'client' : 'fournisseur'}`}
             </h3>
             <p className="text-gray-600">
               {searchQuery
@@ -705,7 +760,7 @@ export default function FacturesPage() {
               <select
                 name="type"
                 required
-                defaultValue={editingFacture?.type || activeTab}
+                defaultValue={editingFacture?.type || activeType}
                 disabled={!!editingFacture}
                 className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100"
               >
@@ -717,7 +772,7 @@ export default function FacturesPage() {
             {/* Contact */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {activeTab === 'client' ? 'Client' : 'Fournisseur'} *
+                {activeType === 'client' ? 'Client' : 'Fournisseur'} *
               </label>
               <select
                 name="contact_id"
@@ -728,7 +783,7 @@ export default function FacturesPage() {
               >
                 <option value="">Sélectionner...</option>
                 {contacts
-                  .filter(c => c.type === (editingFacture?.type || activeTab))
+                  .filter(c => c.type === (editingFacture?.type || activeType))
                   .map(contact => (
                     <option key={contact.id} value={contact.id}>
                       {getContactDisplayName(contact)}
@@ -976,6 +1031,17 @@ export default function FacturesPage() {
           factures={selectedFactures}
           onSuccess={handleMultiDeleteSuccess}
           onDelete={deleteMultipleFactures}
+        />
+
+        {/* Modal Delete Single Facture */}
+        <DeleteFactureModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false)
+            setFactureToDelete(null)
+          }}
+          facture={factureToDelete}
+          onConfirm={handleConfirmDelete}
         />
       </div>
     </AppLayout>

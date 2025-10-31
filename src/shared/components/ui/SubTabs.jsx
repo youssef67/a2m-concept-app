@@ -1,15 +1,15 @@
 import React from 'react'
 
 /**
- * Tabs component for switching between different views
+ * SubTabs component for secondary level navigation (smaller, more subtle)
  * @param {Array} tabs - Array of tab objects with { id, label, count (optional) }
  * @param {string} activeTab - Currently active tab ID
  * @param {function} onChange - Tab change handler
  */
-export default function Tabs({ tabs, activeTab, onChange }) {
+export default function SubTabs({ tabs, activeTab, onChange }) {
   return (
-    <div className="border-b border-gray-200 overflow-x-auto -mx-6 px-6 md:mx-0 md:px-0">
-      <nav className="-mb-px flex space-x-4 md:space-x-8 pr-12 md:pr-0" aria-label="Tabs">
+    <div className="bg-gray-50 border-b border-gray-200 -mx-6 px-6 md:mx-0 md:px-0 md:rounded-t-lg md:border">
+      <nav className="flex space-x-6 py-3 ml-4" aria-label="Sub tabs">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id
 
@@ -18,11 +18,11 @@ export default function Tabs({ tabs, activeTab, onChange }) {
               key={tab.id}
               onClick={() => onChange(tab.id)}
               className={`
-                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                whitespace-nowrap text-sm font-medium transition-colors
                 ${
                   isActive
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'text-primary-600'
+                    : 'text-gray-600 hover:text-gray-900'
                 }
               `}
               aria-current={isActive ? 'page' : undefined}
@@ -31,11 +31,11 @@ export default function Tabs({ tabs, activeTab, onChange }) {
               {tab.count !== undefined && (
                 <span
                   className={`
-                    ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium
+                    ml-1.5 py-0.5 px-1.5 rounded text-xs font-medium
                     ${
                       isActive
-                        ? 'bg-primary-100 text-primary-600'
-                        : 'bg-gray-100 text-gray-600'
+                        ? 'bg-primary-100 text-primary-700'
+                        : 'bg-gray-200 text-gray-700'
                     }
                   `}
                 >
