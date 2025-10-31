@@ -88,12 +88,10 @@ export function useContacts(type = null) {
 
   // Delete contact
   const handleDeleteContact = async (contactId) => {
-    setError(null)
-
     const { success, error: deleteError } = await deleteContact(contactId)
 
     if (!success) {
-      setError(deleteError)
+      // Don't set global error state - error is handled in UI with toast
       return { success: false, error: deleteError }
     }
 

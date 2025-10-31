@@ -214,7 +214,7 @@ export async function deleteContact(contactId) {
 
     return { success: true, error: null }
   } catch (error) {
-    console.error('Error deleting contact:', error)
+    // Return error without logging (handled in UI)
     return { success: false, error }
   }
 }

@@ -129,7 +129,6 @@ export default function ContactsPage() {
       const result = await deleteContact(selectedContact.id)
       if (result.success) {
         showToast('Contact supprimé avec succès', 'success')
-        handleDeleteModalClose()
       } else if (result.error) {
         // Check for foreign key constraint violation
         if (result.error.code === '23503') {
@@ -142,11 +141,11 @@ export default function ContactsPage() {
           showToast('Erreur lors de la suppression du contact', 'error')
         }
       }
-    } catch (err) {
-      console.error('Error deleting contact:', err)
+    } catch {
       showToast('Erreur lors de la suppression du contact', 'error')
     } finally {
       setIsSubmitting(false)
+      handleDeleteModalClose()
     }
   }
 
