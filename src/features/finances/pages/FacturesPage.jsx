@@ -3,11 +3,12 @@
  * MVP version with simplified UI
  */
 
-import React, { useState, useMemo, useRef } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
+import Pagination from '../../../shared/components/ui/Pagination'
 import Spinner from '../../../shared/components/ui/Spinner'
 import Alert from '../../../shared/components/ui/Alert'
 import Modal from '../../../shared/components/ui/Modal'
@@ -52,6 +53,10 @@ export default function FacturesPage() {
   const [isDeleteMultipleModalOpen, setIsDeleteMultipleModalOpen] = useState(false)
   const [showBulkMenu, setShowBulkMenu] = useState(false)
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const ITEMS_PER_PAGE = 6
+
   // Form controlled states for auto-calculation
   const [selectedContactId, setSelectedContactId] = useState('')
   const [dateEmission, setDateEmission] = useState(new Date().toISOString().split('T')[0])
@@ -95,6 +100,26 @@ export default function FacturesPage() {
     const typeFiltered = factures.filter(facture => facture.type === activeTab)
     return searchFactures(typeFiltered, searchQuery)
   }, [factures, activeTab, searchQuery])
+
+  // Pagination logic
+  const paginatedFactures = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+    const endIndex = startIndex + ITEMS_PER_PAGE
+    return filteredFactures.slice(startIndex, endIndex)
+  }, [filteredFactures, currentPage, ITEMS_PER_PAGE])
+
+  const totalPages = Math.ceil(filteredFactures.length / ITEMS_PER_PAGE)
+
+  // Reset page when filter or search changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeTab, searchQuery])
+
+  // Page change handler
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   // Get selected factures objects
   const selectedFactures = useMemo(() => {
@@ -502,7 +527,7 @@ export default function FacturesPage() {
         {/* Factures List */}
         {!loading && !error && filteredFactures.length > 0 && (
           <div className="space-y-4">
-            {filteredFactures.map(facture => (
+            {paginatedFactures.map(facture => (
               <div
                 key={facture.id}
                 className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
@@ -649,6 +674,16 @@ export default function FacturesPage() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Pagination */}
+        {!loading && !error && filteredFactures.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            className="mt-6"
+          />
         )}
 
         {/* Modal Create/Edit */}
