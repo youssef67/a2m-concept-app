@@ -320,3 +320,43 @@ export function calculateProgress(chantier) {
     return null
   }
 }
+
+/**
+ * Calculate montant finalisation 95%
+ * @param {number} montantHT - Montant HT du chantier
+ * @returns {number} 5% du montant HT
+ */
+export function calculateFinalisation95(montantHT) {
+  if (!montantHT || montantHT <= 0) return 0
+  return montantHT * 0.05
+}
+
+/**
+ * Check if chantier has at least one facture with retenue_garantie
+ * @param {string} chantierId - ID du chantier
+ * @param {Array} factures - Array of all factures
+ * @returns {boolean}
+ */
+export function chantierHasRetenueGarantie(chantierId, factures) {
+  if (!factures || !Array.isArray(factures)) return false
+  return factures.some(f => f.chantier_id === chantierId && f.retenue_garantie === true)
+}
+
+/**
+ * Calculate total retenues de garantie for a chantier
+ * @param {string} chantierId - ID du chantier
+ * @param {Array} factures - Array of all factures
+ * @returns {number} Sum of 5% of montant_ht for all factures with retenue_garantie
+ */
+export function calculateTotalRetenuesGarantie(chantierId, factures) {
+  if (!factures || !Array.isArray(factures)) return 0
+
+  const facturesAvecRetenue = factures.filter(
+    f => f.chantier_id === chantierId && f.retenue_garantie === true
+  )
+
+  return facturesAvecRetenue.reduce((sum, facture) => {
+    const montantHT = facture.montant_ht || 0
+    return sum + (montantHT * 0.05)
+  }, 0)
+}

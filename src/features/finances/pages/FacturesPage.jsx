@@ -30,7 +30,6 @@ import {
   formatCurrency,
   getContactDisplayName,
   searchFactures,
-  validateFactureData,
   calculateDateEcheance,
   isFactureOverdue,
   calculateDaysOverdue,
@@ -39,11 +38,20 @@ import {
   getMontantAPayer,
   getMontantLabel
 } from '../utils/factureHelpers'
+import {
+  getClientDisplayName as getChantierClientName,
+  getStatutLabel as getChantierStatutLabel,
+  getStatutColor as getChantierStatutColor,
+  calculateFinalisation95,
+  chantierHasRetenueGarantie,
+  calculateTotalRetenuesGarantie,
+  formatCurrency as formatChantierCurrency
+} from '../../chantiers/utils/chantierHelpers'
 import { canFactureBePaid, canFactureBeDeleted } from '../utils/factureValidation'
 
 export default function FacturesPage() {
   // State
-  const [activeStatut, setActiveStatut] = useState('en_attente')
+  const [activeTab, setActiveTab] = useState('en_attente') // Renamed from activeStatut to handle both factures and chantiers
   const [activeType, setActiveType] = useState('client')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedContactFilter, setSelectedContactFilter] = useState('')
@@ -163,7 +171,7 @@ export default function FacturesPage() {
     }
   }, [selectedChantierId])
 
-  // Tabs configuration with counts - Niveau 1 : Statut
+  // Tabs configuration with counts - Niveau 1 : Statut + Fin de chantier
   const statutTabs = useMemo(() => {
     return [
       {
@@ -185,13 +193,23 @@ export default function FacturesPage() {
         id: 'annulee',
         label: 'Annulées',
         count: factures.filter(f => f.statut === 'annulee').length
+      },
+      {
+        id: 'fin_chantier',
+        label: 'Fin de chantier',
+        count: chantiers.filter(c => {
+          if (c.statut !== 'cloture') return false
+          const hasFinalisation95 = c.finalisation_95
+          const hasRetenue = chantierHasRetenueGarantie(c.id, factures)
+          return hasFinalisation95 || hasRetenue
+        }).length
       }
     ]
-  }, [factures])
+  }, [factures, chantiers])
 
   // Tabs configuration with counts - Niveau 2 : Type (basé sur statut actif)
   const typeTabs = useMemo(() => {
-    const statutFiltered = factures.filter(f => f.statut === activeStatut)
+    const statutFiltered = factures.filter(f => f.statut === activeTab)
 
     return [
       {
@@ -205,7 +223,7 @@ export default function FacturesPage() {
         count: statutFiltered.filter(f => f.type === 'fournisseur').length
       }
     ]
-  }, [factures, activeStatut])
+  }, [factures, activeTab])
 
   // Available contacts filtered by current type
   const availableContacts = useMemo(() => {
@@ -229,15 +247,15 @@ export default function FacturesPage() {
 
   // Calculate overdue count (for button badge)
   const overdueCount = useMemo(() => {
-    const statutFiltered = factures.filter(f => f.statut === activeStatut)
+    const statutFiltered = factures.filter(f => f.statut === activeTab)
     const typeFiltered = statutFiltered.filter(f => f.type === activeType)
     return typeFiltered.filter(f => isFactureOverdue(f)).length
-  }, [factures, activeStatut, activeType])
+  }, [factures, activeTab, activeType])
 
   // Filter and search factures
   const filteredFactures = useMemo(() => {
     // 1. Filtrer par statut
-    const statutFiltered = factures.filter(facture => facture.statut === activeStatut)
+    const statutFiltered = factures.filter(facture => facture.statut === activeTab)
 
     // 2. Filtrer par type
     const typeFiltered = statutFiltered.filter(facture => facture.type === activeType)
@@ -254,16 +272,54 @@ export default function FacturesPage() {
 
     // 5. Appliquer la recherche
     return searchFactures(contactFiltered, searchQuery)
-  }, [factures, activeStatut, activeType, showOverdueOnly, selectedContactFilter, searchQuery])
+  }, [factures, activeTab, activeType, showOverdueOnly, selectedContactFilter, searchQuery])
 
-  // Pagination logic
+  // Filter and search chantiers (for "Fin de chantier" tab)
+  const filteredChantiers = useMemo(() => {
+    if (activeTab !== 'fin_chantier') return []
+
+    // 1. Filter: (finalisation_95 OR hasRetenueGarantie) AND statut = 'cloture'
+    const finChantiers = chantiers.filter(c => {
+      if (c.statut !== 'cloture') return false
+
+      const hasFinalisation95 = c.finalisation_95
+      const hasRetenue = chantierHasRetenueGarantie(c.id, factures)
+
+      return hasFinalisation95 || hasRetenue
+    })
+
+    // 2. Apply search query
+    if (!searchQuery.trim()) return finChantiers
+
+    const lowerQuery = searchQuery.toLowerCase()
+    return finChantiers.filter(chantier => {
+      const clientName = chantier.client?.contact_type === 'professionnel'
+        ? chantier.client?.company_name || ''
+        : `${chantier.client?.first_name || ''} ${chantier.client?.last_name || ''}`.trim()
+
+      return chantier.titre?.toLowerCase().includes(lowerQuery) ||
+             clientName.toLowerCase().includes(lowerQuery) ||
+             chantier.montant_ht?.toString().includes(lowerQuery)
+    })
+  }, [activeTab, chantiers, factures, searchQuery])
+
+  // Pagination logic for factures
   const paginatedFactures = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
     const endIndex = startIndex + ITEMS_PER_PAGE
     return filteredFactures.slice(startIndex, endIndex)
   }, [filteredFactures, currentPage, ITEMS_PER_PAGE])
 
-  const totalPages = Math.ceil(filteredFactures.length / ITEMS_PER_PAGE)
+  // Pagination logic for chantiers
+  const paginatedChantiers = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+    const endIndex = startIndex + ITEMS_PER_PAGE
+    return filteredChantiers.slice(startIndex, endIndex)
+  }, [filteredChantiers, currentPage, ITEMS_PER_PAGE])
+
+  const totalPages = activeTab === 'fin_chantier'
+    ? Math.ceil(filteredChantiers.length / ITEMS_PER_PAGE)
+    : Math.ceil(filteredFactures.length / ITEMS_PER_PAGE)
 
   // Clear all filters function
   const handleClearFilters = () => {
@@ -280,7 +336,7 @@ export default function FacturesPage() {
   // Reset page when filter or search changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [activeStatut, activeType, selectedContactFilter, searchQuery, showOverdueOnly])
+  }, [activeTab, activeType, selectedContactFilter, searchQuery, showOverdueOnly])
 
   // Page change handler
   const handlePageChange = (page) => {
@@ -707,10 +763,12 @@ export default function FacturesPage() {
         </div>
 
         {/* Tabs - Niveau 1 : Statut */}
-        <Tabs tabs={statutTabs} activeTab={activeStatut} onChange={setActiveStatut} />
+        <Tabs tabs={statutTabs} activeTab={activeTab} onChange={setActiveTab} />
 
-        {/* Tabs - Niveau 2 : Type */}
-        <SubTabs tabs={typeTabs} activeTab={activeType} onChange={setActiveType} />
+        {/* Tabs - Niveau 2 : Type (masqué pour Fin de chantier) */}
+        {activeTab !== 'fin_chantier' && (
+          <SubTabs tabs={typeTabs} activeTab={activeType} onChange={setActiveType} />
+        )}
 
         {/* Search Bar and Filters */}
         <div className="flex flex-col gap-3">
@@ -726,57 +784,72 @@ export default function FacturesPage() {
             />
           </div>
 
-          {/* Filters Row - Contact Filter, Overdue Button, Clear Button */}
-          <div className="flex flex-col md:flex-row gap-3 md:items-center">
-            {/* Contact Filter */}
-            <div className="flex-1">
-              <Select
-                value={selectedContactFilter}
-                onChange={setSelectedContactFilter}
-                options={contactFilterOptions}
-                placeholder={activeType === 'client' ? 'Tous les clients' : 'Tous les fournisseurs'}
-              />
+          {/* Filters Row - Contact Filter, Overdue Button, Clear Button (masqué pour Fin de chantier) */}
+          {activeTab !== 'fin_chantier' ? (
+            <div className="flex flex-col md:flex-row gap-3 md:items-center">
+              {/* Contact Filter */}
+              <div className="flex-1">
+                <Select
+                  value={selectedContactFilter}
+                  onChange={setSelectedContactFilter}
+                  options={contactFilterOptions}
+                  placeholder={activeType === 'client' ? 'Tous les clients' : 'Tous les fournisseurs'}
+                />
+              </div>
+
+              {/* Overdue Filter Button */}
+              <button
+                onClick={() => setShowOverdueOnly(!showOverdueOnly)}
+                className={`
+                  h-12 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
+                  ${showOverdueOnly
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }
+                `}
+              >
+                <AlertCircle className="w-5 h-5" />
+                <span>En retard</span>
+                {overdueCount > 0 && (
+                  <span className={`
+                    px-2 py-0.5 rounded-full text-xs font-semibold
+                    ${showOverdueOnly ? 'bg-red-800 text-white' : 'bg-red-100 text-red-800'}
+                  `}>
+                    {overdueCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Clear Filters Button */}
+              <button
+                onClick={handleClearFilters}
+                disabled={!searchQuery && !selectedContactFilter && !showOverdueOnly}
+                className={`
+                  h-12 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
+                  ${(!searchQuery && !selectedContactFilter && !showOverdueOnly)
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }
+                `}
+              >
+                <XCircle className="w-5 h-5" />
+                <span>Effacer</span>
+              </button>
             </div>
-
-            {/* Overdue Filter Button */}
-            <button
-              onClick={() => setShowOverdueOnly(!showOverdueOnly)}
-              className={`
-                h-12 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
-                ${showOverdueOnly
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                }
-              `}
-            >
-              <AlertCircle className="w-5 h-5" />
-              <span>En retard</span>
-              {overdueCount > 0 && (
-                <span className={`
-                  px-2 py-0.5 rounded-full text-xs font-semibold
-                  ${showOverdueOnly ? 'bg-red-800 text-white' : 'bg-red-100 text-red-800'}
-                `}>
-                  {overdueCount}
-                </span>
-              )}
-            </button>
-
-            {/* Clear Filters Button */}
-            <button
-              onClick={handleClearFilters}
-              disabled={!searchQuery && !selectedContactFilter && !showOverdueOnly}
-              className={`
-                h-12 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
-                ${(!searchQuery && !selectedContactFilter && !showOverdueOnly)
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                }
-              `}
-            >
-              <XCircle className="w-5 h-5" />
-              <span>Effacer</span>
-            </button>
-          </div>
+          ) : (
+            /* Clear Search Button for Fin de chantier tab */
+            searchQuery && (
+              <div className="flex justify-end">
+                <button
+                  onClick={handleClearFilters}
+                  className="h-12 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  <XCircle className="w-5 h-5" />
+                  <span>Effacer</span>
+                </button>
+              </div>
+            )
+          )}
         </div>
 
         {/* Bulk Actions Toolbar */}
@@ -807,8 +880,8 @@ export default function FacturesPage() {
           </div>
         )}
 
-        {/* Empty State */}
-        {!loading && !error && filteredFactures.length === 0 && (
+        {/* Empty State - Factures */}
+        {!loading && !error && activeTab !== 'fin_chantier' && filteredFactures.length === 0 && (
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-700 mb-2">
@@ -824,8 +897,25 @@ export default function FacturesPage() {
           </div>
         )}
 
+        {/* Empty State - Chantiers */}
+        {!loading && !error && activeTab === 'fin_chantier' && filteredChantiers.length === 0 && (
+          <div className="text-center py-12">
+            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+              {searchQuery
+                ? 'Aucun chantier trouvé'
+                : 'Aucun chantier clôturé avec finalisation à 95%'}
+            </h3>
+            <p className="text-gray-600">
+              {searchQuery
+                ? 'Essayez de modifier votre recherche'
+                : 'Les chantiers clôturés avec finalisation à 95% apparaîtront ici'}
+            </p>
+          </div>
+        )}
+
         {/* Factures List */}
-        {!loading && !error && filteredFactures.length > 0 && (
+        {!loading && !error && activeTab !== 'fin_chantier' && filteredFactures.length > 0 && (
           <div className="space-y-4">
             {paginatedFactures.map(facture => (
               <div
@@ -1000,8 +1090,84 @@ export default function FacturesPage() {
           </div>
         )}
 
+        {/* Chantiers List (Fin de chantier tab) */}
+        {!loading && !error && activeTab === 'fin_chantier' && filteredChantiers.length > 0 && (
+          <div className="space-y-4">
+            {paginatedChantiers.map(chantier => (
+              <div
+                key={chantier.id}
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+              >
+                <div className="flex flex-col gap-4">
+                  {/* Header: Titre et Statut */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {chantier.titre}
+                      </h3>
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                        <User className="w-4 h-4" />
+                        <span>{getChantierClientName(chantier.client)}</span>
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${getChantierStatutColor(chantier.statut)}`}>
+                      {getChantierStatutLabel(chantier.statut)}
+                    </span>
+                  </div>
+
+                  {/* Montant HT du chantier */}
+                  <div>
+                    <p className="text-sm text-gray-500">Montant HT du chantier</p>
+                    <p className="text-2xl font-bold text-primary-600">
+                      {formatChantierCurrency(chantier.montant_ht)}
+                    </p>
+                  </div>
+
+                  {/* Montants à finaliser */}
+                  <div className="border-t border-gray-200 pt-3 space-y-2">
+                    {chantier.finalisation_95 && (
+                      <div className="flex items-center justify-between">
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                          Finalisation 95%
+                        </span>
+                        <span className="text-lg font-semibold text-blue-900">
+                          {formatChantierCurrency(calculateFinalisation95(chantier.montant_ht))}
+                        </span>
+                      </div>
+                    )}
+
+                    {chantierHasRetenueGarantie(chantier.id, factures) && (
+                      <div className="flex items-center justify-between">
+                        <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-medium">
+                          Retenues de garantie
+                        </span>
+                        <span className="text-lg font-semibold text-orange-900">
+                          {formatChantierCurrency(calculateTotalRetenuesGarantie(chantier.id, factures))}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Total à finaliser */}
+                    {(chantier.finalisation_95 || chantierHasRetenueGarantie(chantier.id, factures)) && (
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                        <span className="font-medium text-gray-700">Total à finaliser</span>
+                        <span className="text-xl font-bold text-gray-900">
+                          {formatChantierCurrency(
+                            (chantier.finalisation_95 ? calculateFinalisation95(chantier.montant_ht) : 0) +
+                            calculateTotalRetenuesGarantie(chantier.id, factures)
+                          )}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Pagination */}
-        {!loading && !error && filteredFactures.length > 0 && (
+        {!loading && !error && ((activeTab !== 'fin_chantier' && filteredFactures.length > 0) || (activeTab === 'fin_chantier' && filteredChantiers.length > 0)) && (
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
