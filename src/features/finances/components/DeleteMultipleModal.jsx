@@ -3,7 +3,6 @@ import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import { FileText, AlertTriangle } from 'lucide-react'
 import { formatCurrency } from '../utils/factureHelpers'
-import { deleteMultipleFactures } from '../services/facturesService'
 
 /**
  * Modal for deleting multiple factures at once
@@ -11,12 +10,14 @@ import { deleteMultipleFactures } from '../services/facturesService'
  * @param {function} onClose - Close handler
  * @param {Array} factures - Selected factures to delete
  * @param {function} onSuccess - Success callback
+ * @param {function} onDelete - Delete handler from hook
  */
 export default function DeleteMultipleModal({
   isOpen,
   onClose,
   factures = [],
-  onSuccess
+  onSuccess,
+  onDelete
 }) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [deletionErrors, setDeletionErrors] = useState([])
@@ -36,7 +37,7 @@ export default function DeleteMultipleModal({
         numero_facture: f.numero_facture
       }))
 
-      const result = await deleteMultipleFactures(facturesData)
+      const result = await onDelete(facturesData)
 
       if (result.success) {
         // All deletions successful

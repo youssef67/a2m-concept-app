@@ -940,6 +940,7 @@ export default function FacturesPage() {
           }}
           factures={selectedFactures}
           onSuccess={handleMultiDeleteSuccess}
+          onDelete={deleteMultipleFactures}
         />
       </div>
     </AppLayout>
