@@ -92,7 +92,9 @@ export default function ChantiersPage() {
     if (result && result.success) {
       showToast('Chantier supprimé avec succès', 'success')
     } else {
-      showToast('Erreur lors de la suppression du chantier', 'error')
+      // Display custom error message if available, otherwise generic message
+      const errorMessage = result?.error?.message || 'Erreur lors de la suppression du chantier'
+      showToast(errorMessage, 'error')
     }
 
     return result

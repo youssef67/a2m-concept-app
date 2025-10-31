@@ -155,6 +155,34 @@ export async function updateChantier(chantierId, chantierData) {
  */
 export async function deleteChantier(chantierId) {
   try {
+    // Check if chantier has associated factures
+    const { count, error: countError } = await supabase
+      .from('factures')
+      .select('*', { count: 'exact', head: true })
+      .eq('chantier_id', chantierId)
+
+    if (countError) {
+      console.error('Error checking factures:', countError)
+      throw countError
+    }
+
+    // If chantier has factures, prevent deletion with explicit message
+    if (count > 0) {
+      const errorMessage = count === 1
+        ? `Impossible de supprimer ce chantier car il contient ${count} facture. Supprimez d'abord la facture associée.`
+        : `Impossible de supprimer ce chantier car il contient ${count} factures. Supprimez d'abord les factures associées.`
+
+      return {
+        success: false,
+        error: {
+          code: 'CHANTIER_HAS_FACTURES',
+          message: errorMessage,
+          count
+        }
+      }
+    }
+
+    // No factures, proceed with deletion
     const { error } = await supabase
       .from('chantiers')
       .delete()
