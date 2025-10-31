@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Clock, CheckCircle, AlertTriangle, Calendar, CheckCircle2, TrendingUp, User as UserIcon } from 'lucide-react'
+import { Clock, CheckCircle, AlertTriangle, Calendar, CheckCircle2, TrendingUp, FileText } from 'lucide-react'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { useFactures } from '../../finances/hooks/useFactures'
 import { useChantiers } from '../../chantiers/hooks/useChantiers'
@@ -12,6 +12,7 @@ import {
   formatDate as formatChantierDate,
   getClientDisplayName as getChantierClientName
 } from '../../chantiers/utils/chantierHelpers'
+import { getContactDisplayName } from '../../contacts/utils/contactHelpers'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Card from '../../../shared/components/ui/Card'
 import Spinner from '../../../shared/components/ui/Spinner'
@@ -112,6 +113,15 @@ export default function AdminDashboard() {
         return dateA - dateB
       })
   }, [chantiers, factures])
+
+  // Calcul des 3 dernières factures
+  const dernieresFactures = useMemo(() => {
+    if (!factures || factures.length === 0) return []
+
+    // Les factures sont déjà triées par date_emission DESC dans le service
+    // On prend simplement les 3 premières
+    return factures.slice(0, 3)
+  }, [factures])
 
   return (
     <AppLayout>
@@ -318,23 +328,58 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        {/* Section: Informations du profil */}
+        {/* Section: Dernières factures */}
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-100 rounded-lg flex-shrink-0">
-              <UserIcon className="w-5 h-5 text-gray-600" />
+            <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+              <FileText className="w-5 h-5 text-blue-600" />
             </div>
             <h2 className="text-xl font-semibold text-gray-800">
-              Informations du profil
+              Dernières factures
             </h2>
           </div>
 
           <Card>
-            <div className="space-y-2 text-sm">
-              <p><span className="font-medium">Email :</span> {profile?.email}</p>
-              <p><span className="font-medium">Rôle :</span> <span className="capitalize">{profile?.role}</span></p>
-              <p><span className="font-medium">Créé le :</span> {new Date(profile?.created_at).toLocaleDateString('fr-FR')}</p>
-            </div>
+            {/* Empty State */}
+            {dernieresFactures.length === 0 && !loading && (
+              <div className="text-center py-8 text-gray-500">
+                Aucune facture disponible
+              </div>
+            )}
+
+            {/* Liste des dernières factures */}
+            {dernieresFactures.length > 0 && (
+              <div className="space-y-3">
+                {dernieresFactures.map(facture => (
+                  <div
+                    key={facture.id}
+                    className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    {/* Numéro de facture - mis en avant */}
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-lg font-bold text-gray-900">
+                        {facture.numero_facture}
+                      </h3>
+                      <span className="text-lg font-semibold text-blue-600">
+                        {formatCurrency(facture.montant)}
+                      </span>
+                    </div>
+
+                    {/* Informations facture */}
+                    <div className="space-y-1 text-sm text-gray-600">
+                      <p>
+                        <span className="font-medium">Client :</span>{' '}
+                        {getContactDisplayName(facture.contact)}
+                      </p>
+                      <p>
+                        <span className="font-medium">Chantier :</span>{' '}
+                        {facture.chantier?.titre || 'Aucun chantier'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
       </div>
