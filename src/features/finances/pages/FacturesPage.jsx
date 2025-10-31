@@ -34,6 +34,7 @@ import {
   isFactureOverdue,
   calculateDaysOverdue,
   calculateTTC,
+  calculateRetenue,
   getMontantAPayer,
   getMontantLabel
 } from '../utils/factureHelpers'
@@ -83,6 +84,10 @@ export default function FacturesPage() {
   const [montantHT, setMontantHT] = useState('')
   const [montantTTC, setMontantTTC] = useState('')
 
+  // Retenue de garantie states
+  const [retenueGarantie, setRetenueGarantie] = useState(false)
+  const [montantRetenue, setMontantRetenue] = useState('')
+
   // Hooks
   const { factures, loading, error, createFacture, updateFacture, deleteFacture, deleteMultipleFactures, refreshFactures } = useFactures()
   const { contacts } = useContacts()
@@ -122,6 +127,21 @@ export default function FacturesPage() {
       setMontantTTC('')
     }
   }, [montantHT, tvaApplicable, factureType])
+
+  // Auto-calculate retenue when montantHT or retenueGarantie changes (clients only)
+  React.useEffect(() => {
+    if (factureType === 'client' && retenueGarantie && montantHT) {
+      const ht = parseFloat(montantHT)
+      if (!isNaN(ht) && ht > 0) {
+        const retenue = calculateRetenue(ht)
+        setMontantRetenue(retenue.toFixed(2))
+      } else {
+        setMontantRetenue('')
+      }
+    } else {
+      setMontantRetenue('')
+    }
+  }, [montantHT, retenueGarantie, factureType])
 
   // Tabs configuration with counts - Niveau 1 : Statut
   const statutTabs = useMemo(() => {
@@ -353,17 +373,21 @@ export default function FacturesPage() {
       montant_ht: null,
       montant_ttc: null,
       tva_applicable: false,
-      taux_tva: 20.00
+      taux_tva: 20.00,
+      // Champ retenue de garantie
+      retenue_garantie: false
     }
 
     if (currentType === 'fournisseur') {
-      // Fournisseur: toujours TTC
+      // Fournisseur: toujours TTC, pas de retenue
       data.montant_ttc = parseFloat(formData.get('montant_ttc'))
       data.tva_applicable = true
+      data.retenue_garantie = false
     } else {
-      // Client: HT avec ou sans TVA
+      // Client: HT avec ou sans TVA, avec ou sans retenue
       data.montant_ht = parseFloat(formData.get('montant_ht'))
       data.tva_applicable = formData.get('tva_applicable') === 'on'
+      data.retenue_garantie = formData.get('retenue_garantie') === 'on'
 
       if (data.tva_applicable) {
         data.montant_ttc = parseFloat(formData.get('montant_ttc'))
@@ -449,6 +473,9 @@ export default function FacturesPage() {
     setTvaApplicable(facture.tva_applicable || false)
     setMontantHT(facture.montant_ht?.toString() || facture.montant?.toString() || '')
     setMontantTTC(facture.montant_ttc?.toString() || '')
+    // Initialize retenue states
+    setRetenueGarantie(facture.retenue_garantie || false)
+    setMontantRetenue(facture.retenue_garantie && facture.montant_ht ? calculateRetenue(facture.montant_ht).toFixed(2) : '')
     setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
@@ -468,6 +495,9 @@ export default function FacturesPage() {
     setTvaApplicable(false)
     setMontantHT('')
     setMontantTTC('')
+    // Reset retenue states
+    setRetenueGarantie(false)
+    setMontantRetenue('')
     setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
@@ -832,10 +862,17 @@ export default function FacturesPage() {
                     <div className="text-2xl font-bold text-primary-600">
                       {formatCurrency(getMontantAPayer(facture))}
                     </div>
-                    <div className="text-xs text-gray-500 -mt-1">
-                      Montant {getMontantLabel(facture)}
-                      {facture.type === 'client' && !facture.tva_applicable && (
-                        <span className="ml-1 text-gray-400">(Auto-liquidation)</span>
+                    <div className="text-xs text-gray-500 -mt-1 flex items-center gap-2 flex-wrap">
+                      <span>
+                        Montant {getMontantLabel(facture)}
+                        {facture.type === 'client' && !facture.tva_applicable && (
+                          <span className="ml-1 text-gray-400">(Auto-liquidation)</span>
+                        )}
+                      </span>
+                      {facture.type === 'client' && facture.retenue_garantie && (
+                        <span className="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                          Retenue 5%
+                        </span>
                       )}
                     </div>
 
@@ -1125,6 +1162,44 @@ export default function FacturesPage() {
                         value={montantTTC}
                         readOnly
                         placeholder="1200.00"
+                        className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                        €
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Checkbox Retenue de garantie */}
+                <div className="flex items-center">
+                  <input
+                    id="retenue_garantie"
+                    name="retenue_garantie"
+                    type="checkbox"
+                    checked={retenueGarantie}
+                    onChange={(e) => setRetenueGarantie(e.target.checked)}
+                    className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                  />
+                  <label htmlFor="retenue_garantie" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
+                    Retenue de garantie (5%)
+                  </label>
+                </div>
+
+                {/* Montant Retenue (auto-calculé si checkbox cochée) */}
+                {retenueGarantie && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Montant retenue (5% du HT)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={montantRetenue}
+                        readOnly
+                        placeholder="50.00"
                         className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">

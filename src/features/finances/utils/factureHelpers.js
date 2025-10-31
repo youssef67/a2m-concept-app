@@ -165,24 +165,44 @@ export function calculateTTC(montantHT, tauxTVA = 20) {
 }
 
 /**
- * Get montant à payer according to facture type and TVA
+ * Calculate retenue de garantie from HT
+ * @param {number} montantHT - Montant HT
+ * @returns {number} Montant retenue (5% du HT)
+ */
+export function calculateRetenue(montantHT) {
+  if (!montantHT || montantHT <= 0) return 0
+  return montantHT * 0.05
+}
+
+/**
+ * Get montant à payer according to facture type, TVA and retenue de garantie
  * @param {Object} facture - Facture object
  * @returns {number} Montant à payer
  */
 export function getMontantAPayer(facture) {
   if (!facture) return 0
 
-  // Fournisseur : toujours TTC
+  let montantBase = 0
+
+  // Fournisseur : toujours TTC, pas de retenue
   if (facture.type === 'fournisseur') {
     return facture.montant_ttc || facture.montant || 0
   }
 
   // Client : TTC si TVA applicable, sinon HT
   if (facture.tva_applicable) {
-    return facture.montant_ttc || facture.montant || 0
+    montantBase = facture.montant_ttc || facture.montant || 0
+  } else {
+    montantBase = facture.montant_ht || facture.montant || 0
   }
 
-  return facture.montant_ht || facture.montant || 0
+  // Déduire la retenue de garantie si applicable (toujours 5% du HT)
+  if (facture.retenue_garantie) {
+    const retenue = calculateRetenue(facture.montant_ht || 0)
+    return montantBase - retenue
+  }
+
+  return montantBase
 }
 
 /**
