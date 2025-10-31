@@ -9,6 +9,7 @@ import ContactDetailModal from '../components/ContactDetailModal'
 import DeleteConfirmModal from '../components/DeleteConfirmModal'
 import { useContacts } from '../hooks/useContacts'
 import { searchContacts, getContactTypeLabel } from '../utils/contactHelpers'
+import { useToast } from '../../../shared/hooks/useToast'
 
 export default function ContactsPage() {
   // State
@@ -20,7 +21,7 @@ export default function ContactsPage() {
   const [selectedContact, setSelectedContact] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Fetch contacts
+  // Hooks
   const {
     contacts,
     loading,
@@ -29,6 +30,7 @@ export default function ContactsPage() {
     updateContact,
     deleteContact
   } = useContacts()
+  const { showToast } = useToast()
 
   // Filter and search contacts
   const filteredContacts = useMemo(() => {
@@ -126,10 +128,23 @@ export default function ContactsPage() {
     try {
       const result = await deleteContact(selectedContact.id)
       if (result.success) {
+        showToast('Contact supprimé avec succès', 'success')
         handleDeleteModalClose()
+      } else if (result.error) {
+        // Check for foreign key constraint violation
+        if (result.error.code === '23503') {
+          const contactType = selectedContact.type === 'client' ? 'client' : 'fournisseur'
+          showToast(
+            `Impossible de supprimer ce ${contactType} car il est utilisé dans des chantiers ou des factures. Veuillez d'abord supprimer les éléments associés.`,
+            'error'
+          )
+        } else {
+          showToast('Erreur lors de la suppression du contact', 'error')
+        }
       }
     } catch (err) {
       console.error('Error deleting contact:', err)
+      showToast('Erreur lors de la suppression du contact', 'error')
     } finally {
       setIsSubmitting(false)
     }
