@@ -3,39 +3,31 @@
  * Section for managing avenants within a chantier
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { FileStack, Plus, Pencil, Trash2 } from 'lucide-react'
 import Button from '../../../shared/components/ui/Button'
 import Alert from '../../../shared/components/ui/Alert'
 import Spinner from '../../../shared/components/ui/Spinner'
 import AvenantFormModal from './AvenantFormModal'
 import DeleteConfirmModal from './DeleteConfirmModal'
-import { useAvenants } from '../hooks/useAvenants'
 import { useToast } from '../../../shared/hooks/useToast'
 import { formatCurrency, formatNumeroAvenant } from '../utils/chantierHelpers'
 
-export default function AvenantsSection({ chantierId }) {
-  const {
-    avenants,
-    loading,
-    error,
-    loadAvenants,
-    addAvenant,
-    modifyAvenant,
-    removeAvenant
-  } = useAvenants(chantierId)
-
+export default function AvenantsSection({
+  chantierId,
+  avenants = [],
+  loading = false,
+  error = null,
+  onAdd,
+  onModify,
+  onDelete
+}) {
   const { showToast } = useToast()
 
   const [showFormModal, setShowFormModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedAvenant, setSelectedAvenant] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
-
-  // Load avenants on mount
-  useEffect(() => {
-    loadAvenants()
-  }, [loadAvenants])
 
   /**
    * Handle add avenant click
@@ -69,7 +61,7 @@ export default function AvenantsSection({ chantierId }) {
   const handleFormSubmit = async (montantHT, description) => {
     if (isEditing && selectedAvenant) {
       // Update existing avenant
-      const result = await modifyAvenant(selectedAvenant.id, {
+      const result = await onModify(selectedAvenant.id, {
         montant_ht: montantHT,
         description
       })
@@ -83,7 +75,7 @@ export default function AvenantsSection({ chantierId }) {
       }
     } else {
       // Create new avenant
-      const result = await addAvenant(montantHT, description)
+      const result = await onAdd(montantHT, description)
 
       if (result.success) {
         showToast('Avenant créé avec succès', 'success')
@@ -100,7 +92,7 @@ export default function AvenantsSection({ chantierId }) {
   const handleConfirmDelete = async () => {
     if (!selectedAvenant) return
 
-    const result = await removeAvenant(selectedAvenant.id)
+    const result = await onDelete(selectedAvenant.id)
 
     if (result.success) {
       showToast('Avenant supprimé avec succès', 'success')

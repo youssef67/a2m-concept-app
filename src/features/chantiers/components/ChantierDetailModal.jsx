@@ -29,7 +29,15 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
   const { showToast } = useToast()
 
   // Load avenants for this chantier
-  const { avenants, loadAvenants } = useAvenants(chantier?.id)
+  const {
+    avenants,
+    loading: avenantsLoading,
+    error: avenantsError,
+    loadAvenants,
+    addAvenant,
+    modifyAvenant,
+    removeAvenant
+  } = useAvenants(chantier?.id)
 
   // Sync currentStatut with chantier.statut when it changes
   useEffect(() => {
@@ -281,7 +289,15 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
 
         {/* Avenants Section */}
         <div className="border-t border-gray-200 pt-6">
-          <AvenantsSection chantierId={chantier.id} />
+          <AvenantsSection
+            chantierId={chantier.id}
+            avenants={avenants}
+            loading={avenantsLoading}
+            error={avenantsError}
+            onAdd={addAvenant}
+            onModify={modifyAvenant}
+            onDelete={removeAvenant}
+          />
         </div>
 
         {/* Notes */}
