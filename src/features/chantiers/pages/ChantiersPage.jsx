@@ -49,6 +49,11 @@ export default function ChantiersPage() {
         id: 'devis',
         label: 'Devis',
         count: chantiers.filter(c => c.statut === 'devis').length
+      },
+      {
+        id: 'cloture',
+        label: 'Clôturés',
+        count: chantiers.filter(c => c.statut === 'cloture').length
       }
     ]
   }, [chantiers])
@@ -183,7 +188,12 @@ export default function ChantiersPage() {
             <h3 className="text-lg font-semibold text-gray-700 mb-2">
               {searchQuery
                 ? 'Aucun chantier trouvé'
-                : `Aucun chantier ${activeTab === 'en_cours' ? 'en cours' : activeTab === 'planifie' ? 'planifié' : 'en devis'}`}
+                : `Aucun chantier ${
+                    activeTab === 'en_cours' ? 'en cours' :
+                    activeTab === 'planifie' ? 'planifié' :
+                    activeTab === 'cloture' ? 'clôturé' :
+                    'en devis'
+                  }`}
             </h3>
             <p className="text-gray-600">
               {searchQuery

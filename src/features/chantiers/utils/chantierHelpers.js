@@ -64,14 +64,15 @@ export function formatAdresse(chantier) {
 
 /**
  * Get display label for statut
- * @param {string} statut - Statut value (en_cours, planifie, devis)
+ * @param {string} statut - Statut value (en_cours, planifie, devis, cloture)
  * @returns {string} Display label
  */
 export function getStatutLabel(statut) {
   const labels = {
     en_cours: 'En cours',
     planifie: 'Planifié',
-    devis: 'Devis'
+    devis: 'Devis',
+    cloture: 'Clôturé'
   }
 
   return labels[statut] || statut
@@ -86,7 +87,8 @@ export function getStatutColor(statut) {
   const colors = {
     en_cours: 'bg-blue-100 text-blue-800',
     planifie: 'bg-orange-100 text-orange-800',
-    devis: 'bg-gray-100 text-gray-800'
+    devis: 'bg-gray-100 text-gray-800',
+    cloture: 'bg-green-100 text-green-800'
   }
 
   return colors[statut] || 'bg-gray-100 text-gray-800'

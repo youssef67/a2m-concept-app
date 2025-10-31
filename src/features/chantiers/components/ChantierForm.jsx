@@ -136,6 +136,7 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
             <option value="devis">Devis</option>
             <option value="planifie">Planifié</option>
             <option value="en_cours">En cours</option>
+            <option value="cloture">Clôturé</option>
           </select>
           {errors.statut && <p className="mt-1 text-sm text-red-600">{errors.statut}</p>}
         </div>

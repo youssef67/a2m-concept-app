@@ -119,6 +119,7 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
             <option value="devis">Devis</option>
             <option value="planifie">Planifié</option>
             <option value="en_cours">En cours</option>
+            <option value="cloture">Clôturé</option>
           </select>
         </div>
 
