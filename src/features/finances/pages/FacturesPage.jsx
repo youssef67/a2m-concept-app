@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings, AlertCircle, XCircle } from 'lucide-react'
+import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings, AlertCircle, XCircle, Building2 } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
@@ -22,6 +22,7 @@ import DeleteFactureModal from '../components/DeleteFactureModal'
 import { useFactures } from '../hooks/useFactures'
 import { useContacts } from '../hooks/useContacts'
 import { useDocuments } from '../hooks/useDocuments'
+import { useChantiers } from '../../chantiers/hooks/useChantiers'
 import { useToast } from '../../../shared/hooks/useToast'
 import {
   formatDate,
@@ -31,7 +32,10 @@ import {
   validateFactureData,
   calculateDateEcheance,
   isFactureOverdue,
-  calculateDaysOverdue
+  calculateDaysOverdue,
+  calculateTTC,
+  getMontantAPayer,
+  getMontantLabel
 } from '../utils/factureHelpers'
 import { canFactureBePaid, canFactureBeDeleted } from '../utils/factureValidation'
 
@@ -69,12 +73,20 @@ export default function FacturesPage() {
 
   // Form controlled states for auto-calculation
   const [selectedContactId, setSelectedContactId] = useState('')
+  const [selectedChantierId, setSelectedChantierId] = useState('')
   const [dateEmission, setDateEmission] = useState(new Date().toISOString().split('T')[0])
   const [dateEcheance, setDateEcheance] = useState('')
+
+  // TVA states
+  const [factureType, setFactureType] = useState('client')
+  const [tvaApplicable, setTvaApplicable] = useState(false)
+  const [montantHT, setMontantHT] = useState('')
+  const [montantTTC, setMontantTTC] = useState('')
 
   // Hooks
   const { factures, loading, error, createFacture, updateFacture, deleteFacture, deleteMultipleFactures, refreshFactures } = useFactures()
   const { contacts } = useContacts()
+  const { chantiers } = useChantiers()
   const { documents, loading: docsLoading, uploading, upload, download, remove } = useDocuments(selectedFacture?.id)
   const { showToast } = useToast()
 
@@ -88,6 +100,28 @@ export default function FacturesPage() {
       }
     }
   }, [selectedContactId, dateEmission, contacts, isModalOpen, editingFacture])
+
+  // Reset chantier when contact changes (except during edit initialization)
+  React.useEffect(() => {
+    if (isModalOpen && !editingFacture) {
+      setSelectedChantierId('')
+    }
+  }, [selectedContactId, isModalOpen, editingFacture])
+
+  // Auto-calculate TTC when montantHT or TVA changes (clients only)
+  React.useEffect(() => {
+    if (factureType === 'client' && tvaApplicable && montantHT) {
+      const ht = parseFloat(montantHT)
+      if (!isNaN(ht) && ht > 0) {
+        const ttc = calculateTTC(ht, 20)
+        setMontantTTC(ttc.toFixed(2))
+      } else {
+        setMontantTTC('')
+      }
+    } else {
+      setMontantTTC('')
+    }
+  }, [montantHT, tvaApplicable, factureType])
 
   // Tabs configuration with counts - Niveau 1 : Statut
   const statutTabs = useMemo(() => {
@@ -304,20 +338,54 @@ export default function FacturesPage() {
     e.preventDefault()
     const formData = new FormData(e.target)
 
+    const currentType = formData.get('type')
+
+    // Construire les données selon le type de facture
     const data = {
-      type: formData.get('type'),
+      type: currentType,
       contact_id: formData.get('contact_id'),
-      montant: parseFloat(formData.get('montant')),
+      chantier_id: formData.get('chantier_id') || null,
       date_emission: formData.get('date_emission'),
       date_echeance: formData.get('date_echeance'),
       statut: formData.get('statut') || 'en_attente',
-      notes: formData.get('notes') || null
+      notes: formData.get('notes') || null,
+      // Champs TVA
+      montant_ht: null,
+      montant_ttc: null,
+      tva_applicable: false,
+      taux_tva: 20.00
     }
 
-    // Validation
-    const errors = validateFactureData(data)
-    if (Object.keys(errors).length > 0) {
-      showToast(Object.values(errors)[0], 'error')
+    if (currentType === 'fournisseur') {
+      // Fournisseur: toujours TTC
+      data.montant_ttc = parseFloat(formData.get('montant_ttc'))
+      data.tva_applicable = true
+    } else {
+      // Client: HT avec ou sans TVA
+      data.montant_ht = parseFloat(formData.get('montant_ht'))
+      data.tva_applicable = formData.get('tva_applicable') === 'on'
+
+      if (data.tva_applicable) {
+        data.montant_ttc = parseFloat(formData.get('montant_ttc'))
+      }
+    }
+
+    // Garder l'ancien champ montant pour compatibilité (deprecated)
+    data.montant = data.tva_applicable ? data.montant_ttc : data.montant_ht
+
+    // Validation basique
+    if (!data.type || !data.contact_id) {
+      showToast('Le type et le contact sont obligatoires', 'error')
+      return
+    }
+
+    if ((!data.montant_ht && currentType === 'client') || (!data.montant_ttc && currentType === 'fournisseur')) {
+      showToast('Le montant est obligatoire', 'error')
+      return
+    }
+
+    if (!data.date_emission || !data.date_echeance) {
+      showToast('Les dates sont obligatoires', 'error')
       return
     }
 
@@ -373,8 +441,14 @@ export default function FacturesPage() {
     setEditingFacture(facture)
     // Initialize form states with existing facture data
     setSelectedContactId(facture.contact_id || '')
+    setSelectedChantierId(facture.chantier_id || '')
     setDateEmission(facture.date_emission || new Date().toISOString().split('T')[0])
     setDateEcheance(facture.date_echeance || '')
+    // Initialize TVA states
+    setFactureType(facture.type || 'client')
+    setTvaApplicable(facture.tva_applicable || false)
+    setMontantHT(facture.montant_ht?.toString() || facture.montant?.toString() || '')
+    setMontantTTC(facture.montant_ttc?.toString() || '')
     setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
@@ -386,8 +460,14 @@ export default function FacturesPage() {
     setEditingFacture(null)
     // Reset form states for new facture
     setSelectedContactId('')
+    setSelectedChantierId('')
     setDateEmission(new Date().toISOString().split('T')[0])
     setDateEcheance('')
+    // Reset TVA states
+    setFactureType(activeType)
+    setTvaApplicable(false)
+    setMontantHT('')
+    setMontantTTC('')
     setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
@@ -720,6 +800,12 @@ export default function FacturesPage() {
                             <User className="w-4 h-4" />
                             <span>{getContactDisplayName(facture.contact)}</span>
                           </div>
+                          {facture.chantier && (
+                            <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                              <Building2 className="w-4 h-4" />
+                              <span className="truncate">{facture.chantier.titre}</span>
+                            </div>
+                          )}
                         </div>
 
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
@@ -744,7 +830,13 @@ export default function FacturesPage() {
                     )}
 
                     <div className="text-2xl font-bold text-primary-600">
-                      {formatCurrency(facture.montant)}
+                      {formatCurrency(getMontantAPayer(facture))}
+                    </div>
+                    <div className="text-xs text-gray-500 -mt-1">
+                      Montant {getMontantLabel(facture)}
+                      {facture.type === 'client' && !facture.tva_applicable && (
+                        <span className="ml-1 text-gray-400">(Auto-liquidation)</span>
+                      )}
                     </div>
 
                     {/* Payment Progress - Always shown per Option A */}
@@ -755,7 +847,7 @@ export default function FacturesPage() {
                         </span>
                         {' payé sur '}
                         <span className="font-medium">
-                          {formatCurrency(facture.montant)}
+                          {formatCurrency(getMontantAPayer(facture))}
                         </span>
                         {facture.montant_restant > 0 && (
                           <span className="text-orange-600 ml-2">
@@ -872,13 +964,18 @@ export default function FacturesPage() {
               <select
                 name="type"
                 required
-                defaultValue={editingFacture?.type || activeType}
+                value={factureType}
+                onChange={(e) => setFactureType(e.target.value)}
                 disabled={!!editingFacture}
                 className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100"
               >
                 <option value="client">Client</option>
                 <option value="fournisseur">Fournisseur</option>
               </select>
+              {/* Hidden input to submit type when select is disabled */}
+              {editingFacture && (
+                <input type="hidden" name="type" value={editingFacture.type} />
+              )}
             </div>
 
             {/* Contact */}
@@ -904,27 +1001,140 @@ export default function FacturesPage() {
               </select>
             </div>
 
-            {/* Montant */}
+            {/* Chantier */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Montant de la facture *
+                Chantier *
               </label>
-              <div className="relative">
-                <input
-                  name="montant"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  required
-                  defaultValue={editingFacture?.montant || ''}
-                  placeholder="1000.00"
-                  className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
-                  €
-                </span>
-              </div>
+              <select
+                name="chantier_id"
+                required
+                value={selectedChantierId}
+                onChange={(e) => setSelectedChantierId(e.target.value)}
+                disabled={!selectedContactId}
+                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                <option value="">
+                  {!selectedContactId
+                    ? 'Sélectionner d\'abord un contact'
+                    : (() => {
+                        const currentType = editingFacture?.type || activeType
+                        const filteredChantiers = chantiers.filter(ch => {
+                          // For client factures: filter by client_id
+                          // For fournisseur factures: show all chantiers
+                          const matchesClient = currentType === 'client' ? ch.client_id === selectedContactId : true
+                          return matchesClient && ch.statut === 'en_cours'
+                        })
+                        return filteredChantiers.length === 0
+                          ? (currentType === 'client' ? 'Aucun chantier en cours pour ce client' : 'Aucun chantier en cours')
+                          : 'Sélectionner un chantier...'
+                      })()}
+                </option>
+                {chantiers
+                  .filter(ch => {
+                    const currentType = editingFacture?.type || activeType
+                    const matchesClient = currentType === 'client' ? ch.client_id === selectedContactId : true
+                    return matchesClient && ch.statut === 'en_cours'
+                  })
+                  .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                  .map(chantier => (
+                    <option key={chantier.id} value={chantier.id}>
+                      {chantier.titre}
+                    </option>
+                  ))}
+              </select>
             </div>
+
+            {/* Montant - Logique conditionnelle selon type */}
+            {factureType === 'fournisseur' ? (
+              /* FOURNISSEUR: Montant TTC uniquement */
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Montant TTC *
+                </label>
+                <div className="relative">
+                  <input
+                    name="montant_ttc"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    required
+                    value={montantTTC}
+                    onChange={(e) => setMontantTTC(e.target.value)}
+                    placeholder="1200.00"
+                    className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                    €
+                  </span>
+                </div>
+              </div>
+            ) : (
+              /* CLIENT: Montant HT + checkbox TVA + (optionnel) TTC */
+              <div className="space-y-4">
+                {/* Montant HT */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Montant HT *
+                  </label>
+                  <div className="relative">
+                    <input
+                      name="montant_ht"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      required
+                      value={montantHT}
+                      onChange={(e) => setMontantHT(e.target.value)}
+                      placeholder="1000.00"
+                      className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                      €
+                    </span>
+                  </div>
+                </div>
+
+                {/* Checkbox TVA */}
+                <div className="flex items-center">
+                  <input
+                    id="tva_applicable"
+                    name="tva_applicable"
+                    type="checkbox"
+                    checked={tvaApplicable}
+                    onChange={(e) => setTvaApplicable(e.target.checked)}
+                    className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                  />
+                  <label htmlFor="tva_applicable" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
+                    TVA à 20%
+                  </label>
+                </div>
+
+                {/* Montant TTC (auto-calculé si TVA cochée) */}
+                {tvaApplicable && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Montant TTC (calculé automatiquement)
+                    </label>
+                    <div className="relative">
+                      <input
+                        name="montant_ttc"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={montantTTC}
+                        readOnly
+                        placeholder="1200.00"
+                        className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                        €
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Date émission */}
             <div>

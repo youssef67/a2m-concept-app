@@ -154,6 +154,55 @@ export function calculateDaysOverdue(dateEcheance) {
 }
 
 /**
+ * Calculate TTC from HT
+ * @param {number} montantHT - Montant HT
+ * @param {number} tauxTVA - Taux de TVA (default 20)
+ * @returns {number} Montant TTC
+ */
+export function calculateTTC(montantHT, tauxTVA = 20) {
+  if (!montantHT || montantHT <= 0) return 0
+  return montantHT * (1 + tauxTVA / 100)
+}
+
+/**
+ * Get montant à payer according to facture type and TVA
+ * @param {Object} facture - Facture object
+ * @returns {number} Montant à payer
+ */
+export function getMontantAPayer(facture) {
+  if (!facture) return 0
+
+  // Fournisseur : toujours TTC
+  if (facture.type === 'fournisseur') {
+    return facture.montant_ttc || facture.montant || 0
+  }
+
+  // Client : TTC si TVA applicable, sinon HT
+  if (facture.tva_applicable) {
+    return facture.montant_ttc || facture.montant || 0
+  }
+
+  return facture.montant_ht || facture.montant || 0
+}
+
+/**
+ * Get montant label for display
+ * @param {Object} facture - Facture object
+ * @returns {string} Label to display (HT/TTC)
+ */
+export function getMontantLabel(facture) {
+  if (!facture) return 'Montant'
+
+  // Fournisseur : toujours TTC
+  if (facture.type === 'fournisseur') {
+    return 'TTC'
+  }
+
+  // Client : TTC si TVA, HT si auto-liquidation
+  return facture.tva_applicable ? 'TTC' : 'HT'
+}
+
+/**
  * Validate facture form data
  */
 export function validateFactureData(data) {

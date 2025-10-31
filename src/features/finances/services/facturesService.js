@@ -5,6 +5,7 @@
 
 import { supabase } from '../../../lib/supabaseClient'
 import { sendInvoiceCreatedNotification, sendInvoiceDeletedNotification } from './emailNotificationService'
+import { getMontantAPayer } from '../utils/factureHelpers'
 
 /**
  * Get all factures with contact information and payment totals
@@ -26,6 +27,11 @@ export async function getAllFactures(type = null) {
           last_name,
           phone,
           email
+        ),
+        chantier:chantiers(
+          id,
+          titre,
+          statut
         )
       `)
       .order('date_emission', { ascending: false })
@@ -52,7 +58,8 @@ export async function getAllFactures(type = null) {
     const facturesWithPaiements = factures.map(facture => {
       const facturePaiements = paiements?.filter(p => p.facture_id === facture.id) || []
       const montantPaye = facturePaiements.reduce((sum, p) => sum + parseFloat(p.montant), 0)
-      const montantRestant = parseFloat(facture.montant) - montantPaye
+      const montantAPayer = getMontantAPayer(facture)
+      const montantRestant = montantAPayer - montantPaye
 
       return {
         ...facture,
@@ -88,6 +95,11 @@ export async function getFactureById(factureId) {
           last_name,
           phone,
           email
+        ),
+        chantier:chantiers(
+          id,
+          titre,
+          statut
         )
       `)
       .eq('id', factureId)
@@ -130,10 +142,11 @@ export async function createFacture(factureData) {
     if (error) throw error
 
     // New factures have no payments yet
+    const montantAPayer = getMontantAPayer(data)
     const factureWithPaiements = {
       ...data,
       montant_paye: 0,
-      montant_restant: parseFloat(data.montant)
+      montant_restant: montantAPayer
     }
 
     // Send email notification (non-blocking, async)
@@ -183,7 +196,8 @@ export async function updateFacture(factureId, factureData) {
       .eq('facture_id', factureId)
 
     const montantPaye = paiements?.reduce((sum, p) => sum + parseFloat(p.montant), 0) || 0
-    const montantRestant = parseFloat(data.montant) - montantPaye
+    const montantAPayer = getMontantAPayer(data)
+    const montantRestant = montantAPayer - montantPaye
 
     const factureWithPaiements = {
       ...data,
