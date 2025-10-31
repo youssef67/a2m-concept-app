@@ -8,14 +8,17 @@ import { Pencil, MapPin, Calendar, Euro, User, FileText } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import DocumentsSection from './DocumentsSection'
+import AvenantsSection from './AvenantsSection'
 import DeleteConfirmModal from './DeleteConfirmModal'
 import { useToast } from '../../../shared/hooks/useToast'
+import { useAvenants } from '../hooks/useAvenants'
 import {
   formatDate,
   formatCurrency,
   getStatutLabel,
   getStatutColor,
-  getClientDisplayName
+  getClientDisplayName,
+  calculateTotalAvecAvenants
 } from '../utils/chantierHelpers'
 
 export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit, onUpdateStatut }) {
@@ -25,6 +28,9 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
   const [isUpdating, setIsUpdating] = useState(false)
   const { showToast } = useToast()
 
+  // Load avenants for this chantier
+  const { avenants, loadAvenants } = useAvenants(chantier?.id)
+
   // Sync currentStatut with chantier.statut when it changes
   useEffect(() => {
     if (chantier?.statut) {
@@ -32,7 +38,17 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
     }
   }, [chantier?.statut])
 
+  // Load avenants when modal opens
+  useEffect(() => {
+    if (isOpen && chantier?.id) {
+      loadAvenants()
+    }
+  }, [isOpen, chantier?.id, loadAvenants])
+
   if (!chantier) return null
+
+  // Calculate total montant HT avec avenants
+  const totalMontantHT = calculateTotalAvecAvenants(chantier.montant_ht, avenants)
 
   /**
    * Handle statut selection change
@@ -221,7 +237,7 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {chantier.montant_ht && (
                     <div>
-                      <p className="text-xs text-gray-500">Montant HT</p>
+                      <p className="text-xs text-gray-500">Montant HT initial</p>
                       <p className="text-lg font-semibold text-gray-900">
                         {formatCurrency(chantier.montant_ht)}
                       </p>
@@ -236,6 +252,21 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
                     </div>
                   )}
                 </div>
+
+                {/* Montant total avec avenants */}
+                {avenants.length > 0 && chantier.montant_ht && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-700">
+                        Montant HT total (avec avenants)
+                      </p>
+                      <p className="text-xl font-bold text-blue-600">
+                        {formatCurrency(totalMontantHT)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {chantier.finalisation_95 && (
                   <div className="mt-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800">
@@ -247,6 +278,11 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
             </div>
           </div>
         )}
+
+        {/* Avenants Section */}
+        <div className="border-t border-gray-200 pt-6">
+          <AvenantsSection chantierId={chantier.id} />
+        </div>
 
         {/* Notes */}
         {chantier.notes && (

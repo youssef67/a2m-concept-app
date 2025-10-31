@@ -421,3 +421,48 @@ export function isEcheancePassee(dateEcheance) {
     return false
   }
 }
+
+/**
+ * Format numero avenant
+ * @param {number} numero - Numero de l'avenant
+ * @returns {string} Formatted numero (Avenant N°X)
+ */
+export function formatNumeroAvenant(numero) {
+  if (!numero) return 'Avenant'
+  return `Avenant N°${numero}`
+}
+
+/**
+ * Calculate total montant HT avec avenants
+ * @param {number} montantHT - Montant HT initial du chantier
+ * @param {Array} avenants - Array of avenants
+ * @returns {number} Total montant HT (initial + sum of avenants)
+ */
+export function calculateTotalAvecAvenants(montantHT, avenants) {
+  const initialMontant = parseFloat(montantHT) || 0
+
+  if (!avenants || !Array.isArray(avenants) || avenants.length === 0) {
+    return initialMontant
+  }
+
+  const totalAvenants = avenants.reduce((sum, avenant) => {
+    return sum + (parseFloat(avenant.montant_ht) || 0)
+  }, 0)
+
+  return initialMontant + totalAvenants
+}
+
+/**
+ * Calculate sum of all avenants montant HT
+ * @param {Array} avenants - Array of avenants
+ * @returns {number} Sum of all avenants montant_ht
+ */
+export function calculateSumAvenants(avenants) {
+  if (!avenants || !Array.isArray(avenants) || avenants.length === 0) {
+    return 0
+  }
+
+  return avenants.reduce((sum, avenant) => {
+    return sum + (parseFloat(avenant.montant_ht) || 0)
+  }, 0)
+}
