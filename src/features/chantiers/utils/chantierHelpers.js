@@ -360,3 +360,64 @@ export function calculateTotalRetenuesGarantie(chantierId, factures) {
     return sum + (montantHT * 0.05)
   }, 0)
 }
+
+/**
+ * Calculate échéance finalisation 95%
+ * @param {string} dateFinReelle - Date fin réelle du chantier (YYYY-MM-DD)
+ * @returns {Date|null} Date d'échéance (+ 2 mois)
+ */
+export function calculateEcheanceFinalisation95(dateFinReelle) {
+  if (!dateFinReelle) return null
+
+  try {
+    const date = new Date(dateFinReelle)
+    if (isNaN(date.getTime())) return null
+
+    // Ajouter 2 mois
+    date.setMonth(date.getMonth() + 2)
+    return date
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Calculate échéance retenues de garantie
+ * @param {string} dateFinReelle - Date fin réelle du chantier (YYYY-MM-DD)
+ * @returns {Date|null} Date d'échéance (+ 1 an)
+ */
+export function calculateEcheanceRetenues(dateFinReelle) {
+  if (!dateFinReelle) return null
+
+  try {
+    const date = new Date(dateFinReelle)
+    if (isNaN(date.getTime())) return null
+
+    // Ajouter 1 an (12 mois)
+    date.setFullYear(date.getFullYear() + 1)
+    return date
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Check if date échéance is passed (dépassée)
+ * @param {Date} dateEcheance - Date échéance
+ * @returns {boolean} True si échéance dépassée
+ */
+export function isEcheancePassee(dateEcheance) {
+  if (!dateEcheance) return false
+
+  try {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const echeance = new Date(dateEcheance)
+    echeance.setHours(0, 0, 0, 0)
+
+    return echeance < today
+  } catch {
+    return false
+  }
+}

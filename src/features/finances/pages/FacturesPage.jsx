@@ -45,7 +45,11 @@ import {
   calculateFinalisation95,
   chantierHasRetenueGarantie,
   calculateTotalRetenuesGarantie,
-  formatCurrency as formatChantierCurrency
+  formatCurrency as formatChantierCurrency,
+  formatDate as formatChantierDate,
+  calculateEcheanceFinalisation95,
+  calculateEcheanceRetenues,
+  isEcheancePassee
 } from '../../chantiers/utils/chantierHelpers'
 import { canFactureBePaid, canFactureBeDeleted } from '../utils/factureValidation'
 
@@ -1124,26 +1128,52 @@ export default function FacturesPage() {
                   </div>
 
                   {/* Montants à finaliser */}
-                  <div className="border-t border-gray-200 pt-3 space-y-2">
+                  <div className="border-t border-gray-200 pt-3 space-y-3">
+                    {/* Finalisation 95% */}
                     {chantier.finalisation_95 && (
-                      <div className="flex items-center justify-between">
-                        <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                          Finalisation 95%
-                        </span>
-                        <span className="text-lg font-semibold text-blue-900">
-                          {formatChantierCurrency(calculateFinalisation95(chantier.montant_ht))}
-                        </span>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                            Finalisation 95%
+                          </span>
+                          <span className="text-lg font-semibold text-blue-900">
+                            {formatChantierCurrency(calculateFinalisation95(chantier.montant_ht))}
+                          </span>
+                        </div>
+                        {/* Date échéance finalisation */}
+                        {chantier.date_fin_reelle && (
+                          <div className="flex items-center gap-2 text-sm pl-3">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-600">
+                              Échéance : {formatChantierDate(calculateEcheanceFinalisation95(chantier.date_fin_reelle))}
+                              {isEcheancePassee(calculateEcheanceFinalisation95(chantier.date_fin_reelle)) && " (dépassée)"}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
 
+                    {/* Retenues de garantie */}
                     {chantierHasRetenueGarantie(chantier.id, factures) && (
-                      <div className="flex items-center justify-between">
-                        <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-medium">
-                          Retenues de garantie
-                        </span>
-                        <span className="text-lg font-semibold text-orange-900">
-                          {formatChantierCurrency(calculateTotalRetenuesGarantie(chantier.id, factures))}
-                        </span>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-medium">
+                            Retenues de garantie
+                          </span>
+                          <span className="text-lg font-semibold text-orange-900">
+                            {formatChantierCurrency(calculateTotalRetenuesGarantie(chantier.id, factures))}
+                          </span>
+                        </div>
+                        {/* Date échéance retenues */}
+                        {chantier.date_fin_reelle && (
+                          <div className="flex items-center gap-2 text-sm pl-3">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-600">
+                              Échéance : {formatChantierDate(calculateEcheanceRetenues(chantier.date_fin_reelle))}
+                              {isEcheancePassee(calculateEcheanceRetenues(chantier.date_fin_reelle)) && " (dépassée)"}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
 
