@@ -37,6 +37,7 @@ export default function ContactModal({
           phone: contact.phone || '',
           email: contact.email || '',
           notes: contact.notes || '',
+          delai_paiement: contact.delai_paiement || 'immediat',
           address: contact.address ? {
             address_line1: contact.address.address_line1 || '',
             address_line2: contact.address.address_line2 || '',
@@ -66,6 +67,7 @@ export default function ContactModal({
           phone: '',
           email: '',
           notes: '',
+          delai_paiement: 'immediat',
           address: {
             address_line1: '',
             address_line2: '',

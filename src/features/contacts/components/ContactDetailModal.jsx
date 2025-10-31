@@ -1,5 +1,5 @@
 import React from 'react'
-import { Building2, User, Phone, Mail, MapPin, Users, Edit2 } from 'lucide-react'
+import { Building2, User, Phone, Mail, MapPin, Users, Edit2, Clock } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import {
@@ -9,7 +9,8 @@ import {
   getContactTypeLabel,
   formatPhoneNumber,
   formatAddress,
-  getPersonFullName
+  getPersonFullName,
+  getPaymentTermLabel
 } from '../utils/contactHelpers'
 
 /**
@@ -115,6 +116,22 @@ export default function ContactDetailModal({
               <p className="text-base text-gray-700">
                 {formatAddress(contact.address)}
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Délai de paiement */}
+        {contact.delai_paiement && (
+          <div className="space-y-4 pt-4 border-t border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Conditions de paiement</h3>
+            <div className="flex items-center gap-3">
+              <Clock className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              <div>
+                <p className="text-sm text-gray-500">Délai de paiement</p>
+                <p className="text-base font-medium text-gray-900">
+                  {getPaymentTermLabel(contact.delai_paiement)}
+                </p>
+              </div>
             </div>
           </div>
         )}

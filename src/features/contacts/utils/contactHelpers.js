@@ -95,6 +95,21 @@ export function getContactEntityTypeBadgeColor(contactType) {
   return colors[contactType] || 'bg-gray-100 text-gray-800'
 }
 
+/**
+ * Get label for payment term
+ * @param {string} delaiPaiement - 'immediat', '30_jours', '45_jours', or '60_jours'
+ * @returns {string} Label
+ */
+export function getPaymentTermLabel(delaiPaiement) {
+  const labels = {
+    immediat: 'Immédiat',
+    '30_jours': '30 jours',
+    '45_jours': '45 jours',
+    '60_jours': '60 jours'
+  }
+  return labels[delaiPaiement] || 'Non spécifié'
+}
+
 // ============================================
 // Phone number helpers
 // ============================================
@@ -230,7 +245,8 @@ export function prepareContactData(formData) {
     contact_type: formData.contact_type,
     phone: normalizePhoneNumber(formData.phone),
     email: formData.email || null,
-    notes: formData.notes || null
+    notes: formData.notes || null,
+    delai_paiement: formData.delai_paiement || 'immediat'
   }
 
   if (formData.contact_type === 'professionnel') {

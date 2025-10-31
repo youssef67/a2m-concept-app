@@ -38,6 +38,7 @@ export default function FacturesPage() {
   const [isPaiementModalOpen, setIsPaiementModalOpen] = useState(false)
   const [selectedPaiementFacture, setSelectedPaiementFacture] = useState(null)
   const [openMenuId, setOpenMenuId] = useState(null)
+  const [formKey, setFormKey] = useState(0)
   const fileInputRef = useRef(null)
 
   // Hooks
@@ -131,6 +132,7 @@ export default function FacturesPage() {
    */
   const handleEdit = (facture) => {
     setEditingFacture(facture)
+    setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
 
@@ -139,6 +141,7 @@ export default function FacturesPage() {
    */
   const handleCreate = () => {
     setEditingFacture(null)
+    setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
 
@@ -442,7 +445,7 @@ export default function FacturesPage() {
           title={editingFacture ? 'Modifier la facture' : 'Nouvelle facture'}
           size="lg"
         >
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form key={formKey} onSubmit={handleSubmit} className="space-y-4">
             {/* Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -483,25 +486,40 @@ export default function FacturesPage() {
             </div>
 
             {/* Montant */}
-            <Input
-              label="Montant (EUR) *"
-              name="montant"
-              type="number"
-              step="0.01"
-              min="0.01"
-              required
-              defaultValue={editingFacture?.montant || ''}
-              placeholder="1000.00"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Montant de la facture *
+              </label>
+              <div className="relative">
+                <input
+                  name="montant"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  defaultValue={editingFacture?.montant || ''}
+                  placeholder="1000.00"
+                  className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                  €
+                </span>
+              </div>
+            </div>
 
             {/* Date émission */}
-            <Input
-              label="Date d'émission *"
-              name="date_emission"
-              type="date"
-              required
-              defaultValue={editingFacture?.date_emission || ''}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date d&apos;émission de la facture *
+              </label>
+              <input
+                name="date_emission"
+                type="date"
+                required
+                defaultValue={editingFacture?.date_emission || new Date().toISOString().split('T')[0]}
+                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+            </div>
 
             {/* Date échéance */}
             <Input
