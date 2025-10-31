@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Clock, CheckCircle, AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react'
+import { Clock, CheckCircle, AlertTriangle, Calendar, CheckCircle2, TrendingUp, User as UserIcon } from 'lucide-react'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { useFactures } from '../../finances/hooks/useFactures'
 import { useChantiers } from '../../chantiers/hooks/useChantiers'
@@ -139,9 +139,20 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Statistics Cards */}
+        {/* Section: Vue d'ensemble financière */}
         {!loading && !error && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                <TrendingUp className="w-5 h-5 text-blue-600" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-800">
+                Vue d&apos;ensemble financière
+              </h2>
+            </div>
+
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Card 1 - Clients À Recevoir */}
             <Card>
               <div className="flex items-center gap-4">
@@ -213,12 +224,13 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </Card>
+            </div>
           </div>
         )}
 
-        {/* Section Chantiers en retard */}
-        <Card>
-          <div className="flex items-center gap-3 mb-4">
+        {/* Section: Chantiers en retard */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
             <div className="p-2 bg-red-100 rounded-lg flex-shrink-0">
               <AlertTriangle className="w-5 h-5 text-red-600" />
             </div>
@@ -226,6 +238,8 @@ export default function AdminDashboard() {
               Chantiers en retard
             </h2>
           </div>
+
+          <Card>
 
           {/* Loading State */}
           {chantiersLoading && (
@@ -301,19 +315,28 @@ export default function AdminDashboard() {
               ))}
             </div>
           )}
-        </Card>
+          </Card>
+        </div>
 
-        {/* Profile Information Card */}
-        <Card>
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Informations
-          </h2>
-          <div className="space-y-2 text-sm">
-            <p><span className="font-medium">Email :</span> {profile?.email}</p>
-            <p><span className="font-medium">Rôle :</span> <span className="capitalize">{profile?.role}</span></p>
-            <p><span className="font-medium">Créé le :</span> {new Date(profile?.created_at).toLocaleDateString('fr-FR')}</p>
+        {/* Section: Informations du profil */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gray-100 rounded-lg flex-shrink-0">
+              <UserIcon className="w-5 h-5 text-gray-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-800">
+              Informations du profil
+            </h2>
           </div>
-        </Card>
+
+          <Card>
+            <div className="space-y-2 text-sm">
+              <p><span className="font-medium">Email :</span> {profile?.email}</p>
+              <p><span className="font-medium">Rôle :</span> <span className="capitalize">{profile?.role}</span></p>
+              <p><span className="font-medium">Créé le :</span> {new Date(profile?.created_at).toLocaleDateString('fr-FR')}</p>
+            </div>
+          </Card>
+        </div>
       </div>
     </AppLayout>
   )
