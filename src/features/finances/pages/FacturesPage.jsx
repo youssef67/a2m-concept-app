@@ -11,7 +11,6 @@ import Tabs from '../../../shared/components/ui/Tabs'
 import Spinner from '../../../shared/components/ui/Spinner'
 import Alert from '../../../shared/components/ui/Alert'
 import Modal from '../../../shared/components/ui/Modal'
-import Input from '../../../shared/components/ui/Input'
 import PaiementModal from '../components/PaiementModal'
 import { useFactures } from '../hooks/useFactures'
 import { useContacts } from '../hooks/useContacts'
@@ -24,7 +23,8 @@ import {
   getStatutColor,
   getContactDisplayName,
   searchFactures,
-  validateFactureData
+  validateFactureData,
+  calculateDateEcheance
 } from '../utils/factureHelpers'
 
 export default function FacturesPage() {
@@ -41,11 +41,27 @@ export default function FacturesPage() {
   const [formKey, setFormKey] = useState(0)
   const fileInputRef = useRef(null)
 
+  // Form controlled states for auto-calculation
+  const [selectedContactId, setSelectedContactId] = useState('')
+  const [dateEmission, setDateEmission] = useState(new Date().toISOString().split('T')[0])
+  const [dateEcheance, setDateEcheance] = useState('')
+
   // Hooks
   const { factures, loading, error, createFacture, updateFacture, deleteFacture, refreshFactures } = useFactures()
   const { contacts } = useContacts()
   const { documents, loading: docsLoading, uploading, upload, download, remove } = useDocuments(selectedFacture?.id)
   const { showToast } = useToast()
+
+  // Auto-calculate date échéance when contact or date émission changes
+  React.useEffect(() => {
+    if (selectedContactId && dateEmission && isModalOpen && !editingFacture) {
+      const contact = contacts.find(c => c.id === selectedContactId)
+      if (contact?.delai_paiement) {
+        const calculatedDate = calculateDateEcheance(dateEmission, contact.delai_paiement)
+        setDateEcheance(calculatedDate)
+      }
+    }
+  }, [selectedContactId, dateEmission, contacts, isModalOpen, editingFacture])
 
   // Tabs configuration with counts
   const tabs = useMemo(() => {
@@ -132,6 +148,10 @@ export default function FacturesPage() {
    */
   const handleEdit = (facture) => {
     setEditingFacture(facture)
+    // Initialize form states with existing facture data
+    setSelectedContactId(facture.contact_id || '')
+    setDateEmission(facture.date_emission || new Date().toISOString().split('T')[0])
+    setDateEcheance(facture.date_echeance || '')
     setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
@@ -141,6 +161,10 @@ export default function FacturesPage() {
    */
   const handleCreate = () => {
     setEditingFacture(null)
+    // Reset form states for new facture
+    setSelectedContactId('')
+    setDateEmission(new Date().toISOString().split('T')[0])
+    setDateEcheance('')
     setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
@@ -471,7 +495,8 @@ export default function FacturesPage() {
               <select
                 name="contact_id"
                 required
-                defaultValue={editingFacture?.contact_id || ''}
+                value={selectedContactId}
+                onChange={(e) => setSelectedContactId(e.target.value)}
                 className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 <option value="">Sélectionner...</option>
@@ -516,19 +541,26 @@ export default function FacturesPage() {
                 name="date_emission"
                 type="date"
                 required
-                defaultValue={editingFacture?.date_emission || new Date().toISOString().split('T')[0]}
+                value={dateEmission}
+                onChange={(e) => setDateEmission(e.target.value)}
                 className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
 
             {/* Date échéance */}
-            <Input
-              label="Date d'échéance *"
-              name="date_echeance"
-              type="date"
-              required
-              defaultValue={editingFacture?.date_echeance || ''}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date d&apos;échéance de la facture *
+              </label>
+              <input
+                name="date_echeance"
+                type="date"
+                required
+                value={dateEcheance}
+                onChange={(e) => setDateEcheance(e.target.value)}
+                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+            </div>
 
             {/* Statut */}
             <div>

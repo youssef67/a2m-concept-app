@@ -91,6 +91,29 @@ export function searchFactures(factures, query) {
 }
 
 /**
+ * Calculate date échéance based on date émission and délai de paiement
+ * @param {string} dateEmission - Date ISO format (YYYY-MM-DD)
+ * @param {string} delaiPaiement - 'immediat', '30_jours', '45_jours', or '60_jours'
+ * @returns {string} Date échéance in ISO format (YYYY-MM-DD)
+ */
+export function calculateDateEcheance(dateEmission, delaiPaiement) {
+  if (!dateEmission || !delaiPaiement) return ''
+
+  const daysMap = {
+    'immediat': 0,
+    '30_jours': 30,
+    '45_jours': 45,
+    '60_jours': 60
+  }
+
+  const daysToAdd = daysMap[delaiPaiement] || 0
+  const date = new Date(dateEmission)
+  date.setDate(date.getDate() + daysToAdd)
+
+  return date.toISOString().split('T')[0]
+}
+
+/**
  * Validate facture form data
  */
 export function validateFactureData(data) {

@@ -16,7 +16,7 @@ export function useContacts(type = null) {
 
       let query = supabase
         .from('contacts')
-        .select('id, type, contact_type, company_name, first_name, last_name')
+        .select('id, type, contact_type, company_name, first_name, last_name, delai_paiement')
         .order('created_at', { ascending: false })
 
       if (type) {
