@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, Link, useNavigate } from 'react-router-dom'
 import { Users, Construction, Euro, LogOut } from 'lucide-react'
 import { useAuth } from '../../../features/auth/hooks/useAuth'
 import Logo from '../ui/Logo'
@@ -48,10 +48,10 @@ export default function Sidebar() {
     <aside className="hidden md:flex md:flex-col fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-gray-200 z-40">
       {/* Logo section */}
       <div className="px-4 py-6 border-b border-gray-200">
-        <div className="flex items-center gap-3">
+        <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer">
           <Logo size="sm" />
           <h1 className="text-lg font-bold text-gray-800">A2M Concepts</h1>
-        </div>
+        </Link>
       </div>
 
       {/* Navigation section */}
