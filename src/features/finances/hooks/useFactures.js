@@ -8,7 +8,8 @@ import {
   getAllFactures,
   createFacture as createFactureService,
   updateFacture as updateFactureService,
-  deleteFacture as deleteFactureService
+  deleteFacture as deleteFactureService,
+  deleteMultipleFactures as deleteMultipleFacturesService
 } from '../services/facturesService'
 
 export function useFactures() {
@@ -80,6 +81,21 @@ export function useFactures() {
   }
 
   /**
+   * Delete multiple factures
+   */
+  const deleteMultipleFactures = async (facturesData) => {
+    const result = await deleteMultipleFacturesService(facturesData)
+
+    if (result.deleted.length > 0) {
+      // Remove successfully deleted factures from local state
+      const deletedIds = result.deleted.map(d => d.factureId)
+      setFactures(prev => prev.filter(f => !deletedIds.includes(f.id)))
+    }
+
+    return result
+  }
+
+  /**
    * Refresh factures
    */
   const refreshFactures = () => {
@@ -98,6 +114,7 @@ export function useFactures() {
     createFacture,
     updateFacture,
     deleteFacture,
+    deleteMultipleFactures,
     refreshFactures
   }
 }

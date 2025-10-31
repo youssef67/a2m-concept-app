@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo, useRef } from 'react'
-import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard } from 'lucide-react'
+import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
@@ -12,6 +12,9 @@ import Spinner from '../../../shared/components/ui/Spinner'
 import Alert from '../../../shared/components/ui/Alert'
 import Modal from '../../../shared/components/ui/Modal'
 import PaiementModal from '../components/PaiementModal'
+import BulkActionsToolbar from '../components/BulkActionsToolbar'
+import MultiPaiementModal from '../components/MultiPaiementModal'
+import DeleteMultipleModal from '../components/DeleteMultipleModal'
 import { useFactures } from '../hooks/useFactures'
 import { useContacts } from '../hooks/useContacts'
 import { useDocuments } from '../hooks/useDocuments'
@@ -26,6 +29,7 @@ import {
   validateFactureData,
   calculateDateEcheance
 } from '../utils/factureHelpers'
+import { canFactureBePaid, canFactureBeDeleted } from '../utils/factureValidation'
 
 export default function FacturesPage() {
   // State
@@ -41,13 +45,20 @@ export default function FacturesPage() {
   const [formKey, setFormKey] = useState(0)
   const fileInputRef = useRef(null)
 
+  // Bulk actions states
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedFactureIds, setSelectedFactureIds] = useState(new Set())
+  const [isMultiPaiementModalOpen, setIsMultiPaiementModalOpen] = useState(false)
+  const [isDeleteMultipleModalOpen, setIsDeleteMultipleModalOpen] = useState(false)
+  const [showBulkMenu, setShowBulkMenu] = useState(false)
+
   // Form controlled states for auto-calculation
   const [selectedContactId, setSelectedContactId] = useState('')
   const [dateEmission, setDateEmission] = useState(new Date().toISOString().split('T')[0])
   const [dateEcheance, setDateEcheance] = useState('')
 
   // Hooks
-  const { factures, loading, error, createFacture, updateFacture, deleteFacture, refreshFactures } = useFactures()
+  const { factures, loading, error, createFacture, updateFacture, deleteFacture, deleteMultipleFactures, refreshFactures } = useFactures()
   const { contacts } = useContacts()
   const { documents, loading: docsLoading, uploading, upload, download, remove } = useDocuments(selectedFacture?.id)
   const { showToast } = useToast()
@@ -84,6 +95,89 @@ export default function FacturesPage() {
     const typeFiltered = factures.filter(facture => facture.type === activeTab)
     return searchFactures(typeFiltered, searchQuery)
   }, [factures, activeTab, searchQuery])
+
+  // Get selected factures objects
+  const selectedFactures = useMemo(() => {
+    return filteredFactures.filter(f => selectedFactureIds.has(f.id))
+  }, [filteredFactures, selectedFactureIds])
+
+  // Check if selection has payable/deletable factures
+  const hasPayableSelection = useMemo(() => {
+    return selectedFactures.some(canFactureBePaid)
+  }, [selectedFactures])
+
+  const hasDeletableSelection = useMemo(() => {
+    return selectedFactures.some(canFactureBeDeleted)
+  }, [selectedFactures])
+
+  /**
+   * Bulk actions handlers
+   */
+  const toggleSelectionMode = (mode) => {
+    if (mode === 'pay' || mode === 'delete') {
+      setSelectionMode(true)
+    } else {
+      setSelectionMode(false)
+      clearSelection()
+    }
+  }
+
+  const toggleFactureSelection = (factureId) => {
+    setSelectedFactureIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(factureId)) {
+        newSet.delete(factureId)
+      } else {
+        newSet.add(factureId)
+      }
+      return newSet
+    })
+  }
+
+  const selectAllFactures = () => {
+    const allIds = new Set(filteredFactures.map(f => f.id))
+    setSelectedFactureIds(allIds)
+  }
+
+  const clearSelection = () => {
+    setSelectedFactureIds(new Set())
+    setSelectionMode(false)
+  }
+
+  const handleBulkPay = () => {
+    if (selectedFactures.length < 2) {
+      showToast('Veuillez sélectionner au moins 2 factures pour effectuer un paiement multiple', 'error')
+      return
+    }
+    setIsMultiPaiementModalOpen(true)
+  }
+
+  const handleBulkDelete = () => {
+    if (selectedFactures.length === 0) {
+      showToast('Veuillez sélectionner au moins 1 facture à supprimer', 'error')
+      return
+    }
+
+    // Check if all selected factures can be deleted
+    const nonDeletableFactures = selectedFactures.filter(f => !canFactureBeDeleted(f))
+
+    if (nonDeletableFactures.length > 0) {
+      const nonDeletableStatuts = nonDeletableFactures.map(f => {
+        if (f.statut === 'payee') return 'payée'
+        if (f.statut === 'partiellement_payee') return 'partiellement payée'
+        return f.statut
+      })
+
+      const message = nonDeletableFactures.length === 1
+        ? `La facture ${nonDeletableFactures[0].numero_facture} est ${nonDeletableStatuts[0]} et ne peut pas être supprimée. Seules les factures en attente ou annulées peuvent être supprimées.`
+        : `${nonDeletableFactures.length} facture(s) sélectionnée(s) ne peuvent pas être supprimées (statut: payée ou partiellement payée). Seules les factures en attente ou annulées peuvent être supprimées.`
+
+      showToast(message, 'error')
+      return
+    }
+
+    setIsDeleteMultipleModalOpen(true)
+  }
 
   /**
    * Handle create/edit facture
@@ -193,6 +287,24 @@ export default function FacturesPage() {
   }
 
   /**
+   * Handle multi-payment success
+   */
+  const handleMultiPaiementSuccess = (result) => {
+    showToast(result.message, result.hasErrors ? 'warning' : 'success')
+    refreshFactures()
+    clearSelection()
+  }
+
+  /**
+   * Handle multi-delete success
+   */
+  const handleMultiDeleteSuccess = (result) => {
+    showToast(result.message, result.hasErrors ? 'warning' : 'success')
+    refreshFactures()
+    clearSelection()
+  }
+
+  /**
    * Handle file upload
    */
   const handleFileUpload = async (e) => {
@@ -269,13 +381,62 @@ export default function FacturesPage() {
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Finances</h1>
           </div>
 
-          <Button
-            onClick={handleCreate}
-            className="w-full sm:w-auto"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="ml-2">Nouvelle facture</span>
-          </Button>
+          <div className="flex gap-3 w-full sm:w-auto">
+            <Button
+              onClick={handleCreate}
+              className="flex-1 sm:flex-none"
+            >
+              <Plus className="w-5 h-5" />
+              <span className="ml-2">Nouvelle facture</span>
+            </Button>
+
+            {/* Bulk Actions Menu */}
+            <div className="relative flex-1 sm:flex-none">
+              <Button
+                variant="outline"
+                onClick={() => setShowBulkMenu(!showBulkMenu)}
+                className="w-full"
+              >
+                <Settings className="w-5 h-5" />
+                <span className="ml-2">Actions multiples</span>
+                <ChevronDown className="w-4 h-4 ml-1" />
+              </Button>
+
+              {showBulkMenu && (
+                <>
+                  {/* Backdrop to close menu */}
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowBulkMenu(false)}
+                  />
+
+                  {/* Dropdown menu */}
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
+                    <button
+                      onClick={() => {
+                        toggleSelectionMode('pay')
+                        setShowBulkMenu(false)
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                    >
+                      <CreditCard className="w-5 h-5 text-primary-600" />
+                      <span className="text-gray-700 font-medium">Payer plusieurs</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        toggleSelectionMode('delete')
+                        setShowBulkMenu(false)
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                    >
+                      <Trash2 className="w-5 h-5 text-red-600" />
+                      <span className="text-gray-700 font-medium">Supprimer plusieurs</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -292,6 +453,20 @@ export default function FacturesPage() {
             className="w-full h-12 pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
           />
         </div>
+
+        {/* Bulk Actions Toolbar */}
+        {selectionMode && (
+          <BulkActionsToolbar
+            selectedCount={selectedFactureIds.size}
+            totalCount={filteredFactures.length}
+            onSelectAll={selectAllFactures}
+            onCancel={clearSelection}
+            onPay={handleBulkPay}
+            onDelete={handleBulkDelete}
+            hasPayableSelection={hasPayableSelection}
+            hasDeletableSelection={hasDeletableSelection}
+          />
+        )}
 
         {/* Error State */}
         {error && (
@@ -332,23 +507,38 @@ export default function FacturesPage() {
                 key={facture.id}
                 className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
               >
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  {/* Left: Main info */}
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {facture.numero_facture}
-                        </h3>
-                        <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-                          <User className="w-4 h-4" />
-                          <span>{getContactDisplayName(facture.contact)}</span>
-                        </div>
-                      </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatutColor(facture.statut)}`}>
-                        {getStatutLabel(facture.statut)}
-                      </span>
+                <div className="flex gap-3">
+                  {/* Checkbox in selection mode */}
+                  {selectionMode && (
+                    <div className="flex items-start pt-1">
+                      <input
+                        type="checkbox"
+                        checked={selectedFactureIds.has(facture.id)}
+                        onChange={() => toggleFactureSelection(facture.id)}
+                        className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                      />
                     </div>
+                  )}
+
+                  {/* Facture content */}
+                  <div className="flex-1">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      {/* Left: Main info */}
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {facture.numero_facture}
+                            </h3>
+                            <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                              <User className="w-4 h-4" />
+                              <span>{getContactDisplayName(facture.contact)}</span>
+                            </div>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatutColor(facture.statut)}`}>
+                            {getStatutLabel(facture.statut)}
+                          </span>
+                        </div>
 
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                       <div className="flex items-center gap-1">
@@ -452,6 +642,8 @@ export default function FacturesPage() {
                         </>
                       )}
                     </div>
+                  </div>
+                </div>
                   </div>
                 </div>
               </div>
@@ -728,6 +920,26 @@ export default function FacturesPage() {
           }}
           facture={selectedPaiementFacture}
           onPaiementChange={handlePaiementChange}
+        />
+
+        {/* Modal Multi-Paiement */}
+        <MultiPaiementModal
+          isOpen={isMultiPaiementModalOpen}
+          onClose={() => {
+            setIsMultiPaiementModalOpen(false)
+          }}
+          factures={selectedFactures.filter(canFactureBePaid)}
+          onSuccess={handleMultiPaiementSuccess}
+        />
+
+        {/* Modal Delete Multiple */}
+        <DeleteMultipleModal
+          isOpen={isDeleteMultipleModalOpen}
+          onClose={() => {
+            setIsDeleteMultipleModalOpen(false)
+          }}
+          factures={selectedFactures}
+          onSuccess={handleMultiDeleteSuccess}
         />
       </div>
     </AppLayout>

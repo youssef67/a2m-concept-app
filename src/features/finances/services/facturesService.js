@@ -213,3 +213,59 @@ export async function deleteFacture(factureId) {
     return { data: null, error, success: false }
   }
 }
+
+/**
+ * Delete multiple factures in batch
+ * @param {Array<{id: string, numero_facture: string}>} facturesData - Array of facture objects with id and numero
+ * @returns {Promise<{success: boolean, deleted: Array, errors: Array}>}
+ */
+export async function deleteMultipleFactures(facturesData) {
+  try {
+    // Delete all factures with Promise.allSettled
+    // This ensures all deletions are attempted even if some fail
+    const promises = facturesData.map(async (facture) => {
+      const { error } = await supabase
+        .from('factures')
+        .delete()
+        .eq('id', facture.id)
+
+      if (error) throw error
+
+      return {
+        factureId: facture.id,
+        factureNumero: facture.numero_facture
+      }
+    })
+
+    const results = await Promise.allSettled(promises)
+
+    // Separate successful from failed deletions
+    const deleted = []
+    const errors = []
+
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        deleted.push(result.value)
+      } else {
+        errors.push({
+          factureId: facturesData[index].id,
+          factureNumero: facturesData[index].numero_facture,
+          error: result.reason.message || 'Erreur inconnue'
+        })
+      }
+    })
+
+    return {
+      success: errors.length === 0,
+      deleted,
+      errors
+    }
+  } catch (error) {
+    console.error('Error in deleteMultipleFactures:', error)
+    return {
+      success: false,
+      deleted: [],
+      errors: [{ error: error.message }]
+    }
+  }
+}
