@@ -203,16 +203,38 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
           </div>
         )}
 
-        {/* Budget */}
-        {chantier.budget_estime && (
+        {/* Montants */}
+        {(chantier.montant_ht || chantier.montant_ttc) && (
           <div className="border-t border-gray-200 pt-6">
             <div className="flex items-start gap-3">
               <Euro className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">Budget</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {formatCurrency(chantier.budget_estime)}
-                </p>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-500 mb-2">Montants</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {chantier.montant_ht && (
+                    <div>
+                      <p className="text-xs text-gray-500">Montant HT</p>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {formatCurrency(chantier.montant_ht)}
+                      </p>
+                    </div>
+                  )}
+                  {chantier.montant_ttc && (
+                    <div>
+                      <p className="text-xs text-gray-500">Montant TTC</p>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {formatCurrency(chantier.montant_ttc)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {chantier.finalisation_95 && (
+                  <div className="mt-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      ℹ️ Ce chantier a une finalisation à 95%
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
