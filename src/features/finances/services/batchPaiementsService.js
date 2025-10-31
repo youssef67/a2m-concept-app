@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../../../lib/supabaseClient'
+import { sendPaymentNotification } from './emailNotificationService'
 
 /**
  * Create multiple paiements in batch
@@ -43,6 +44,43 @@ export async function createMultiplePaiements(paiementsData) {
     results.forEach((result, index) => {
       if (result.status === 'fulfilled') {
         created.push(result.value)
+
+        // Send email notification for each successful payment (non-blocking)
+        const paiementInfo = paiementsData[index]
+        supabase
+          .from('factures')
+          .select(`
+            *,
+            contact:contacts(
+              company_name,
+              first_name,
+              last_name
+            )
+          `)
+          .eq('id', paiementInfo.factureId)
+          .single()
+          .then(({ data: facture }) => {
+            if (facture) {
+              // Determine if full or partial payment
+              const isFullPayment = paiementInfo.montantRestant <= 0
+
+              sendPaymentNotification(
+                {
+                  ...facture,
+                  montant_paye: facture.montant - (paiementInfo.montantRestant || 0),
+                  montant_restant: paiementInfo.montantRestant || 0
+                },
+                {
+                  montant: paiementInfo.montant,
+                  date_paiement: paiementInfo.date_paiement,
+                  reference: paiementInfo.reference
+                },
+                isFullPayment
+              ).catch(err => console.error(`[Email] Batch payment notification failed for ${paiementInfo.factureNumero}:`, err))
+            }
+          })
+          .catch(err => console.error(`[Email] Failed to fetch facture ${paiementInfo.factureNumero} for notification:`, err))
+
       } else {
         errors.push({
           factureId: paiementsData[index].factureId,

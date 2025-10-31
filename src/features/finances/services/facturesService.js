@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../../../lib/supabaseClient'
+import { sendInvoiceCreatedNotification, sendInvoiceDeletedNotification } from './emailNotificationService'
 
 /**
  * Get all factures with contact information and payment totals
@@ -135,6 +136,10 @@ export async function createFacture(factureData) {
       montant_restant: parseFloat(data.montant)
     }
 
+    // Send email notification (non-blocking, async)
+    sendInvoiceCreatedNotification(factureWithPaiements)
+      .catch(err => console.error('[Email] Invoice creation notification failed:', err))
+
     return { data: factureWithPaiements, error: null, success: true }
   } catch (error) {
     console.error('Error creating facture:', error)
@@ -200,12 +205,38 @@ export async function updateFacture(factureId, factureData) {
  */
 export async function deleteFacture(factureId) {
   try {
+    // IMPORTANT: Fetch facture data BEFORE deleting (for email notification)
+    const { data: factureToDelete, error: fetchError } = await supabase
+      .from('factures')
+      .select(`
+        *,
+        contact:contacts(
+          company_name,
+          first_name,
+          last_name
+        )
+      `)
+      .eq('id', factureId)
+      .single()
+
+    if (fetchError) {
+      console.error('Error fetching facture before delete:', fetchError)
+      // Continue with deletion even if fetch fails
+    }
+
+    // Delete the facture
     const { data, error } = await supabase
       .from('factures')
       .delete()
       .eq('id', factureId)
 
     if (error) throw error
+
+    // Send email notification (non-blocking, async)
+    if (factureToDelete) {
+      sendInvoiceDeletedNotification(factureToDelete)
+        .catch(err => console.error('[Email] Invoice deletion notification failed:', err))
+    }
 
     return { data, error: null, success: true }
   } catch (error) {

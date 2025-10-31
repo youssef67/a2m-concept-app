@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../../../lib/supabaseClient'
+import { sendPaymentNotification } from './emailNotificationService'
 
 /**
  * Get all paiements for a specific facture
@@ -58,6 +59,44 @@ export async function createPaiement(paiementData) {
       console.error('Create paiement error:', error)
       return { success: false, error: 'Erreur lors de la création du paiement' }
     }
+
+    // Send email notification (non-blocking, async)
+    // Fetch facture with contact info to determine payment type
+    getFactureWithPaiements(paiementData.facture_id)
+      .then(({ data: factureData }) => {
+        if (factureData) {
+          // Determine if full or partial payment
+          const isFullPayment = factureData.montant_restant <= 0
+
+          // Fetch contact info for email
+          supabase
+            .from('factures')
+            .select(`
+              *,
+              contact:contacts(
+                company_name,
+                first_name,
+                last_name
+              )
+            `)
+            .eq('id', paiementData.facture_id)
+            .single()
+            .then(({ data: fullFacture }) => {
+              if (fullFacture) {
+                sendPaymentNotification(
+                  {
+                    ...fullFacture,
+                    montant_paye: factureData.montant_paye,
+                    montant_restant: factureData.montant_restant
+                  },
+                  data,
+                  isFullPayment
+                ).catch(err => console.error('[Email] Payment notification failed:', err))
+              }
+            })
+        }
+      })
+      .catch(err => console.error('[Email] Failed to fetch facture for notification:', err))
 
     return { success: true, data }
   } catch (error) {
