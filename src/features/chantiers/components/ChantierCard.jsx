@@ -48,7 +48,7 @@ export default function ChantierCard({ chantier, onView, onEdit, onDelete }) {
         </div>
 
         {/* Dates */}
-        {(chantier.date_debut || chantier.date_fin_prevue) && (
+        {(chantier.date_debut || chantier.date_fin_prevue || chantier.date_fin_reelle) && (
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Calendar className="w-4 h-4 flex-shrink-0" />
             <span>
@@ -57,6 +57,12 @@ export default function ChantierCard({ chantier, onView, onEdit, onDelete }) {
               )}
               {chantier.date_fin_prevue && (
                 <> au {formatDate(chantier.date_fin_prevue)}</>
+              )}
+              {/* Date de fin réelle (uniquement si clôturé) */}
+              {chantier.statut === 'cloture' && chantier.date_fin_reelle && (
+                <span className="ml-2 font-medium text-green-700">
+                  (Clôturé le {formatDate(chantier.date_fin_reelle)})
+                </span>
               )}
             </span>
           </div>

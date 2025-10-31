@@ -59,7 +59,15 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
     setIsUpdating(true)
     setShowConfirmModal(false)
 
-    const result = await onUpdateStatut(chantier.id, { statut: pendingStatut })
+    // Préparer les données de mise à jour
+    const updateData = { statut: pendingStatut }
+
+    // Si passage à "cloture", ajouter automatiquement la date de fin réelle
+    if (pendingStatut === 'cloture') {
+      updateData.date_fin_reelle = new Date().toISOString().split('T')[0] // Format YYYY-MM-DD
+    }
+
+    const result = await onUpdateStatut(chantier.id, updateData)
 
     setIsUpdating(false)
 
@@ -194,7 +202,7 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
                   {chantier.date_fin_reelle && (
                     <div>
                       <p className="text-xs text-gray-500">Fin réelle</p>
-                      <p className="text-base text-gray-900">{formatDate(chantier.date_fin_reelle)}</p>
+                      <p className="text-base font-medium text-green-700">{formatDate(chantier.date_fin_reelle)}</p>
                     </div>
                   )}
                 </div>
