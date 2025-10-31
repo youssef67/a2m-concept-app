@@ -8,7 +8,9 @@ export default function Input({
   error,
   disabled = false,
   required = false,
-  className = ''
+  className = '',
+  label,
+  ...rest
 }) {
   const baseClasses = 'w-full min-h-[48px] px-4 py-3 text-base border rounded-lg transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed'
   const errorClasses = error
@@ -17,15 +19,21 @@ export default function Input({
 
   return (
     <div className="w-full">
+      {label && (
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {label}
+        </label>
+      )}
       <input
         type={type}
         name={name}
-        value={value}
+        value={value ?? ''}
         onChange={onChange}
         placeholder={placeholder}
         disabled={disabled}
         required={required}
         className={`${baseClasses} ${errorClasses} ${className}`}
+        {...rest}
       />
       {error && (
         <p className="mt-1 text-sm text-red-600">{error}</p>

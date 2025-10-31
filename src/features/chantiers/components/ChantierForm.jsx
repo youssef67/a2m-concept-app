@@ -14,6 +14,7 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
   const [clients, setClients] = useState([])
   const [loadingClients, setLoadingClients] = useState(true)
   const [fileError, setFileError] = useState(null)
+  const [calculerTVA, setCalculerTVA] = useState(false)
 
   // Initial form data
   const formData = chantier || {
@@ -26,6 +27,9 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
     date_fin_reelle: '',
     budget_estime: '',
     cout_reel: '',
+    montant_ht: '',
+    montant_ttc: '',
+    finalisation_95: false,
     adresse_ligne1: '',
     adresse_ligne2: '',
     ville: '',
@@ -51,6 +55,25 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
 
     loadClients()
   }, [])
+
+  /**
+   * Auto-calculate TTC when calculerTVA is checked
+   */
+  useEffect(() => {
+    if (calculerTVA) {
+      if (formData.montant_ht) {
+        const ht = parseFloat(formData.montant_ht)
+        if (!isNaN(ht) && ht > 0) {
+          const ttc = ht * 1.20 // TVA 20%
+          onChange({ ...formData, montant_ttc: ttc.toFixed(2) })
+        } else {
+          onChange({ ...formData, montant_ttc: '' })
+        }
+      } else {
+        onChange({ ...formData, montant_ttc: '' })
+      }
+    }
+  }, [calculerTVA, formData.montant_ht])
 
   /**
    * Handle input change
@@ -204,19 +227,70 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
 
       {/* Financier */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900">Budget</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Montants</h3>
 
-        <Input
-          label="Budget (€)"
-          type="number"
-          name="budget_estime"
-          value={formData.budget_estime}
-          onChange={handleChange}
-          error={errors.budget_estime}
-          placeholder="0.00"
-          step="0.01"
-          min="0"
-        />
+        {/* Montants HT et TTC du chantier */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label="Montant HT (€)"
+            type="number"
+            name="montant_ht"
+            value={formData.montant_ht}
+            onChange={handleChange}
+            error={errors.montant_ht}
+            placeholder="0.00"
+            step="0.01"
+            min="0"
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Montant TTC (€)
+            </label>
+            <input
+              type="number"
+              name="montant_ttc"
+              value={formData.montant_ttc || ''}
+              readOnly
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+              className="w-full h-12 px-4 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
+            />
+            {errors.montant_ttc && (
+              <p className="mt-1 text-sm text-red-600">{errors.montant_ttc}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Checkbox Calculer TVA automatiquement */}
+        <div className="flex items-center">
+          <input
+            id="calculer_tva"
+            type="checkbox"
+            checked={calculerTVA || false}
+            onChange={(e) => setCalculerTVA(e.target.checked)}
+            className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+          />
+          <label htmlFor="calculer_tva" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
+            Calculer automatiquement la TVA (20%)
+          </label>
+        </div>
+
+        {/* Checkbox Finalisation 95% */}
+        <div className="flex items-center">
+          <input
+            id="finalisation_95"
+            name="finalisation_95"
+            type="checkbox"
+            checked={formData.finalisation_95 || false}
+            onChange={(e) => onChange({ ...formData, finalisation_95: e.target.checked })}
+            className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+          />
+          <label htmlFor="finalisation_95" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
+            Ce chantier a une finalisation à 95% (calculée sur montant HT)
+          </label>
+        </div>
       </div>
 
       {/* Adresse du chantier */}

@@ -23,6 +23,7 @@ import { useFactures } from '../hooks/useFactures'
 import { useContacts } from '../hooks/useContacts'
 import { useDocuments } from '../hooks/useDocuments'
 import { useChantiers } from '../../chantiers/hooks/useChantiers'
+import { getChantierById } from '../../chantiers/services/chantiersService'
 import { useToast } from '../../../shared/hooks/useToast'
 import {
   formatDate,
@@ -88,6 +89,10 @@ export default function FacturesPage() {
   const [retenueGarantie, setRetenueGarantie] = useState(false)
   const [montantRetenue, setMontantRetenue] = useState('')
 
+  // Finalisation 95% states
+  const [exclueFinalization, setExclueFinalization] = useState(false)
+  const [chantierLie, setChantierLie] = useState(null)
+
   // Hooks
   const { factures, loading, error, createFacture, updateFacture, deleteFacture, deleteMultipleFactures, refreshFactures } = useFactures()
   const { contacts } = useContacts()
@@ -142,6 +147,21 @@ export default function FacturesPage() {
       setMontantRetenue('')
     }
   }, [montantHT, retenueGarantie, factureType])
+
+  // Load chantier lié when selectedChantierId changes
+  React.useEffect(() => {
+    if (selectedChantierId) {
+      getChantierById(selectedChantierId).then(({ data, error }) => {
+        if (!error && data) {
+          setChantierLie(data)
+        } else {
+          setChantierLie(null)
+        }
+      })
+    } else {
+      setChantierLie(null)
+    }
+  }, [selectedChantierId])
 
   // Tabs configuration with counts - Niveau 1 : Statut
   const statutTabs = useMemo(() => {
@@ -375,19 +395,23 @@ export default function FacturesPage() {
       tva_applicable: false,
       taux_tva: 20.00,
       // Champ retenue de garantie
-      retenue_garantie: false
+      retenue_garantie: false,
+      // Champ exclue de finalisation
+      exclue_finalisation: false
     }
 
     if (currentType === 'fournisseur') {
-      // Fournisseur: toujours TTC, pas de retenue
+      // Fournisseur: toujours TTC, pas de retenue ni exclusion finalisation
       data.montant_ttc = parseFloat(formData.get('montant_ttc'))
       data.tva_applicable = true
       data.retenue_garantie = false
+      data.exclue_finalisation = false
     } else {
-      // Client: HT avec ou sans TVA, avec ou sans retenue
+      // Client: HT avec ou sans TVA, avec ou sans retenue, avec ou sans exclusion finalisation
       data.montant_ht = parseFloat(formData.get('montant_ht'))
       data.tva_applicable = formData.get('tva_applicable') === 'on'
       data.retenue_garantie = formData.get('retenue_garantie') === 'on'
+      data.exclue_finalisation = formData.get('exclue_finalisation') === 'on'
 
       if (data.tva_applicable) {
         data.montant_ttc = parseFloat(formData.get('montant_ttc'))
@@ -476,6 +500,8 @@ export default function FacturesPage() {
     // Initialize retenue states
     setRetenueGarantie(facture.retenue_garantie || false)
     setMontantRetenue(facture.retenue_garantie && facture.montant_ht ? calculateRetenue(facture.montant_ht).toFixed(2) : '')
+    // Initialize finalisation states
+    setExclueFinalization(facture.exclue_finalisation || false)
     setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
@@ -498,6 +524,8 @@ export default function FacturesPage() {
     // Reset retenue states
     setRetenueGarantie(false)
     setMontantRetenue('')
+    // Reset finalisation states
+    setExclueFinalization(false)
     setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
@@ -1206,6 +1234,23 @@ export default function FacturesPage() {
                         €
                       </span>
                     </div>
+                  </div>
+                )}
+
+                {/* Checkbox Exclure de la finalisation (si chantier avec finalisation_95) */}
+                {chantierLie?.finalisation_95 && (
+                  <div className="flex items-center">
+                    <input
+                      id="exclue_finalisation"
+                      name="exclue_finalisation"
+                      type="checkbox"
+                      checked={exclueFinalization}
+                      onChange={(e) => setExclueFinalization(e.target.checked)}
+                      className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                    />
+                    <label htmlFor="exclue_finalisation" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
+                      Exclure cette facture du calcul de finalisation 95%
+                    </label>
                   </div>
                 )}
               </div>
