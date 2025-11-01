@@ -13,6 +13,8 @@ import ChantiersPage from './features/chantiers/pages/ChantiersPage'
 import FacturesPage from './features/finances/pages/FacturesPage'
 import ToolsPage from './features/tools/pages/ToolsPage'
 import WorkersPage from './features/workers/pages/WorkersPage'
+import PlotsManagerPage from './features/plotsmanager/pages/PlotsManagerPage'
+import PlotDetailPage from './features/plotsmanager/pages/PlotDetailPage'
 
 // Route protection
 import RoleProtectedRoute from './shared/components/routing/RoleProtectedRoute'
@@ -102,6 +104,22 @@ function App() {
             element={
               <RoleProtectedRoute requiredRole="admin">
                 <WorkersPage />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/plotsmanager"
+            element={
+              <RoleProtectedRoute requiredRole="admin">
+                <PlotsManagerPage />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/plotsmanager/:id"
+            element={
+              <RoleProtectedRoute requiredRole="admin">
+                <PlotDetailPage />
               </RoleProtectedRoute>
             }
           />
