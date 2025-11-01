@@ -94,6 +94,7 @@ export default function FacturesPage() {
 
   // TVA states
   const [factureType, setFactureType] = useState('client')
+  const [factureStatut, setFactureStatut] = useState('en_attente')
   const [tvaApplicable, setTvaApplicable] = useState(false)
   const [montantHT, setMontantHT] = useState('')
   const [montantTTC, setMontantTTC] = useState('')
@@ -576,6 +577,7 @@ export default function FacturesPage() {
     setSelectedChantierId(facture.chantier_id || '')
     setDateEmission(facture.date_emission || new Date().toISOString().split('T')[0])
     setDateEcheance(facture.date_echeance || '')
+    setFactureStatut(facture.statut || 'en_attente')
     // Initialize TVA states
     setFactureType(facture.type || 'client')
     setTvaApplicable(facture.tva_applicable || false)
@@ -603,6 +605,7 @@ export default function FacturesPage() {
     setSelectedChantierId('')
     setDateEmission(new Date().toISOString().split('T')[0])
     setDateEcheance('')
+    setFactureStatut('en_attente')
     // Reset TVA states
     setFactureType(activeType)
     setTvaApplicable(false)
@@ -1265,17 +1268,16 @@ export default function FacturesPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Type *
               </label>
-              <select
-                name="type"
-                required
+              <Select
                 value={factureType}
-                onChange={(e) => setFactureType(e.target.value)}
+                onChange={setFactureType}
+                options={[
+                  { value: 'client', label: 'Client' },
+                  { value: 'fournisseur', label: 'Fournisseur' }
+                ]}
                 disabled={!!editingFacture}
-                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100"
-              >
-                <option value="client">Client</option>
-                <option value="fournisseur">Fournisseur</option>
-              </select>
+                placeholder="Sélectionner un type"
+              />
               {/* Hidden input to submit type when select is disabled */}
               {editingFacture && (
                 <input type="hidden" name="type" value={editingFacture.type} />
@@ -1287,22 +1289,21 @@ export default function FacturesPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {activeType === 'client' ? 'Client' : 'Fournisseur'} *
               </label>
-              <select
-                name="contact_id"
-                required
+              <Select
                 value={selectedContactId}
-                onChange={(e) => setSelectedContactId(e.target.value)}
-                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                <option value="">Sélectionner...</option>
-                {contacts
-                  .filter(c => c.type === (editingFacture?.type || activeType))
-                  .map(contact => (
-                    <option key={contact.id} value={contact.id}>
-                      {getContactDisplayName(contact)}
-                    </option>
-                  ))}
-              </select>
+                onChange={setSelectedContactId}
+                options={[
+                  { value: '', label: 'Sélectionner...' },
+                  ...contacts
+                    .filter(c => c.type === (editingFacture?.type || activeType))
+                    .map(contact => ({
+                      value: contact.id,
+                      label: getContactDisplayName(contact)
+                    }))
+                ]}
+                placeholder="Sélectionner..."
+              />
+              <input type="hidden" name="contact_id" value={selectedContactId} />
             </div>
 
             {/* Chantier */}
@@ -1310,43 +1311,38 @@ export default function FacturesPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Chantier *
               </label>
-              <select
-                name="chantier_id"
-                required
+              <Select
                 value={selectedChantierId}
-                onChange={(e) => setSelectedChantierId(e.target.value)}
+                onChange={setSelectedChantierId}
                 disabled={!selectedContactId}
-                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                <option value="">
-                  {!selectedContactId
-                    ? 'Sélectionner d\'abord un contact'
-                    : (() => {
-                        const currentType = editingFacture?.type || activeType
-                        const filteredChantiers = chantiers.filter(ch => {
-                          // For client factures: filter by client_id
-                          // For fournisseur factures: show all chantiers
-                          const matchesClient = currentType === 'client' ? ch.client_id === selectedContactId : true
-                          return matchesClient && ch.statut === 'en_cours'
-                        })
-                        return filteredChantiers.length === 0
-                          ? (currentType === 'client' ? 'Aucun chantier en cours pour ce client' : 'Aucun chantier en cours')
-                          : 'Sélectionner un chantier...'
-                      })()}
-                </option>
-                {chantiers
-                  .filter(ch => {
-                    const currentType = editingFacture?.type || activeType
-                    const matchesClient = currentType === 'client' ? ch.client_id === selectedContactId : true
-                    return matchesClient && ch.statut === 'en_cours'
-                  })
-                  .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-                  .map(chantier => (
-                    <option key={chantier.id} value={chantier.id}>
-                      {chantier.titre}
-                    </option>
-                  ))}
-              </select>
+                options={(() => {
+                  if (!selectedContactId) {
+                    return [{ value: '', label: 'Sélectionner d\'abord un contact' }]
+                  }
+
+                  const currentType = editingFacture?.type || activeType
+                  const filteredChantiers = chantiers
+                    .filter(ch => {
+                      const matchesClient = currentType === 'client' ? ch.client_id === selectedContactId : true
+                      return matchesClient && ch.statut === 'en_cours'
+                    })
+                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+                  const placeholderLabel = filteredChantiers.length === 0
+                    ? (currentType === 'client' ? 'Aucun chantier en cours pour ce client' : 'Aucun chantier en cours')
+                    : 'Sélectionner un chantier...'
+
+                  return [
+                    { value: '', label: placeholderLabel },
+                    ...filteredChantiers.map(chantier => ({
+                      value: chantier.id,
+                      label: chantier.titre
+                    }))
+                  ]
+                })()}
+                placeholder={!selectedContactId ? 'Sélectionner d\'abord un contact' : 'Sélectionner un chantier...'}
+              />
+              <input type="hidden" name="chantier_id" value={selectedChantierId} />
             </div>
 
             {/* Montant - Logique conditionnelle selon type */}
@@ -1568,15 +1564,17 @@ export default function FacturesPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Statut
               </label>
-              <select
-                name="statut"
-                defaultValue={editingFacture?.statut || 'en_attente'}
-                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                <option value="en_attente">En attente</option>
-                <option value="payee">Payée</option>
-                <option value="annulee">Annulée</option>
-              </select>
+              <Select
+                value={factureStatut}
+                onChange={setFactureStatut}
+                options={[
+                  { value: 'en_attente', label: 'En attente' },
+                  { value: 'payee', label: 'Payée' },
+                  { value: 'annulee', label: 'Annulée' }
+                ]}
+                placeholder="Sélectionner un statut"
+              />
+              <input type="hidden" name="statut" value={factureStatut} />
             </div>
 
             {/* Notes */}

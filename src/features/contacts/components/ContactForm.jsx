@@ -1,6 +1,7 @@
 import React from 'react'
 import { Plus, X } from 'lucide-react'
 import Button from '../../../shared/components/ui/Button'
+import Select from '../../../shared/components/ui/Select'
 
 /**
  * Contact form with all fields
@@ -374,18 +375,18 @@ export default function ContactForm({
         <label htmlFor="delai_paiement" className="block text-sm font-medium text-gray-700 mb-1">
           Délai de paiement
         </label>
-        <select
-          id="delai_paiement"
+        <Select
           value={formData.delai_paiement || 'immediat'}
-          onChange={(e) => handleChange('delai_paiement', e.target.value)}
-          className="w-full h-12 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+          onChange={(value) => handleChange('delai_paiement', value)}
+          options={[
+            { value: 'immediat', label: 'Immédiat' },
+            { value: '30_jours', label: '30 jours' },
+            { value: '45_jours', label: '45 jours' },
+            { value: '60_jours', label: '60 jours' }
+          ]}
           disabled={isSubmitting}
-        >
-          <option value="immediat">Immédiat</option>
-          <option value="30_jours">30 jours</option>
-          <option value="45_jours">45 jours</option>
-          <option value="60_jours">60 jours</option>
-        </select>
+          placeholder="Délai de paiement"
+        />
       </div>
 
       {/* Contact persons (for professionnel) */}

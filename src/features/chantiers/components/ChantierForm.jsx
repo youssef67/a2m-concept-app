@@ -3,9 +3,10 @@
  * Form for creating/editing a chantier
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Upload, FileText, X } from 'lucide-react'
 import Input from '../../../shared/components/ui/Input'
+import Select from '../../../shared/components/ui/Select'
 import { getAllContacts } from '../../contacts/services/contactsService'
 import { getClientDisplayName } from '../utils/chantierHelpers'
 import { validatePDFFile, formatFileSize } from '../services/documentsService'
@@ -109,6 +110,29 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
     onFileChange?.(null)
   }
 
+  // Options for Statut select
+  const statutOptions = useMemo(() => [
+    { value: 'devis', label: 'Devis' },
+    { value: 'planifie', label: 'Planifié' },
+    { value: 'en_cours', label: 'En cours' },
+    { value: 'cloture', label: 'Clôturé' }
+  ], [])
+
+  // Options for Client select
+  const clientOptions = useMemo(() => {
+    const placeholder = {
+      value: '',
+      label: loadingClients ? 'Chargement des clients...' : 'Sélectionner un client'
+    }
+
+    const clientsList = clients.map(client => ({
+      value: client.id,
+      label: getClientDisplayName(client)
+    }))
+
+    return [placeholder, ...clientsList]
+  }, [clients, loadingClients])
+
   return (
     <div className="space-y-6">
       {/* Informations principales */}
@@ -148,19 +172,12 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
           <label htmlFor="statut" className="block text-sm font-medium text-gray-700 mb-1">
             Statut *
           </label>
-          <select
-            id="statut"
-            name="statut"
+          <Select
             value={formData.statut}
-            onChange={handleChange}
-            className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            required
-          >
-            <option value="devis">Devis</option>
-            <option value="planifie">Planifié</option>
-            <option value="en_cours">En cours</option>
-            <option value="cloture">Clôturé</option>
-          </select>
+            onChange={(value) => onChange({ ...formData, statut: value })}
+            options={statutOptions}
+            placeholder="Sélectionner un statut"
+          />
           {errors.statut && <p className="mt-1 text-sm text-red-600">{errors.statut}</p>}
         </div>
 
@@ -169,24 +186,13 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
           <label htmlFor="client_id" className="block text-sm font-medium text-gray-700 mb-1">
             Client *
           </label>
-          <select
-            id="client_id"
-            name="client_id"
+          <Select
             value={formData.client_id}
-            onChange={handleChange}
+            onChange={(value) => onChange({ ...formData, client_id: value })}
+            options={clientOptions}
             disabled={loadingClients}
-            className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100"
-            required
-          >
-            <option value="">
-              {loadingClients ? 'Chargement des clients...' : 'Sélectionner un client'}
-            </option>
-            {clients.map(client => (
-              <option key={client.id} value={client.id}>
-                {getClientDisplayName(client)}
-              </option>
-            ))}
-          </select>
+            placeholder={loadingClients ? 'Chargement des clients...' : 'Sélectionner un client'}
+          />
           {errors.client_id && <p className="mt-1 text-sm text-red-600">{errors.client_id}</p>}
         </div>
       </div>

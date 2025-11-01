@@ -3,10 +3,11 @@
  * Display chantier details in read-only mode
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Pencil, MapPin, Calendar, Euro, User, FileText, TrendingUp, TrendingDown } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
+import Select from '../../../shared/components/ui/Select'
 import DocumentsSection from './DocumentsSection'
 import AvenantsSection from './AvenantsSection'
 import DeleteConfirmModal from './DeleteConfirmModal'
@@ -135,6 +136,14 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
     setCurrentStatut(chantier.statut)
   }
 
+  // Options for Statut select
+  const statutOptions = useMemo(() => [
+    { value: 'devis', label: 'Devis' },
+    { value: 'planifie', label: 'Planifié' },
+    { value: 'en_cours', label: 'En cours' },
+    { value: 'cloture', label: 'Clôturé' }
+  ], [])
+
   return (
     <Modal
       isOpen={isOpen}
@@ -158,18 +167,13 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
           <label htmlFor="statut-select" className="block text-sm font-medium text-gray-700 mb-2">
             Changer le statut
           </label>
-          <select
-            id="statut-select"
+          <Select
             value={currentStatut}
-            onChange={handleStatutChange}
+            onChange={(value) => handleStatutChange({ target: { value } })}
+            options={statutOptions}
             disabled={isUpdating}
-            className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-          >
-            <option value="devis">Devis</option>
-            <option value="planifie">Planifié</option>
-            <option value="en_cours">En cours</option>
-            <option value="cloture">Clôturé</option>
-          </select>
+            placeholder="Changer le statut"
+          />
         </div>
 
         {/* Description */}
