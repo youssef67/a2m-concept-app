@@ -241,13 +241,13 @@ export default function AdminDashboard() {
         {/* Section: Vue d'ensemble financière */}
         {!loading && !error && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
-                <TrendingUp className="w-5 h-5 text-blue-600" />
+            <div className="border-t-4 border-blue-600 bg-blue-50 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-3">
+                <TrendingUp className="w-6 h-6 text-blue-600" />
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Vue d&apos;ensemble financière
+                </h2>
               </div>
-              <h2 className="text-xl font-semibold text-gray-800">
-                Vue d&apos;ensemble financière
-              </h2>
             </div>
 
             {/* Statistics Cards */}
@@ -329,13 +329,13 @@ export default function AdminDashboard() {
 
         {/* Section: Factures clients en retard */}
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg flex-shrink-0">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+          <div className="border-t-4 border-red-600 bg-red-50 rounded-lg p-4 mb-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-6 h-6 text-red-600" />
+              <h2 className="text-2xl font-bold text-gray-900">
+                Factures clients en retard
+              </h2>
             </div>
-            <h2 className="text-xl font-semibold text-gray-800">
-              Factures clients en retard
-            </h2>
           </div>
 
           <Card>
@@ -403,13 +403,13 @@ export default function AdminDashboard() {
 
         {/* Section: Factures fournisseurs en retard */}
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-100 rounded-lg flex-shrink-0">
-              <AlertTriangle className="w-5 h-5 text-orange-600" />
+          <div className="border-t-4 border-orange-600 bg-orange-50 rounded-lg p-4 mb-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-6 h-6 text-orange-600" />
+              <h2 className="text-2xl font-bold text-gray-900">
+                Factures fournisseurs en retard
+              </h2>
             </div>
-            <h2 className="text-xl font-semibold text-gray-800">
-              Factures fournisseurs en retard
-            </h2>
           </div>
 
           <Card>
@@ -477,13 +477,13 @@ export default function AdminDashboard() {
 
         {/* Section: Chantiers en retard */}
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg flex-shrink-0">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+          <div className="border-t-4 border-red-600 bg-red-50 rounded-lg p-4 mb-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-6 h-6 text-red-600" />
+              <h2 className="text-2xl font-bold text-gray-900">
+                RG et finalisation 95% en retard
+              </h2>
             </div>
-            <h2 className="text-xl font-semibold text-gray-800">
-              RG et finalisation 95% en retard
-            </h2>
           </div>
 
           <Card>
@@ -567,13 +567,13 @@ export default function AdminDashboard() {
 
         {/* Section: Dernières factures */}
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
-              <FileText className="w-5 h-5 text-blue-600" />
+          <div className="border-t-4 border-blue-600 bg-blue-50 rounded-lg p-4 mb-4">
+            <div className="flex items-center gap-3">
+              <FileText className="w-6 h-6 text-blue-600" />
+              <h2 className="text-2xl font-bold text-gray-900">
+                Dernières factures
+              </h2>
             </div>
-            <h2 className="text-xl font-semibold text-gray-800">
-              Dernières factures
-            </h2>
           </div>
 
           <Card>
