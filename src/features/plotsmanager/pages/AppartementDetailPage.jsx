@@ -228,38 +228,6 @@ export default function AppartementDetailPage() {
               <h1 className="text-2xl font-bold text-gray-900">{appartement.nom}</h1>
             </div>
 
-            {/* Progress Stats */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold text-gray-900">Progression</h2>
-                <span className="text-2xl font-bold text-primary-600">{progressPercentage}%</span>
-              </div>
-
-              {/* Progress bar */}
-              <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
-                <div
-                  className="bg-primary-600 h-3 rounded-full transition-all duration-300"
-                  style={{ width: `${progressPercentage}%` }}
-                />
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-2xl font-bold text-gray-400">{tachesStats.a_faire}</p>
-                  <p className="text-xs text-gray-600">À faire</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-blue-500">{tachesStats.en_cours}</p>
-                  <p className="text-xs text-gray-600">En cours</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-green-500">{tachesStats.terminee}</p>
-                  <p className="text-xs text-gray-600">Terminées</p>
-                </div>
-              </div>
-            </div>
-
             {/* Tabs */}
             <div className="mb-6">
               <Tabs
@@ -277,6 +245,37 @@ export default function AppartementDetailPage() {
               {/* Taches Tab */}
               {activeTab === 'taches' && (
                 <div>
+                  {/* Progress Stats */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-lg font-semibold text-gray-900">Progression</h2>
+                      <span className="text-2xl font-bold text-primary-600">{progressPercentage}%</span>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+                      <div
+                        className="bg-primary-600 h-3 rounded-full transition-all duration-300"
+                        style={{ width: `${progressPercentage}%` }}
+                      />
+                    </div>
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-2xl font-bold text-gray-400">{tachesStats.a_faire}</p>
+                        <p className="text-xs text-gray-600">À faire</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-blue-500">{tachesStats.en_cours}</p>
+                        <p className="text-xs text-gray-600">En cours</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-green-500">{tachesStats.terminee}</p>
+                        <p className="text-xs text-gray-600">Terminées</p>
+                      </div>
+                    </div>
+                  </div>
 
               {tachesLoading && (
                 <div className="flex items-center justify-center py-8">
