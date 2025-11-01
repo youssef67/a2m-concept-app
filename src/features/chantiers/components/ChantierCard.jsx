@@ -127,7 +127,7 @@ export default function ChantierCard({ chantier, onView, onEdit, onDelete }) {
             title="Voir les détails"
           >
             <Eye className="w-4 h-4 flex-shrink-0" />
-            <span className="hidden sm:inline whitespace-nowrap">Voir</span>
+            <span className="hidden md:inline whitespace-nowrap">Voir</span>
           </Button>
 
           <Button
