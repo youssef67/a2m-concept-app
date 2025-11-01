@@ -175,7 +175,17 @@ export function calculateRetenue(montantHT) {
 }
 
 /**
- * Get montant à payer according to facture type, TVA and retenue de garantie
+ * Calculate prorata from HT
+ * @param {number} montantHT - Montant HT
+ * @returns {number} Montant prorata (2% du HT)
+ */
+export function calculateProrata(montantHT) {
+  if (!montantHT || montantHT <= 0) return 0
+  return montantHT * 0.02
+}
+
+/**
+ * Get montant à payer according to facture type, TVA, retenue de garantie and prorata
  * @param {Object} facture - Facture object
  * @returns {number} Montant à payer
  */
@@ -184,7 +194,7 @@ export function getMontantAPayer(facture) {
 
   let montantBase = 0
 
-  // Fournisseur : toujours TTC, pas de retenue
+  // Fournisseur : toujours TTC, pas de retenue ni prorata
   if (facture.type === 'fournisseur') {
     return facture.montant_ttc || facture.montant || 0
   }
@@ -196,10 +206,16 @@ export function getMontantAPayer(facture) {
     montantBase = facture.montant_ht || facture.montant || 0
   }
 
-  // Déduire la retenue de garantie si applicable (toujours 5% du HT)
+  // Déduire la retenue de garantie si applicable (5% du HT)
   if (facture.retenue_garantie) {
     const retenue = calculateRetenue(facture.montant_ht || 0)
-    return montantBase - retenue
+    montantBase -= retenue
+  }
+
+  // Déduire le prorata si applicable (2% du HT)
+  if (facture.prorata_applicable) {
+    const prorata = calculateProrata(facture.montant_ht || 0)
+    montantBase -= prorata
   }
 
   return montantBase
