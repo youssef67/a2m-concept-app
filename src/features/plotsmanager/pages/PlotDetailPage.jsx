@@ -32,7 +32,7 @@ export default function PlotDetailPage() {
   const [appartementToEdit, setAppartementToEdit] = useState(null)
   const [appartementToDelete, setAppartementToDelete] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeTab, setActiveTab] = useState('en_attente')
+  const [activeTab, setActiveTab] = useState('en_cours')
 
   // Appartements hook
   const { appartements, loading: appartementsLoading, loadAppartements, deleteAppartement } = useAppartements(plotId, chantierId)
@@ -85,6 +85,7 @@ export default function PlotDetailPage() {
   // Calculate stats for tabs
   const stats = useMemo(() => ({
     en_attente: filterAppartementsByStatut(appartements, 'en_attente').length,
+    en_cours: filterAppartementsByStatut(appartements, 'en_cours').length,
     pret: filterAppartementsByStatut(appartements, 'pret').length,
     finalise: filterAppartementsByStatut(appartements, 'finalise').length
   }), [appartements])
@@ -216,6 +217,7 @@ export default function PlotDetailPage() {
                   <Tabs
                     tabs={[
                       { id: 'en_attente', label: 'En attente', count: stats.en_attente },
+                      { id: 'en_cours', label: 'En cours', count: stats.en_cours },
                       { id: 'pret', label: 'Prêt', count: stats.pret },
                       { id: 'finalise', label: 'Finalisé', count: stats.finalise }
                     ]}
@@ -261,11 +263,12 @@ export default function PlotDetailPage() {
                   <Home className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                   {searchQuery ? (
                     <p className="text-gray-600">
-                      Aucun appartement {activeTab === 'en_attente' ? 'en attente' : activeTab === 'pret' ? 'prêt' : 'finalisé'} trouvé pour &quot;{searchQuery}&quot;
+                      Aucun appartement {activeTab === 'en_attente' ? 'en attente' : activeTab === 'en_cours' ? 'en cours' : activeTab === 'pret' ? 'prêt' : 'finalisé'} trouvé pour &quot;{searchQuery}&quot;
                     </p>
                   ) : (
                     <p className="text-gray-600">
                       {activeTab === 'en_attente' && 'Aucun appartement en attente'}
+                      {activeTab === 'en_cours' && 'Aucun appartement en cours'}
                       {activeTab === 'pret' && 'Aucun appartement prêt'}
                       {activeTab === 'finalise' && 'Aucun appartement finalisé'}
                     </p>
