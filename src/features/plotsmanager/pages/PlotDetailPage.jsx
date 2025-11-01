@@ -5,11 +5,12 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
 import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
+import Modal from '../../../shared/components/ui/Modal'
 import Tabs from '../../../shared/components/ui/Tabs'
 import CreateAppartementModal from '../components/CreateAppartementModal'
 import CreateMultipleAppartementsModal from '../components/CreateMultipleAppartementsModal'
@@ -37,6 +38,8 @@ export default function PlotDetailPage() {
   const [appartementToDelete, setAppartementToDelete] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('en_cours')
+  const [creationResult, setCreationResult] = useState(null)
+  const [showResultModal, setShowResultModal] = useState(false)
 
   // Appartements hook
   const { appartements, loading: appartementsLoading, loadAppartements, deleteAppartement } = useAppartements(plotId, chantierId)
@@ -117,11 +120,8 @@ export default function PlotDetailPage() {
   // Handle multiple appartements creation success
   const handleMultipleAppartementsCreated = (result) => {
     loadAppartements()
-    // Show success message
-    const message = result.failed > 0
-      ? `${result.created} appartement(s) créé(s) avec succès, ${result.failed} échec(s)`
-      : `${result.created} appartement(s) créé(s) avec succès`
-    alert(message)
+    setCreationResult(result)
+    setShowResultModal(true)
   }
 
   // Handle appartement edit
@@ -424,6 +424,97 @@ export default function PlotDetailPage() {
               cancelLabel="Annuler"
               variant="danger"
             />
+
+            {/* Creation result modal */}
+            <Modal
+              isOpen={showResultModal}
+              onClose={() => {
+                setShowResultModal(false)
+                setCreationResult(null)
+              }}
+              size="md"
+              title="Résultat de la création"
+            >
+              {creationResult && (
+                <div className="space-y-4">
+                  {/* Icon and main message */}
+                  <div className="flex flex-col items-center text-center">
+                    {creationResult.failed === 0 ? (
+                      <>
+                        <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                          <CheckCircle className="w-10 h-10 text-green-600" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          Création réussie !
+                        </h3>
+                        <p className="text-gray-600">
+                          {creationResult.created} appartement{creationResult.created > 1 ? 's ont été créés' : ' a été créé'} avec succès.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center mb-4">
+                          <AlertTriangle className="w-10 h-10 text-orange-600" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          Création partielle
+                        </h3>
+                        <p className="text-gray-600">
+                          {creationResult.created} appartement{creationResult.created > 1 ? 's créés' : ' créé'} avec succès,{' '}
+                          {creationResult.failed} échec{creationResult.failed > 1 ? 's' : ''}.
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Details */}
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Appartements créés :</span>
+                      <span className="text-sm font-semibold text-green-600">{creationResult.created}</span>
+                    </div>
+                    {creationResult.failed > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Échecs :</span>
+                        <span className="text-sm font-semibold text-red-600">{creationResult.failed}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between border-t border-gray-200 pt-2">
+                      <span className="text-sm font-medium text-gray-900">Total :</span>
+                      <span className="text-sm font-bold text-gray-900">{creationResult.total}</span>
+                    </div>
+                  </div>
+
+                  {/* Errors list if any */}
+                  {creationResult.failed > 0 && creationResult.errors && creationResult.errors.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-red-800 mb-2">Détails des erreurs :</h4>
+                      <ul className="space-y-1 text-sm text-red-700">
+                        {creationResult.errors.map((error, index) => (
+                          <li key={index} className="flex items-start gap-2">
+                            <span className="text-red-600 mt-0.5">•</span>
+                            <span>{error}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Close button */}
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      onClick={() => {
+                        setShowResultModal(false)
+                        setCreationResult(null)
+                      }}
+                      className="min-w-[120px]"
+                    >
+                      OK
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Modal>
           </>
         )}
       </div>
