@@ -5,10 +5,11 @@
 
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Home, Building2 } from 'lucide-react'
+import { ArrowLeft, Home, Building2, Edit, Trash2 } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
+import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import CreateAppartementModal from '../components/CreateAppartementModal'
 import { getPlotById } from '../services/plotsService'
 import { useAppartements } from '../hooks/useAppartements'
@@ -21,9 +22,11 @@ export default function PlotDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isCreateAppartementModalOpen, setIsCreateAppartementModalOpen] = useState(false)
+  const [appartementToEdit, setAppartementToEdit] = useState(null)
+  const [appartementToDelete, setAppartementToDelete] = useState(null)
 
   // Appartements hook
-  const { appartements, loading: appartementsLoading, loadAppartements } = useAppartements(plotId, chantierId)
+  const { appartements, loading: appartementsLoading, loadAppartements, deleteAppartement } = useAppartements(plotId, chantierId)
 
   // Load plot data
   useEffect(() => {
@@ -72,6 +75,38 @@ export default function PlotDetailPage() {
   // Handle appartement creation success
   const handleAppartementCreated = () => {
     loadAppartements()
+  }
+
+  // Handle appartement edit
+  const handleEditAppartement = (e, appartement) => {
+    e.stopPropagation() // Prevent navigation to appartement detail
+    setAppartementToEdit(appartement)
+    setIsCreateAppartementModalOpen(true)
+  }
+
+  // Handle appartement delete - open confirm modal
+  const handleDeleteAppartement = (e, appartement) => {
+    e.stopPropagation() // Prevent navigation to appartement detail
+    setAppartementToDelete(appartement)
+  }
+
+  // Confirm appartement deletion
+  const confirmDeleteAppartement = async () => {
+    if (!appartementToDelete) return
+
+    const result = await deleteAppartement(appartementToDelete.id)
+    if (result.success) {
+      loadAppartements()
+    } else {
+      alert('Erreur lors de la suppression de l\'appartement')
+    }
+    setAppartementToDelete(null)
+  }
+
+  // Handle modal close
+  const handleCloseAppartementModal = () => {
+    setIsCreateAppartementModalOpen(false)
+    setAppartementToEdit(null)
   }
 
   // Type labels
@@ -159,7 +194,7 @@ export default function PlotDetailPage() {
                   <Home className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-600">Aucun appartement créé pour ce plot</p>
                   <p className="text-sm text-gray-500 mt-1">
-                    Cliquez sur "Créer un appartement" pour commencer
+                    Cliquez sur « Créer un appartement » pour commencer
                   </p>
                 </div>
               )}
@@ -172,14 +207,30 @@ export default function PlotDetailPage() {
                       onClick={() => handleAppartementClick(appartement)}
                       className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 hover:shadow-md transition-all cursor-pointer bg-white"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Home className="w-5 h-5 text-gray-600" />
-                          <span className="font-medium text-gray-900">{appartement.nom}</span>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <Home className="w-5 h-5 text-gray-600 flex-shrink-0" />
+                          <span className="font-medium text-gray-900 truncate">{appartement.nom}</span>
                         </div>
-                        <span className="text-sm text-gray-600">
-                          {appartement.taches_count} {appartement.taches_count <= 1 ? 'tâche' : 'tâches'}
-                        </span>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-sm text-gray-600 hidden sm:inline">
+                            {appartement.taches_count} {appartement.taches_count <= 1 ? 'tâche' : 'tâches'}
+                          </span>
+                          <button
+                            onClick={(e) => handleEditAppartement(e, appartement)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Modifier"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteAppartement(e, appartement)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -187,14 +238,27 @@ export default function PlotDetailPage() {
               )}
             </div>
 
-            {/* Modal for creating appartement */}
+            {/* Modal for creating/editing appartement */}
             <CreateAppartementModal
               isOpen={isCreateAppartementModalOpen}
-              onClose={() => setIsCreateAppartementModalOpen(false)}
+              onClose={handleCloseAppartementModal}
               plotId={plotId}
               chantierId={chantierId}
               plotNom={plot.nom}
+              appartementToEdit={appartementToEdit}
               onSuccess={handleAppartementCreated}
+            />
+
+            {/* Confirm delete modal */}
+            <ConfirmModal
+              isOpen={!!appartementToDelete}
+              onClose={() => setAppartementToDelete(null)}
+              onConfirm={confirmDeleteAppartement}
+              title="Supprimer l'appartement"
+              message={`Êtes-vous sûr de vouloir supprimer l'appartement « ${appartementToDelete?.nom} » ? Cette action est irréversible.`}
+              confirmLabel="Supprimer"
+              cancelLabel="Annuler"
+              variant="danger"
             />
           </>
         )}

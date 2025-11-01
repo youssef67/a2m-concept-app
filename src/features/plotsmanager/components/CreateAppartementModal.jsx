@@ -1,10 +1,10 @@
 /**
  * CreateAppartementModal
- * Modal pour créer un appartement lié à un plot
- * Les tâches sont automatiquement héritées du chantier
+ * Modal pour créer ou modifier un appartement lié à un plot
+ * Les tâches sont automatiquement héritées du chantier (création uniquement)
  */
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Input from '../../../shared/components/ui/Input'
@@ -16,14 +16,33 @@ export default function CreateAppartementModal({
   plotId,
   chantierId,
   plotNom,
+  appartementToEdit = null,
   onSuccess
 }) {
-  const { createAppartement } = useAppartements(plotId, chantierId)
+  const { createAppartement, updateAppartement } = useAppartements(plotId, chantierId)
+  const isEditMode = !!appartementToEdit
 
   const [formData, setFormData] = useState({
     nom: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Initialize form data when modal opens (create or edit mode)
+  useEffect(() => {
+    if (isOpen) {
+      if (isEditMode && appartementToEdit) {
+        // Edit mode: pre-fill with existing data
+        setFormData({
+          nom: appartementToEdit.nom
+        })
+      } else {
+        // Create mode: reset form
+        setFormData({
+          nom: ''
+        })
+      }
+    }
+  }, [isOpen, isEditMode, appartementToEdit])
 
   // Handle input change
   const handleChange = (e) => {
@@ -46,21 +65,28 @@ export default function CreateAppartementModal({
     setIsSubmitting(true)
 
     try {
-      const result = await createAppartement(formData)
+      let result
+
+      if (isEditMode) {
+        // Update existing appartement
+        result = await updateAppartement(appartementToEdit.id, formData)
+      } else {
+        // Create new appartement
+        result = await createAppartement(formData)
+      }
 
       if (result.success) {
-        alert('Appartement créé avec succès ! Les tâches ont été automatiquement ajoutées.')
         handleClose()
         // Notify parent to refresh appartements list
         if (onSuccess) {
           onSuccess()
         }
       } else {
-        alert(result.error?.message || 'Erreur lors de la création de l\'appartement')
+        alert(result.error?.message || `Erreur lors de ${isEditMode ? 'la modification' : 'la création'} de l'appartement`)
       }
     } catch (error) {
-      console.error('Erreur création appartement:', error)
-      alert('Erreur lors de la création de l\'appartement')
+      console.error(`Erreur ${isEditMode ? 'modification' : 'création'} appartement:`, error)
+      alert(`Erreur lors de ${isEditMode ? 'la modification' : 'la création'} de l'appartement`)
     } finally {
       setIsSubmitting(false)
     }
@@ -77,7 +103,12 @@ export default function CreateAppartementModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} size="md" title="Créer un appartement">
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      size="md"
+      title={isEditMode ? "Modifier l'appartement" : "Créer un appartement"}
+    >
       <div>
         {/* Plot info */}
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -86,19 +117,21 @@ export default function CreateAppartementModal({
           </p>
         </div>
 
-        {/* Info about task inheritance */}
-        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-800">
-            Les tâches du chantier seront automatiquement ajoutées à cet appartement.
-          </p>
-        </div>
+        {/* Info about task inheritance (only in create mode) */}
+        {!isEditMode && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm text-green-800">
+              Les tâches du chantier seront automatiquement ajoutées à cet appartement.
+            </p>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Nom de l'appartement */}
           <div>
             <label htmlFor="nom" className="block text-sm font-medium text-gray-700 mb-1">
-              Nom de l'appartement <span className="text-red-500">*</span>
+              Nom de l&apos;appartement <span className="text-red-500">*</span>
             </label>
             <Input
               id="nom"
@@ -129,7 +162,7 @@ export default function CreateAppartementModal({
               loading={isSubmitting}
               className="w-full sm:w-auto"
             >
-              Créer l'appartement
+              {isEditMode ? 'Enregistrer' : "Créer l'appartement"}
             </Button>
           </div>
         </form>
