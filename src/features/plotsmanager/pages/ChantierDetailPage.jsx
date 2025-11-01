@@ -207,14 +207,14 @@ export default function ChantierDetailPage() {
               </div>
 
               {/* Right: Action buttons */}
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full sm:w-auto">
                 <div className="flex flex-col gap-1">
                   <Button
                     onClick={handleOpenCreatePlotModal}
                     disabled={!hasTaches || !hasDocuments}
-                    className="flex items-center justify-center gap-2 min-h-[44px]"
+                    className="flex items-center justify-center gap-2 min-h-[44px] w-full"
                   >
-                    <Building2 className="w-5 h-5" />
+                    <Building2 className="w-5 h-5 flex-shrink-0" />
                     <span>Créer un plot</span>
                   </Button>
                   {(!hasTaches || !hasDocuments) && (
@@ -228,23 +228,27 @@ export default function ChantierDetailPage() {
                   )}
                 </div>
 
-                <Button
-                  onClick={handleOpenTachesModal}
-                  variant={hasTaches ? 'secondary' : 'primary'}
-                  className="flex items-center justify-center gap-2 min-h-[44px]"
-                >
-                  <FileText className="w-5 h-5" />
-                  <span>{tachesButtonLabel}</span>
-                </Button>
+                <div className="flex flex-col gap-1">
+                  <Button
+                    onClick={handleOpenTachesModal}
+                    variant={hasTaches ? 'secondary' : 'primary'}
+                    className="flex items-center justify-center gap-2 min-h-[44px] w-full"
+                  >
+                    <FileText className="w-5 h-5 flex-shrink-0" />
+                    <span>{tachesButtonLabel}</span>
+                  </Button>
+                </div>
 
-                <Button
-                  onClick={handleOpenDocumentsModal}
-                  variant={hasDocuments ? 'secondary' : 'primary'}
-                  className="flex items-center justify-center gap-2 min-h-[44px]"
-                >
-                  <FolderOpen className="w-5 h-5" />
-                  <span>{documentsButtonLabel}</span>
-                </Button>
+                <div className="flex flex-col gap-1">
+                  <Button
+                    onClick={handleOpenDocumentsModal}
+                    variant={hasDocuments ? 'secondary' : 'primary'}
+                    className="flex items-center justify-center gap-2 min-h-[44px] w-full"
+                  >
+                    <FolderOpen className="w-5 h-5 flex-shrink-0" />
+                    <span>{documentsButtonLabel}</span>
+                  </Button>
+                </div>
               </div>
             </div>
 
