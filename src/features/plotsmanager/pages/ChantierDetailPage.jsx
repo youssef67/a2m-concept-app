@@ -212,10 +212,10 @@ export default function ChantierDetailPage() {
                   <Button
                     onClick={handleOpenCreatePlotModal}
                     disabled={!hasTaches || !hasDocuments}
-                    className="flex items-center justify-center gap-2 h-[52px] w-full text-sm"
+                    className="flex items-center justify-center gap-2 min-h-[52px] w-full text-xs leading-tight py-2"
                   >
                     <Building2 className="w-4 h-4 flex-shrink-0" />
-                    <span className="whitespace-nowrap">Créer un plot</span>
+                    <span className="text-center">Créer un plot</span>
                   </Button>
                   {(!hasTaches || !hasDocuments) && (
                     <p className="text-xs text-orange-600 text-center sm:text-left">
@@ -232,10 +232,10 @@ export default function ChantierDetailPage() {
                   <Button
                     onClick={handleOpenTachesModal}
                     variant={hasTaches ? 'secondary' : 'primary'}
-                    className="flex items-center justify-center gap-2 h-[52px] w-full text-sm"
+                    className="flex items-center justify-center gap-2 min-h-[52px] w-full text-xs leading-tight py-2"
                   >
                     <FileText className="w-4 h-4 flex-shrink-0" />
-                    <span className="whitespace-nowrap">{tachesButtonLabel}</span>
+                    <span className="text-center">{tachesButtonLabel}</span>
                   </Button>
                 </div>
 
@@ -243,10 +243,10 @@ export default function ChantierDetailPage() {
                   <Button
                     onClick={handleOpenDocumentsModal}
                     variant={hasDocuments ? 'secondary' : 'primary'}
-                    className="flex items-center justify-center gap-2 h-[52px] w-full text-sm"
+                    className="flex items-center justify-center gap-2 min-h-[52px] w-full text-xs leading-tight py-2"
                   >
                     <FolderOpen className="w-4 h-4 flex-shrink-0" />
-                    <span className="whitespace-nowrap">{documentsButtonLabel}</span>
+                    <span className="text-center">{documentsButtonLabel}</span>
                   </Button>
                 </div>
               </div>
