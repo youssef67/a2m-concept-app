@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
-import { Clock, CheckCircle, AlertTriangle, Calendar, CheckCircle2, TrendingUp, FileText } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Clock, CheckCircle, AlertTriangle, Calendar, CheckCircle2, TrendingUp, FileText, LogOut } from 'lucide-react'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { useFactures } from '../../finances/hooks/useFactures'
 import { useChantiers } from '../../chantiers/hooks/useChantiers'
@@ -17,9 +18,16 @@ import AppLayout from '../../../shared/components/layout/AppLayout'
 import Card from '../../../shared/components/ui/Card'
 import Spinner from '../../../shared/components/ui/Spinner'
 import Alert from '../../../shared/components/ui/Alert'
+import Button from '../../../shared/components/ui/Button'
 
 export default function AdminDashboard() {
-  const { profile } = useAuth()
+  const { profile, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
   const { factures, loading, error } = useFactures()
   const { chantiers, loading: chantiersLoading, error: chantiersError } = useChantiers('cloture')
 
@@ -192,13 +200,23 @@ export default function AdminDashboard() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Dashboard Administrateur
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Bienvenue, {profile?.full_name || profile?.email}
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Dashboard Administrateur
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Bienvenue, {profile?.full_name || profile?.email}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={handleLogout}
+            className="flex items-center justify-center min-h-[44px] min-w-[44px] px-3"
+            title="Déconnexion"
+          >
+            <LogOut className="w-5 h-5" />
+          </Button>
         </div>
 
         {/* Error State */}

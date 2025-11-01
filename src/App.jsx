@@ -11,6 +11,8 @@ import ViewerDashboard from './features/dashboard/pages/ViewerDashboard'
 import ContactsPage from './features/contacts/pages/ContactsPage'
 import ChantiersPage from './features/chantiers/pages/ChantiersPage'
 import FacturesPage from './features/finances/pages/FacturesPage'
+import ToolsPage from './features/tools/pages/ToolsPage'
+import WorkersPage from './features/workers/pages/WorkersPage'
 
 // Route protection
 import RoleProtectedRoute from './shared/components/routing/RoleProtectedRoute'
@@ -84,6 +86,22 @@ function App() {
             element={
               <RoleProtectedRoute requiredRole="admin">
                 <FacturesPage />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/tools"
+            element={
+              <RoleProtectedRoute requiredRole="admin">
+                <ToolsPage />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/workers"
+            element={
+              <RoleProtectedRoute requiredRole="admin">
+                <WorkersPage />
               </RoleProtectedRoute>
             }
           />

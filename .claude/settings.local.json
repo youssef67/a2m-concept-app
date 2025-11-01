@@ -22,7 +22,8 @@
       "Bash(git branch:*)",
       "Bash(psql:*)",
       "Bash(source .env.dev)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(source .env.prod)"
     ],
     "deny": [],
     "ask": []
