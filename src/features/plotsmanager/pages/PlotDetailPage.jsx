@@ -3,9 +3,9 @@
  * Page de détail d'un plot avec liste des appartements
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Home, Building2, Edit, Trash2 } from 'lucide-react'
+import { ArrowLeft, Home, Building2, Edit, Trash2, Search } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
@@ -13,6 +13,7 @@ import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import CreateAppartementModal from '../components/CreateAppartementModal'
 import { getPlotById } from '../services/plotsService'
 import { useAppartements } from '../hooks/useAppartements'
+import { searchAppartements } from '../utils/appartementHelpers'
 
 export default function PlotDetailPage() {
   const { chantierId, plotId } = useParams()
@@ -24,6 +25,7 @@ export default function PlotDetailPage() {
   const [isCreateAppartementModalOpen, setIsCreateAppartementModalOpen] = useState(false)
   const [appartementToEdit, setAppartementToEdit] = useState(null)
   const [appartementToDelete, setAppartementToDelete] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Appartements hook
   const { appartements, loading: appartementsLoading, loadAppartements, deleteAppartement } = useAppartements(plotId, chantierId)
@@ -61,6 +63,11 @@ export default function PlotDetailPage() {
       loadAppartements()
     }
   }, [plotId, loadAppartements])
+
+  // Filter appartements based on search query
+  const filteredAppartements = useMemo(() => {
+    return searchAppartements(appartements, searchQuery)
+  }, [appartements, searchQuery])
 
   // Handle back button
   const handleBack = () => {
@@ -183,6 +190,20 @@ export default function PlotDetailPage() {
             <div className="mt-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Appartements</h2>
 
+              {/* Search Bar */}
+              {!appartementsLoading && appartements.length > 0 && (
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Rechercher un appartement..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[44px] text-base"
+                  />
+                </div>
+              )}
+
               {appartementsLoading && (
                 <div className="flex items-center justify-center py-8">
                   <Spinner size="md" />
@@ -199,9 +220,17 @@ export default function PlotDetailPage() {
                 </div>
               )}
 
-              {!appartementsLoading && appartements.length > 0 && (
+              {/* No search results */}
+              {!appartementsLoading && appartements.length > 0 && filteredAppartements.length === 0 && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+                  <Home className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600">Aucun appartement trouvé pour &quot;{searchQuery}&quot;</p>
+                </div>
+              )}
+
+              {!appartementsLoading && filteredAppartements.length > 0 && (
                 <div className="space-y-3">
-                  {appartements.map((appartement) => (
+                  {filteredAppartements.map((appartement) => (
                     <div
                       key={appartement.id}
                       onClick={() => handleAppartementClick(appartement)}
