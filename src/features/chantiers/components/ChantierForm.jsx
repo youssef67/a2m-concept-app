@@ -232,7 +232,7 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
         {/* Montants HT et TTC du chantier */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
-            label="Montant HT (€)"
+            label="Montant HT (€) *"
             type="number"
             name="montant_ht"
             value={formData.montant_ht}
@@ -241,6 +241,7 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
             placeholder="0.00"
             step="0.01"
             min="0"
+            required
           />
 
           <div>

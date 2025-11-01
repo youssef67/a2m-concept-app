@@ -234,6 +234,13 @@ export function validateChantierData(data) {
     errors.code_postal = 'Le code postal est obligatoire'
   }
 
+  // Montant HT validation (obligatoire)
+  if (!data.montant_ht || data.montant_ht === '' || parseFloat(data.montant_ht) === 0) {
+    errors.montant_ht = 'Le montant HT est obligatoire'
+  } else if (!isValidBudget(data.montant_ht)) {
+    errors.montant_ht = 'Le montant HT doit être un nombre positif'
+  }
+
   // Budget validation
   if (data.budget_estime && !isValidBudget(data.budget_estime)) {
     errors.budget_estime = 'Le budget doit être un nombre positif'
