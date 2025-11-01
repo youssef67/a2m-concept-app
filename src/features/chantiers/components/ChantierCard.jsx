@@ -119,21 +119,21 @@ export default function ChantierCard({ chantier, onView, onEdit, onDelete }) {
         </div>
 
         {/* Actions - stays at bottom */}
-        <div className="flex items-center gap-2 pt-4 border-t border-gray-200 mt-4">
+        <div className="flex items-center gap-1.5 pt-4 border-t border-gray-200 mt-4">
           <Button
             variant="outline"
             onClick={() => onView(chantier)}
-            className="flex-1 h-12"
+            className="flex-1 min-h-[44px] flex items-center justify-center gap-2"
             title="Voir les détails"
           >
-            <Eye className="w-4 h-4" />
-            <span className="ml-2">Voir</span>
+            <Eye className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline whitespace-nowrap">Voir</span>
           </Button>
 
           <Button
             variant="outline"
             onClick={() => onEdit(chantier)}
-            className="h-12 px-4"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center"
             title="Modifier"
           >
             <Pencil className="w-4 h-4" />
@@ -142,7 +142,7 @@ export default function ChantierCard({ chantier, onView, onEdit, onDelete }) {
           <Button
             variant="outline"
             onClick={() => onDelete(chantier)}
-            className="h-12 px-4 text-red-600 hover:bg-red-50 hover:border-red-300"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-red-600 hover:bg-red-50 hover:border-red-300"
             title="Supprimer"
           >
             <Trash2 className="w-4 h-4" />

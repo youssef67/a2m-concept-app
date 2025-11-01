@@ -129,7 +129,7 @@ export default function ContactCard({ contact, onView, onEdit, onDelete }) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+        <div className="flex items-center justify-end gap-1.5 pt-3 border-t border-gray-100">
           <Button
             variant="outline"
             size="sm"
@@ -137,10 +137,10 @@ export default function ContactCard({ contact, onView, onEdit, onDelete }) {
               e.stopPropagation()
               onEdit(contact)
             }}
-            className="flex items-center gap-1 px-2 sm:px-3"
+            className="flex items-center justify-center gap-1 px-2 sm:px-3 min-w-[44px]"
           >
             <Edit2 className="w-4 h-4 flex-shrink-0" />
-            <span className="hidden sm:inline">Modifier</span>
+            <span className="hidden sm:inline whitespace-nowrap">Modifier</span>
           </Button>
           <Button
             variant="outline"
@@ -149,10 +149,10 @@ export default function ContactCard({ contact, onView, onEdit, onDelete }) {
               e.stopPropagation()
               onDelete(contact)
             }}
-            className="flex items-center gap-1 px-2 sm:px-3 text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="flex items-center justify-center gap-1 px-2 sm:px-3 min-w-[44px] text-red-600 hover:text-red-700 hover:bg-red-50"
           >
             <Trash2 className="w-4 h-4 flex-shrink-0" />
-            <span className="hidden sm:inline">Supprimer</span>
+            <span className="hidden sm:inline whitespace-nowrap">Supprimer</span>
           </Button>
         </div>
       </div>
