@@ -14,7 +14,9 @@ import FacturesPage from './features/finances/pages/FacturesPage'
 import ToolsPage from './features/tools/pages/ToolsPage'
 import WorkersPage from './features/workers/pages/WorkersPage'
 import PlotsManagerPage from './features/plotsmanager/pages/PlotsManagerPage'
+import ChantierDetailPage from './features/plotsmanager/pages/ChantierDetailPage'
 import PlotDetailPage from './features/plotsmanager/pages/PlotDetailPage'
+import AppartementDetailPage from './features/plotsmanager/pages/AppartementDetailPage'
 
 // Route protection
 import RoleProtectedRoute from './shared/components/routing/RoleProtectedRoute'
@@ -119,7 +121,23 @@ function App() {
             path="/admin/plotsmanager/:id"
             element={
               <RoleProtectedRoute requiredRole="admin">
+                <ChantierDetailPage />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/plotsmanager/:chantierId/plot/:plotId"
+            element={
+              <RoleProtectedRoute requiredRole="admin">
                 <PlotDetailPage />
+              </RoleProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/plotsmanager/:chantierId/plot/:plotId/appartement/:appartementId"
+            element={
+              <RoleProtectedRoute requiredRole="admin">
+                <AppartementDetailPage />
               </RoleProtectedRoute>
             }
           />

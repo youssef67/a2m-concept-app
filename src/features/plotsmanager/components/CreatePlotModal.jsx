@@ -1,22 +1,44 @@
 /**
  * CreatePlotModal
- * Modal pour créer un plot (immeuble/structure) lié à un chantier
+ * Modal pour créer ou modifier un plot (immeuble/structure) lié à un chantier
  */
 
-import React, { useState } from 'react'
-import { X } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Input from '../../../shared/components/ui/Input'
 import Select from '../../../shared/components/ui/Select'
+import { usePlots } from '../hooks/usePlots'
 
-export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierTitre }) {
+export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierTitre, plotToEdit, onSuccess }) {
+  const { createPlot, updatePlot } = usePlots(chantierId)
   const [formData, setFormData] = useState({
     nom: '',
     type: 'immeuble',
     description: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const isEditMode = !!plotToEdit
+
+  // Initialize form data when modal opens or plot changes
+  useEffect(() => {
+    if (isOpen) {
+      if (plotToEdit) {
+        setFormData({
+          nom: plotToEdit.nom || '',
+          type: plotToEdit.type || 'immeuble',
+          description: plotToEdit.description || ''
+        })
+      } else {
+        setFormData({
+          nom: '',
+          type: 'immeuble',
+          description: ''
+        })
+      }
+    }
+  }, [isOpen, plotToEdit])
 
   // Type options for Select component
   const typeOptions = [
@@ -56,21 +78,25 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
     setIsSubmitting(true)
 
     try {
-      // TODO: Implémenter l'appel API pour créer le plot
-      console.log('Création plot:', {
-        ...formData,
-        chantierId,
-        chantierTitre
-      })
+      let result
+      if (isEditMode) {
+        result = await updatePlot(plotToEdit.id, formData)
+      } else {
+        result = await createPlot(formData)
+      }
 
-      // Simuler l'enregistrement
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      alert('Plot créé avec succès !')
-      handleClose()
+      if (result.success) {
+        handleClose()
+        // Notify parent to refresh plots list
+        if (onSuccess) {
+          onSuccess()
+        }
+      } else {
+        alert(result.error?.message || `Erreur lors de ${isEditMode ? 'la modification' : 'la création'} du plot`)
+      }
     } catch (error) {
-      console.error('Erreur création plot:', error)
-      alert('Erreur lors de la création du plot')
+      console.error(`Erreur ${isEditMode ? 'modification' : 'création'} plot:`, error)
+      alert(`Erreur lors de ${isEditMode ? 'la modification' : 'la création'} du plot`)
     } finally {
       setIsSubmitting(false)
     }
@@ -89,20 +115,8 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} size="md">
-      <div className="p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Créer un plot</h2>
-          <button
-            onClick={handleClose}
-            disabled={isSubmitting}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-          >
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-
+    <Modal isOpen={isOpen} onClose={handleClose} size="md" title={isEditMode ? 'Modifier le plot' : 'Créer un plot'}>
+      <div>
         {/* Chantier info */}
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800">
@@ -176,7 +190,7 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
               loading={isSubmitting}
               className="w-full sm:w-auto"
             >
-              Créer le plot
+              {isEditMode ? 'Enregistrer' : 'Créer le plot'}
             </Button>
           </div>
         </form>

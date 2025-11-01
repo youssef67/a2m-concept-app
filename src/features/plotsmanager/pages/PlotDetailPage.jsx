@@ -1,31 +1,35 @@
 /**
  * PlotDetailPage
- * Page de détail d'un chantier (plot) avec actions
+ * Page de détail d'un plot avec liste des appartements
  */
 
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Building2, ListTodo } from 'lucide-react'
+import { ArrowLeft, Home, Building2 } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
-import CreatePlotModal from '../components/CreatePlotModal'
-import { getChantierById } from '../../chantiers/services/chantiersService'
+import CreateAppartementModal from '../components/CreateAppartementModal'
+import { getPlotById } from '../services/plotsService'
+import { useAppartements } from '../hooks/useAppartements'
 
 export default function PlotDetailPage() {
-  const { id } = useParams()
+  const { chantierId, plotId } = useParams()
   const navigate = useNavigate()
 
-  const [chantier, setChantier] = useState(null)
+  const [plot, setPlot] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [isCreatePlotModalOpen, setIsCreatePlotModalOpen] = useState(false)
+  const [isCreateAppartementModalOpen, setIsCreateAppartementModalOpen] = useState(false)
 
-  // Load chantier data
+  // Appartements hook
+  const { appartements, loading: appartementsLoading, loadAppartements } = useAppartements(plotId, chantierId)
+
+  // Load plot data
   useEffect(() => {
-    async function loadChantier() {
-      if (!id) {
-        setError('ID du chantier manquant')
+    async function loadPlot() {
+      if (!plotId) {
+        setError('ID du plot manquant')
         setLoading(false)
         return
       }
@@ -33,29 +37,50 @@ export default function PlotDetailPage() {
       setLoading(true)
       setError(null)
 
-      const { data, error: fetchError } = await getChantierById(id)
+      const { data, error: fetchError } = await getPlotById(plotId)
 
       if (fetchError || !data) {
-        setError('Chantier introuvable')
-        setChantier(null)
+        setError('Plot introuvable')
+        setPlot(null)
       } else {
-        setChantier(data)
+        setPlot(data)
       }
 
       setLoading(false)
     }
 
-    loadChantier()
-  }, [id])
+    loadPlot()
+  }, [plotId])
 
-  // Handle navigation to tasks page
-  const handleNavigateToTasks = () => {
-    navigate(`/admin/plotsmanager/${id}/taches`)
-  }
+  // Load appartements data
+  useEffect(() => {
+    if (plotId) {
+      loadAppartements()
+    }
+  }, [plotId, loadAppartements])
 
   // Handle back button
   const handleBack = () => {
-    navigate('/admin/plotsmanager')
+    navigate(`/admin/plotsmanager/${chantierId}`)
+  }
+
+  // Handle appartement click
+  const handleAppartementClick = (appartement) => {
+    navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}`)
+  }
+
+  // Handle appartement creation success
+  const handleAppartementCreated = () => {
+    loadAppartements()
+  }
+
+  // Type labels
+  const TYPE_LABELS = {
+    immeuble: 'Immeuble',
+    structure: 'Structure',
+    batiment: 'Bâtiment',
+    annexe: 'Annexe',
+    autre: 'Autre'
   }
 
   return (
@@ -80,7 +105,7 @@ export default function PlotDetailPage() {
         )}
 
         {/* Success State */}
-        {!loading && !error && chantier && (
+        {!loading && !error && plot && (
           <>
             {/* Header with title and action buttons */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -93,36 +118,83 @@ export default function PlotDetailPage() {
                 >
                   <ArrowLeft className="w-5 h-5 text-gray-600" />
                 </button>
-                <h1 className="text-2xl font-bold text-gray-900">{chantier.titre}</h1>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">{plot.nom}</h1>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                    <Building2 className="w-4 h-4" />
+                    <span>{TYPE_LABELS[plot.type] || plot.type}</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Right: Action buttons */}
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                <Button
-                  onClick={() => setIsCreatePlotModalOpen(true)}
-                  className="flex items-center justify-center gap-2 min-h-[44px]"
-                >
-                  <Building2 className="w-5 h-5" />
-                  <span>Créer un plot</span>
-                </Button>
-
-                <Button
-                  onClick={handleNavigateToTasks}
-                  variant="secondary"
-                  className="flex items-center justify-center gap-2 min-h-[44px]"
-                >
-                  <ListTodo className="w-5 h-5" />
-                  <span>Tâches</span>
-                </Button>
-              </div>
+              {/* Right: Action button */}
+              <Button
+                onClick={() => setIsCreateAppartementModalOpen(true)}
+                className="flex items-center justify-center gap-2 min-h-[44px]"
+              >
+                <Home className="w-5 h-5" />
+                <span>Créer un appartement</span>
+              </Button>
             </div>
 
-            {/* Modal for creating plot (immeuble/structure) */}
-            <CreatePlotModal
-              isOpen={isCreatePlotModalOpen}
-              onClose={() => setIsCreatePlotModalOpen(false)}
-              chantierId={id}
-              chantierTitre={chantier.titre}
+            {/* Description if exists */}
+            {plot.description && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-700">{plot.description}</p>
+              </div>
+            )}
+
+            {/* Appartements list */}
+            <div className="mt-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Appartements</h2>
+
+              {appartementsLoading && (
+                <div className="flex items-center justify-center py-8">
+                  <Spinner size="md" />
+                </div>
+              )}
+
+              {!appartementsLoading && appartements.length === 0 && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+                  <Home className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600">Aucun appartement créé pour ce plot</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Cliquez sur "Créer un appartement" pour commencer
+                  </p>
+                </div>
+              )}
+
+              {!appartementsLoading && appartements.length > 0 && (
+                <div className="space-y-3">
+                  {appartements.map((appartement) => (
+                    <div
+                      key={appartement.id}
+                      onClick={() => handleAppartementClick(appartement)}
+                      className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 hover:shadow-md transition-all cursor-pointer bg-white"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Home className="w-5 h-5 text-gray-600" />
+                          <span className="font-medium text-gray-900">{appartement.nom}</span>
+                        </div>
+                        <span className="text-sm text-gray-600">
+                          {appartement.taches_count} {appartement.taches_count <= 1 ? 'tâche' : 'tâches'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Modal for creating appartement */}
+            <CreateAppartementModal
+              isOpen={isCreateAppartementModalOpen}
+              onClose={() => setIsCreateAppartementModalOpen(false)}
+              plotId={plotId}
+              chantierId={chantierId}
+              plotNom={plot.nom}
+              onSuccess={handleAppartementCreated}
             />
           </>
         )}
