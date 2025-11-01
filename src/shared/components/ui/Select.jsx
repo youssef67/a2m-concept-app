@@ -8,8 +8,9 @@ import { ChevronDown, Check } from 'lucide-react'
  * @param {Array} options - Array of {value, label} objects
  * @param {string} placeholder - Placeholder text when no value selected
  * @param {string} className - Additional classes for wrapper
+ * @param {boolean} disabled - Disable the select
  */
-export default function Select({ value, onChange, options, placeholder, className = '' }) {
+export default function Select({ value, onChange, options, placeholder, className = '', disabled = false }) {
   const [isOpen, setIsOpen] = useState(false)
   const selectRef = useRef(null)
 
@@ -46,8 +47,11 @@ export default function Select({ value, onChange, options, placeholder, classNam
       {/* Select button */}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white cursor-pointer flex items-center justify-between text-left"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white flex items-center justify-between text-left ${
+          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        }`}
       >
         <span className={value ? 'text-gray-900' : 'text-gray-500'}>
           {displayText}
@@ -56,7 +60,7 @@ export default function Select({ value, onChange, options, placeholder, classNam
       </button>
 
       {/* Dropdown menu */}
-      {isOpen && (
+      {isOpen && !disabled && (
         <>
           {/* Backdrop for mobile */}
           <div

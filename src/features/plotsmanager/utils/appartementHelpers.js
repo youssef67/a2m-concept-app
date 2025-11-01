@@ -68,6 +68,16 @@ export function filterAppartementsByStatut(appartements, statut) {
 }
 
 /**
+ * Obtient les tâches en cours d'un appartement
+ * @param {Object} appartement - Appartement avec taches
+ * @returns {Array} Tâches avec statut 'en_cours'
+ */
+export function getTasksEnCours(appartement) {
+  const { taches = [] } = appartement
+  return taches.filter((t) => t.statut === 'en_cours')
+}
+
+/**
  * Obtient la configuration de style pour un statut d'appartement
  * @param {string} statut - Statut de l'appartement
  * @returns {Object} Configuration avec label, color, bgColor, textColor

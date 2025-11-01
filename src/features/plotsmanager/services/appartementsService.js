@@ -55,6 +55,7 @@ export async function getAppartementsByPlotWithDetails(plotId, chantierId) {
         *,
         appartement_taches (
           id,
+          intitule,
           statut
         )
       `)

@@ -18,7 +18,8 @@ import {
   searchAppartements,
   filterAppartementsByStatut,
   calculateAppartementStatut,
-  getStatutConfig
+  getStatutConfig,
+  getTasksEnCours
 } from '../utils/appartementHelpers'
 
 export default function PlotDetailPage() {
@@ -281,6 +282,8 @@ export default function PlotDetailPage() {
                   {filteredAppartements.map((appartement) => {
                     const statut = calculateAppartementStatut(appartement)
                     const statutConfig = getStatutConfig(statut)
+                    const tachesEnCours = getTasksEnCours(appartement)
+                    const tacheEnCours = tachesEnCours.length > 0 ? tachesEnCours[0] : null
 
                     return (
                       <div
@@ -297,9 +300,15 @@ export default function PlotDetailPage() {
                             </span>
                           </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-sm text-gray-600 hidden sm:inline">
-                            {appartement.taches_count} {appartement.taches_count <= 1 ? 'tâche' : 'tâches'}
-                          </span>
+                          {statut === 'en_cours' && tacheEnCours ? (
+                            <span className="text-xs sm:text-sm text-yellow-700 font-medium hidden sm:inline truncate max-w-[200px]" title={tacheEnCours.intitule}>
+                              {tacheEnCours.intitule}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-600 hidden sm:inline">
+                              {appartement.taches_count} {appartement.taches_count <= 1 ? 'tâche' : 'tâches'}
+                            </span>
+                          )}
                           <button
                             onClick={(e) => handleEditAppartement(e, appartement)}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
