@@ -197,9 +197,11 @@ export default function AdminDashboard() {
   const dernieresFactures = useMemo(() => {
     if (!factures || factures.length === 0) return []
 
+    // Filtrer uniquement les factures clients et prendre les 3 premières
     // Les factures sont déjà triées par date_emission DESC dans le service
-    // On prend simplement les 3 premières
-    return factures.slice(0, 3)
+    return factures
+      .filter(f => f.type === 'client')
+      .slice(0, 3)
   }, [factures])
 
   return (
@@ -571,7 +573,7 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-3">
               <FileText className="w-6 h-6 text-blue-600" />
               <h2 className="text-2xl font-bold text-gray-900">
-                Dernières factures
+                Dernières factures clients
               </h2>
             </div>
           </div>
