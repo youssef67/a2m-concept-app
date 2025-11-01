@@ -208,13 +208,25 @@ export default function ChantierDetailPage() {
 
               {/* Right: Action buttons */}
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                <Button
-                  onClick={handleOpenCreatePlotModal}
-                  className="flex items-center justify-center gap-2 min-h-[44px]"
-                >
-                  <Building2 className="w-5 h-5" />
-                  <span>Créer un plot</span>
-                </Button>
+                <div className="flex flex-col gap-1">
+                  <Button
+                    onClick={handleOpenCreatePlotModal}
+                    disabled={!hasTaches || !hasDocuments}
+                    className="flex items-center justify-center gap-2 min-h-[44px]"
+                  >
+                    <Building2 className="w-5 h-5" />
+                    <span>Créer un plot</span>
+                  </Button>
+                  {(!hasTaches || !hasDocuments) && (
+                    <p className="text-xs text-orange-600 text-center sm:text-left">
+                      {!hasTaches && !hasDocuments
+                        ? 'Créez des tâches et documents d\'abord'
+                        : !hasTaches
+                        ? 'Créez des tâches d\'abord'
+                        : 'Définissez des documents d\'abord'}
+                    </p>
+                  )}
+                </div>
 
                 <Button
                   onClick={handleOpenTachesModal}
@@ -277,6 +289,8 @@ export default function ChantierDetailPage() {
               chantierId={id}
               chantierTitre={chantier.titre}
               plotToEdit={plotToEdit}
+              hasTaches={hasTaches}
+              hasDocuments={hasDocuments}
               onSuccess={handlePlotCreated}
             />
 

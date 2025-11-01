@@ -10,7 +10,7 @@ import Input from '../../../shared/components/ui/Input'
 import Select from '../../../shared/components/ui/Select'
 import { usePlots } from '../hooks/usePlots'
 
-export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierTitre, plotToEdit, onSuccess }) {
+export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierTitre, plotToEdit, hasTaches, hasDocuments, onSuccess }) {
   const { createPlot, updatePlot } = usePlots(chantierId)
   const [formData, setFormData] = useState({
     nom: '',
@@ -18,6 +18,7 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
     description: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
   const isEditMode = !!plotToEdit
 
@@ -37,6 +38,7 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
           description: ''
         })
       }
+      setErrorMessage('')
     }
   }, [isOpen, plotToEdit])
 
@@ -56,6 +58,7 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
       ...prev,
       [name]: value
     }))
+    setErrorMessage('')
   }
 
   // Handle select change (custom Select component)
@@ -70,10 +73,20 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!formData.nom.trim()) {
-      alert('Le nom est obligatoire')
+    // Validate taches and documents requirement
+    if (!hasTaches || !hasDocuments) {
+      setErrorMessage(
+        'Vous devez définir au moins une tâche ET un document pour ce chantier avant de créer un plot. Utilisez les boutons "Créer des tâches" et "Définir les documents".'
+      )
       return
     }
+
+    if (!formData.nom.trim()) {
+      setErrorMessage('Le nom est obligatoire')
+      return
+    }
+
+    setErrorMessage('')
 
     setIsSubmitting(true)
 
@@ -92,11 +105,11 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
           onSuccess()
         }
       } else {
-        alert(result.error?.message || `Erreur lors de ${isEditMode ? 'la modification' : 'la création'} du plot`)
+        setErrorMessage(result.error?.message || `Erreur lors de ${isEditMode ? 'la modification' : 'la création'} du plot`)
       }
     } catch (error) {
       console.error(`Erreur ${isEditMode ? 'modification' : 'création'} plot:`, error)
-      alert(`Erreur lors de ${isEditMode ? 'la modification' : 'la création'} du plot`)
+      setErrorMessage(`Erreur lors de ${isEditMode ? 'la modification' : 'la création'} du plot`)
     } finally {
       setIsSubmitting(false)
     }
@@ -110,6 +123,7 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
         type: 'immeuble',
         description: ''
       })
+      setErrorMessage('')
       onClose()
     }
   }
@@ -123,6 +137,13 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
             <strong>Chantier :</strong> {chantierTitre}
           </p>
         </div>
+
+        {/* Error message */}
+        {errorMessage && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800">{errorMessage}</p>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
