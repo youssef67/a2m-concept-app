@@ -309,13 +309,22 @@ export default function FacturesPage() {
     if (activeTab !== 'fin_chantier') return []
 
     // 1. Filter: (finalisation_95 OR hasRetenueGarantie) AND statut = 'cloture'
+    // AND au moins un paiement applicable non payé
     const finChantiers = chantiers.filter(c => {
       if (c.statut !== 'cloture') return false
 
       const hasFinalisation95 = c.finalisation_95
       const hasRetenue = chantierHasRetenueGarantie(c.id, factures)
 
-      return hasFinalisation95 || hasRetenue
+      // Le chantier doit avoir au moins une finalisation ou retenue
+      if (!hasFinalisation95 && !hasRetenue) return false
+
+      // Vérifier si au moins un paiement applicable n'est pas payé
+      const finalisationNonPayee = hasFinalisation95 && !c.finalisation_95_payee
+      const retenueNonPayee = hasRetenue && !c.retenue_garantie_payee
+
+      // Afficher seulement si au moins un paiement applicable n'est pas payé
+      return finalisationNonPayee || retenueNonPayee
     })
 
     // 2. Apply search query
