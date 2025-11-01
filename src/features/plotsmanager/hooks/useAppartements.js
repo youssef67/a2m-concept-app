@@ -9,6 +9,7 @@ import {
   getAppartementsByPlotWithDetails,
   getAppartementTaches,
   createAppartementWithTaches,
+  createMultipleAppartementsWithTaches,
   updateAppartement as updateAppartementService,
   updateAppartementTacheStatut as updateTacheStatutService,
   deleteAppartement as deleteAppartementService
@@ -82,6 +83,51 @@ export function useAppartements(plotId, chantierId = null) {
   }
 
   /**
+   * Create multiple appartements with inherited tasks
+   * @param {Array<string>} nomsAppartements - Array of apartment names
+   * @returns {Promise<{success: boolean, created: number, failed: number, errors: Array}>}
+   */
+  const createMultipleAppartements = async (nomsAppartements) => {
+    if (!plotId) {
+      return {
+        success: false,
+        created: 0,
+        failed: nomsAppartements.length,
+        errors: ['Plot ID manquant']
+      }
+    }
+
+    if (!chantierId) {
+      return {
+        success: false,
+        created: 0,
+        failed: nomsAppartements.length,
+        errors: ['Chantier ID manquant']
+      }
+    }
+
+    setLoading(true)
+    setError(null)
+
+    const result = await createMultipleAppartementsWithTaches(
+      plotId,
+      chantierId,
+      nomsAppartements
+    )
+
+    if (!result.success) {
+      setError(result.errors.join(', ') || 'Erreur lors de la création des appartements')
+      setLoading(false)
+      return result
+    }
+
+    // Refresh appartements list
+    await loadAppartements()
+
+    return result
+  }
+
+  /**
    * Update an appartement
    * @param {string} appartementId - Appartement ID
    * @param {Object} appartementData - Data to update
@@ -137,6 +183,7 @@ export function useAppartements(plotId, chantierId = null) {
     error,
     loadAppartements,
     createAppartement,
+    createMultipleAppartements,
     updateAppartement,
     deleteAppartement
   }

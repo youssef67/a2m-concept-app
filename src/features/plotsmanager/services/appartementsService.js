@@ -330,3 +330,146 @@ export async function deleteAppartement(appartementId) {
     return { success: false, error: err }
   }
 }
+
+/**
+ * Create multiple appartements WITH automatic task inheritance from chantier
+ * @param {string} plotId - Plot ID
+ * @param {string} chantierId - Chantier ID (for task inheritance)
+ * @param {Array<string>} nomsAppartements - Array of apartment names
+ * @returns {Promise<{success: boolean, created: number, failed: number, errors: Array, data: Array}>}
+ */
+export async function createMultipleAppartementsWithTaches(plotId, chantierId, nomsAppartements) {
+  try {
+    // Validate input
+    if (!Array.isArray(nomsAppartements) || nomsAppartements.length === 0) {
+      return {
+        success: false,
+        created: 0,
+        failed: 0,
+        errors: ['Aucun nom d\'appartement fourni'],
+        data: []
+      }
+    }
+
+    // Remove empty names and trim
+    const validNoms = nomsAppartements
+      .map(nom => nom.trim())
+      .filter(nom => nom.length > 0)
+
+    if (validNoms.length === 0) {
+      return {
+        success: false,
+        created: 0,
+        failed: 0,
+        errors: ['Aucun nom valide fourni'],
+        data: []
+      }
+    }
+
+    // Step 1: Get current max ordre for this plot
+    const { data: existingAppts, error: fetchError } = await supabase
+      .from('appartements')
+      .select('ordre')
+      .eq('plot_id', plotId)
+      .order('ordre', { ascending: false })
+      .limit(1)
+
+    if (fetchError) {
+      console.error('Error fetching existing appartements:', fetchError)
+      return {
+        success: false,
+        created: 0,
+        failed: validNoms.length,
+        errors: [fetchError.message],
+        data: []
+      }
+    }
+
+    let nextOrdre = existingAppts && existingAppts.length > 0
+      ? existingAppts[0].ordre + 1
+      : 1
+
+    // Step 2: Get chantier tasks ONCE (optimization)
+    const { data: chantierTaches, error: tachesError } = await getTachesByChantier(chantierId)
+
+    if (tachesError) {
+      console.error('Error fetching chantier taches:', tachesError)
+      // Don't fail completely, but warn
+      console.warn('Tasks inheritance will be skipped due to error')
+    }
+
+    // Step 3: Create each appartement with its tasks
+    const results = []
+    const errors = []
+    let createdCount = 0
+    let failedCount = 0
+
+    for (const nom of validNoms) {
+      try {
+        // Create appartement
+        const { data: appartement, error: insertError } = await supabase
+          .from('appartements')
+          .insert({
+            plot_id: plotId,
+            nom: nom,
+            ordre: nextOrdre
+          })
+          .select()
+          .single()
+
+        if (insertError) {
+          console.error(`Error creating appartement "${nom}":`, insertError)
+          errors.push(`${nom}: ${insertError.message}`)
+          failedCount++
+          continue
+        }
+
+        // Create inherited tasks (if any)
+        if (chantierTaches && chantierTaches.length > 0) {
+          const appartementTachesToInsert = chantierTaches.map(tache => ({
+            appartement_id: appartement.id,
+            chantier_tache_id: tache.id,
+            intitule: tache.intitule,
+            statut: 'a_faire',
+            ordre: tache.ordre
+          }))
+
+          const { error: insertTachesError } = await supabase
+            .from('appartement_taches')
+            .insert(appartementTachesToInsert)
+
+          if (insertTachesError) {
+            console.error(`Error inserting tasks for "${nom}":`, insertTachesError)
+            // Don't fail the appartement creation, but log warning
+            console.warn(`Appartement "${nom}" created but tasks inheritance failed`)
+          }
+        }
+
+        results.push(appartement)
+        createdCount++
+        nextOrdre++ // Increment for next appartement
+      } catch (err) {
+        console.error(`Exception creating appartement "${nom}":`, err)
+        errors.push(`${nom}: ${err.message}`)
+        failedCount++
+      }
+    }
+
+    return {
+      success: createdCount > 0,
+      created: createdCount,
+      failed: failedCount,
+      errors: errors,
+      data: results
+    }
+  } catch (err) {
+    console.error('Exception in createMultipleAppartementsWithTaches:', err)
+    return {
+      success: false,
+      created: 0,
+      failed: nomsAppartements.length,
+      errors: [err.message],
+      data: []
+    }
+  }
+}

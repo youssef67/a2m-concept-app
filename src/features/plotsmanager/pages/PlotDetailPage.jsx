@@ -5,13 +5,14 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Home, Building2, Edit, Trash2, Search } from 'lucide-react'
+import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
 import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import Tabs from '../../../shared/components/ui/Tabs'
 import CreateAppartementModal from '../components/CreateAppartementModal'
+import CreateMultipleAppartementsModal from '../components/CreateMultipleAppartementsModal'
 import { getPlotById } from '../services/plotsService'
 import { useAppartements } from '../hooks/useAppartements'
 import {
@@ -30,6 +31,8 @@ export default function PlotDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isCreateAppartementModalOpen, setIsCreateAppartementModalOpen] = useState(false)
+  const [isCreateMultipleModalOpen, setIsCreateMultipleModalOpen] = useState(false)
+  const [showCreateMenu, setShowCreateMenu] = useState(false)
   const [appartementToEdit, setAppartementToEdit] = useState(null)
   const [appartementToDelete, setAppartementToDelete] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -91,6 +94,11 @@ export default function PlotDetailPage() {
     finalise: filterAppartementsByStatut(appartements, 'finalise').length
   }), [appartements])
 
+  // Get existing appartement names for duplicate validation
+  const existingAppartementNames = useMemo(() => {
+    return appartements.map(appt => appt.nom)
+  }, [appartements])
+
   // Handle back button
   const handleBack = () => {
     navigate(`/admin/plotsmanager/${chantierId}`)
@@ -104,6 +112,16 @@ export default function PlotDetailPage() {
   // Handle appartement creation success
   const handleAppartementCreated = () => {
     loadAppartements()
+  }
+
+  // Handle multiple appartements creation success
+  const handleMultipleAppartementsCreated = (result) => {
+    loadAppartements()
+    // Show success message
+    const message = result.failed > 0
+      ? `${result.created} appartement(s) créé(s) avec succès, ${result.failed} échec(s)`
+      : `${result.created} appartement(s) créé(s) avec succès`
+    alert(message)
   }
 
   // Handle appartement edit
@@ -191,14 +209,51 @@ export default function PlotDetailPage() {
                 </div>
               </div>
 
-              {/* Right: Action button */}
-              <Button
-                onClick={() => setIsCreateAppartementModalOpen(true)}
-                className="flex items-center justify-center gap-2 min-h-[44px]"
-              >
-                <Home className="w-5 h-5" />
-                <span>Créer un appartement</span>
-              </Button>
+              {/* Right: Action button with dropdown */}
+              <div className="relative">
+                <Button
+                  onClick={() => setShowCreateMenu(!showCreateMenu)}
+                  className="flex items-center justify-center gap-2 min-h-[44px]"
+                >
+                  <Home className="w-5 h-5" />
+                  <span>Créer appartement(s)</span>
+                  <ChevronDown className="w-4 h-4 ml-1" />
+                </Button>
+
+                {showCreateMenu && (
+                  <>
+                    {/* Backdrop to close menu */}
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowCreateMenu(false)}
+                    />
+
+                    {/* Dropdown menu */}
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
+                      <button
+                        onClick={() => {
+                          setIsCreateAppartementModalOpen(true)
+                          setShowCreateMenu(false)
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                      >
+                        <Home className="w-5 h-5 text-primary-600" />
+                        <span className="text-gray-700 font-medium">Créer un appartement</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsCreateMultipleModalOpen(true)
+                          setShowCreateMenu(false)
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                      >
+                        <Building2 className="w-5 h-5 text-primary-600" />
+                        <span className="text-gray-700 font-medium">Créer plusieurs appartements</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Description if exists */}
@@ -345,6 +400,17 @@ export default function PlotDetailPage() {
               plotNom={plot.nom}
               appartementToEdit={appartementToEdit}
               onSuccess={handleAppartementCreated}
+            />
+
+            {/* Modal for creating multiple appartements */}
+            <CreateMultipleAppartementsModal
+              isOpen={isCreateMultipleModalOpen}
+              onClose={() => setIsCreateMultipleModalOpen(false)}
+              plotId={plotId}
+              chantierId={chantierId}
+              plotNom={plot.nom}
+              existingAppartementNames={existingAppartementNames}
+              onSuccess={handleMultipleAppartementsCreated}
             />
 
             {/* Confirm delete modal */}
