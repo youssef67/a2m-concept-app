@@ -119,7 +119,7 @@ export default function FacturesPage() {
   // Hooks
   const { factures, loading, error, createFacture, updateFacture, deleteFacture, deleteMultipleFactures, refreshFactures } = useFactures()
   const { contacts } = useContacts()
-  const { chantiers } = useChantiers()
+  const { chantiers, refetch: refetchChantiers } = useChantiers()
   const { documents, loading: docsLoading, uploading, upload, download, remove } = useDocuments(selectedFacture?.id)
   const { showToast } = useToast()
 
@@ -754,8 +754,8 @@ export default function FacturesPage() {
       showToast('Erreur lors de la mise à jour du statut de paiement', 'error')
     } else {
       showToast('Statut de paiement mis à jour avec succès', 'success')
-      // Refresh chantiers to update the display
-      refreshFactures() // This will trigger a re-fetch of factures and chantiers
+      // Refresh chantiers to update the display immediately
+      refetchChantiers()
     }
   }
 
