@@ -5,17 +5,19 @@
 
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Building2, FileText } from 'lucide-react'
+import { ArrowLeft, Building2, FileText, FolderOpen } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
 import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import CreatePlotModal from '../components/CreatePlotModal'
 import TachesModal from '../components/TachesModal'
+import DocumentsModal from '../components/DocumentsModal'
 import PlotCardDisplay from '../components/PlotCardDisplay'
 import { getChantierById } from '../../chantiers/services/chantiersService'
 import { useTaches } from '../hooks/useTaches'
 import { usePlots } from '../hooks/usePlots'
+import { useDocuments } from '../hooks/useDocuments'
 
 export default function ChantierDetailPage() {
   const { id } = useParams()
@@ -26,14 +28,18 @@ export default function ChantierDetailPage() {
   const [error, setError] = useState(null)
   const [isCreatePlotModalOpen, setIsCreatePlotModalOpen] = useState(false)
   const [isTachesModalOpen, setIsTachesModalOpen] = useState(false)
+  const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false)
   const [plotToEdit, setPlotToEdit] = useState(null)
   const [plotToDelete, setPlotToDelete] = useState(null)
 
   // Taches hook
-  const { taches, loading: tachesLoading, loadTaches, saveTaches } = useTaches(id)
+  const { taches, loading: _tachesLoading, loadTaches, saveTaches } = useTaches(id)
 
   // Plots hook
   const { plots, loading: plotsLoading, loadPlots, deletePlot } = usePlots(id)
+
+  // Documents hook
+  const { documents, loading: _documentsLoading, loadDocuments, saveDocuments } = useDocuments(id)
 
   // Load chantier data
   useEffect(() => {
@@ -75,6 +81,13 @@ export default function ChantierDetailPage() {
       loadPlots()
     }
   }, [id, loadPlots])
+
+  // Load documents data
+  useEffect(() => {
+    if (id) {
+      loadDocuments()
+    }
+  }, [id, loadDocuments])
 
   // Handle back button
   const handleBack = () => {
@@ -137,9 +150,23 @@ export default function ChantierDetailPage() {
     return result
   }
 
+  // Handle documents modal
+  const handleOpenDocumentsModal = () => {
+    setIsDocumentsModalOpen(true)
+  }
+
+  const handleSaveDocuments = async (documentsData) => {
+    const result = await saveDocuments(documentsData)
+    return result
+  }
+
   // Determine button label and icon based on taches existence
   const hasTaches = taches && taches.length > 0
   const tachesButtonLabel = hasTaches ? 'Modifier les tâches' : 'Créer des tâches'
+
+  // Determine button label based on documents existence
+  const hasDocuments = documents && documents.length > 0
+  const documentsButtonLabel = hasDocuments ? 'Modifier les documents' : 'Définir les documents'
 
   return (
     <AppLayout>
@@ -197,6 +224,15 @@ export default function ChantierDetailPage() {
                   <FileText className="w-5 h-5" />
                   <span>{tachesButtonLabel}</span>
                 </Button>
+
+                <Button
+                  onClick={handleOpenDocumentsModal}
+                  variant={hasDocuments ? 'secondary' : 'primary'}
+                  className="flex items-center justify-center gap-2 min-h-[44px]"
+                >
+                  <FolderOpen className="w-5 h-5" />
+                  <span>{documentsButtonLabel}</span>
+                </Button>
               </div>
             </div>
 
@@ -252,6 +288,15 @@ export default function ChantierDetailPage() {
               chantierTitre={chantier.titre}
               initialTaches={taches}
               onSave={handleSaveTaches}
+            />
+
+            {/* Modal for managing documents */}
+            <DocumentsModal
+              isOpen={isDocumentsModalOpen}
+              onClose={() => setIsDocumentsModalOpen(false)}
+              chantierTitre={chantier.titre}
+              initialDocuments={documents}
+              onSave={handleSaveDocuments}
             />
 
             {/* Confirm delete modal */}

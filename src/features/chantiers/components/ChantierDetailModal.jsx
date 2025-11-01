@@ -60,6 +60,14 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
     }
   }, [isOpen, chantier?.id, loadAvenants])
 
+  // Options for Statut select - MUST be before early return
+  const statutOptions = useMemo(() => [
+    { value: 'devis', label: 'Devis' },
+    { value: 'planifie', label: 'Planifié' },
+    { value: 'en_cours', label: 'En cours' },
+    { value: 'cloture', label: 'Clôturé' }
+  ], [])
+
   if (!chantier) return null
 
   // Calculate total montant HT avec avenants
@@ -135,14 +143,6 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
     // Reset to original status on cancel
     setCurrentStatut(chantier.statut)
   }
-
-  // Options for Statut select
-  const statutOptions = useMemo(() => [
-    { value: 'devis', label: 'Devis' },
-    { value: 'planifie', label: 'Planifié' },
-    { value: 'en_cours', label: 'En cours' },
-    { value: 'cloture', label: 'Clôturé' }
-  ], [])
 
   return (
     <Modal
