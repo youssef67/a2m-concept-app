@@ -232,7 +232,7 @@ export default function AppartementDetailPage() {
             <div className="mb-6">
               <Tabs
                 tabs={[
-                  { id: 'taches', label: 'Tâches', count: tachesStats.total },
+                  { id: 'taches', label: 'Tâches', count: `${tachesStats.terminee}/${tachesStats.total}` },
                   { id: 'documents', label: 'Documents', count: `${documentsStats.uploaded}/${documentsStats.total}` }
                 ]}
                 activeTab={activeTab}

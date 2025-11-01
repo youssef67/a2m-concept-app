@@ -6,7 +6,7 @@
 import { supabase } from '../../../lib/supabaseClient'
 
 /**
- * Get all plots for a specific chantier
+ * Get all plots for a specific chantier with appartement count
  * @param {string} chantierId - Chantier ID
  * @returns {Promise<{data: Array, error: Error|null}>}
  */
@@ -14,7 +14,10 @@ export async function getPlotsByChantier(chantierId) {
   try {
     const { data, error } = await supabase
       .from('plots')
-      .select('*')
+      .select(`
+        *,
+        appartements (count)
+      `)
       .eq('chantier_id', chantierId)
       .order('ordre', { ascending: true })
 
@@ -23,7 +26,13 @@ export async function getPlotsByChantier(chantierId) {
       return { data: null, error }
     }
 
-    return { data: data || [], error: null }
+    // Transform data to include appartement count
+    const transformedData = (data || []).map(plot => ({
+      ...plot,
+      appartements_count: plot.appartements?.[0]?.count || 0
+    }))
+
+    return { data: transformedData, error: null }
   } catch (err) {
     console.error('Exception in getPlotsByChantier:', err)
     return { data: null, error: err }

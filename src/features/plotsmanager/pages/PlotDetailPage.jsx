@@ -10,10 +10,16 @@ import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
 import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
+import Tabs from '../../../shared/components/ui/Tabs'
 import CreateAppartementModal from '../components/CreateAppartementModal'
 import { getPlotById } from '../services/plotsService'
 import { useAppartements } from '../hooks/useAppartements'
-import { searchAppartements } from '../utils/appartementHelpers'
+import {
+  searchAppartements,
+  filterAppartementsByStatut,
+  calculateAppartementStatut,
+  getStatutConfig
+} from '../utils/appartementHelpers'
 
 export default function PlotDetailPage() {
   const { chantierId, plotId } = useParams()
@@ -26,6 +32,7 @@ export default function PlotDetailPage() {
   const [appartementToEdit, setAppartementToEdit] = useState(null)
   const [appartementToDelete, setAppartementToDelete] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [activeTab, setActiveTab] = useState('en_attente')
 
   // Appartements hook
   const { appartements, loading: appartementsLoading, loadAppartements, deleteAppartement } = useAppartements(plotId, chantierId)
@@ -64,10 +71,23 @@ export default function PlotDetailPage() {
     }
   }, [plotId, loadAppartements])
 
-  // Filter appartements based on search query
-  const filteredAppartements = useMemo(() => {
+  // Filter appartements based on search query and status
+  const filteredBySearch = useMemo(() => {
     return searchAppartements(appartements, searchQuery)
   }, [appartements, searchQuery])
+
+  const filteredByStatut = useMemo(() => {
+    return filterAppartementsByStatut(filteredBySearch, activeTab)
+  }, [filteredBySearch, activeTab])
+
+  const filteredAppartements = filteredByStatut
+
+  // Calculate stats for tabs
+  const stats = useMemo(() => ({
+    en_attente: filterAppartementsByStatut(appartements, 'en_attente').length,
+    pret: filterAppartementsByStatut(appartements, 'pret').length,
+    finalise: filterAppartementsByStatut(appartements, 'finalise').length
+  }), [appartements])
 
   // Handle back button
   const handleBack = () => {
@@ -190,6 +210,21 @@ export default function PlotDetailPage() {
             <div className="mt-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Appartements</h2>
 
+              {/* Tabs */}
+              {!appartementsLoading && appartements.length > 0 && (
+                <div className="mb-4">
+                  <Tabs
+                    tabs={[
+                      { id: 'en_attente', label: 'En attente', count: stats.en_attente },
+                      { id: 'pret', label: 'Prêt', count: stats.pret },
+                      { id: 'finalise', label: 'Finalisé', count: stats.finalise }
+                    ]}
+                    activeTab={activeTab}
+                    onChange={setActiveTab}
+                  />
+                </div>
+              )}
+
               {/* Search Bar */}
               {!appartementsLoading && appartements.length > 0 && (
                 <div className="relative mb-4">
@@ -220,27 +255,44 @@ export default function PlotDetailPage() {
                 </div>
               )}
 
-              {/* No search results */}
+              {/* No results - search or tab specific */}
               {!appartementsLoading && appartements.length > 0 && filteredAppartements.length === 0 && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
                   <Home className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-600">Aucun appartement trouvé pour &quot;{searchQuery}&quot;</p>
+                  {searchQuery ? (
+                    <p className="text-gray-600">
+                      Aucun appartement {activeTab === 'en_attente' ? 'en attente' : activeTab === 'pret' ? 'prêt' : 'finalisé'} trouvé pour &quot;{searchQuery}&quot;
+                    </p>
+                  ) : (
+                    <p className="text-gray-600">
+                      {activeTab === 'en_attente' && 'Aucun appartement en attente'}
+                      {activeTab === 'pret' && 'Aucun appartement prêt'}
+                      {activeTab === 'finalise' && 'Aucun appartement finalisé'}
+                    </p>
+                  )}
                 </div>
               )}
 
               {!appartementsLoading && filteredAppartements.length > 0 && (
                 <div className="space-y-3">
-                  {filteredAppartements.map((appartement) => (
-                    <div
-                      key={appartement.id}
-                      onClick={() => handleAppartementClick(appartement)}
-                      className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 hover:shadow-md transition-all cursor-pointer bg-white"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <Home className="w-5 h-5 text-gray-600 flex-shrink-0" />
-                          <span className="font-medium text-gray-900 truncate">{appartement.nom}</span>
-                        </div>
+                  {filteredAppartements.map((appartement) => {
+                    const statut = calculateAppartementStatut(appartement)
+                    const statutConfig = getStatutConfig(statut)
+
+                    return (
+                      <div
+                        key={appartement.id}
+                        onClick={() => handleAppartementClick(appartement)}
+                        className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 hover:shadow-md transition-all cursor-pointer bg-white"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <Home className="w-5 h-5 text-gray-600 flex-shrink-0" />
+                            <span className="font-medium text-gray-900 truncate">{appartement.nom}</span>
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statutConfig.color} flex-shrink-0`}>
+                              {statutConfig.label}
+                            </span>
+                          </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-sm text-gray-600 hidden sm:inline">
                             {appartement.taches_count} {appartement.taches_count <= 1 ? 'tâche' : 'tâches'}
@@ -262,7 +314,8 @@ export default function PlotDetailPage() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>

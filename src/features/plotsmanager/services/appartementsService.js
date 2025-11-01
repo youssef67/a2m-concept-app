@@ -41,6 +41,64 @@ export async function getAppartementsByPlot(plotId) {
 }
 
 /**
+ * Get all appartements for a specific plot with full details (tasks and documents)
+ * @param {string} plotId - Plot ID
+ * @param {string} chantierId - Chantier ID
+ * @returns {Promise<{data: Array, error: Error|null}>}
+ */
+export async function getAppartementsByPlotWithDetails(plotId, chantierId) {
+  try {
+    // 1. Récupérer les appartements avec leurs tâches
+    const { data: appartements, error: apptsError } = await supabase
+      .from('appartements')
+      .select(`
+        *,
+        appartement_taches (
+          id,
+          statut
+        )
+      `)
+      .eq('plot_id', plotId)
+      .order('ordre', { ascending: true })
+
+    if (apptsError) throw apptsError
+
+    // 2. Récupérer les documents requis du chantier
+    const { data: documentsRequis, error: docsRequisError } = await supabase
+      .from('chantier_documents_requis')
+      .select('id')
+      .eq('chantier_id', chantierId)
+
+    if (docsRequisError) throw docsRequisError
+
+    const totalDocumentsRequis = documentsRequis?.length || 0
+
+    // 3. Pour chaque appartement, récupérer ses documents uploadés
+    const appartementsWithDetails = await Promise.all(
+      (appartements || []).map(async (appt) => {
+        const { data: docs } = await supabase
+          .from('appartement_documents')
+          .select('id')
+          .eq('appartement_id', appt.id)
+
+        return {
+          ...appt,
+          taches: appt.appartement_taches || [],
+          documents_uploaded_count: docs?.length || 0,
+          documents_required_count: totalDocumentsRequis,
+          taches_count: appt.appartement_taches?.length || 0
+        }
+      })
+    )
+
+    return { data: appartementsWithDetails, error: null }
+  } catch (err) {
+    console.error('Exception in getAppartementsByPlotWithDetails:', err)
+    return { data: null, error: err }
+  }
+}
+
+/**
  * Get a single appartement by ID
  * @param {string} appartementId - Appartement ID
  * @returns {Promise<{data: Object|null, error: Error|null}>}

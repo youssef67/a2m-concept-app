@@ -6,6 +6,7 @@
 import { useState, useCallback } from 'react'
 import {
   getAppartementsByPlot,
+  getAppartementsByPlotWithDetails,
   getAppartementTaches,
   createAppartementWithTaches,
   updateAppartement as updateAppartementService,
@@ -30,7 +31,10 @@ export function useAppartements(plotId, chantierId = null) {
     setLoading(true)
     setError(null)
 
-    const { data, error: fetchError } = await getAppartementsByPlot(plotId)
+    // Use detailed version if chantierId is provided (for status calculation)
+    const { data, error: fetchError } = chantierId
+      ? await getAppartementsByPlotWithDetails(plotId, chantierId)
+      : await getAppartementsByPlot(plotId)
 
     if (fetchError) {
       setError('Erreur lors du chargement des appartements')
@@ -40,7 +44,7 @@ export function useAppartements(plotId, chantierId = null) {
     }
 
     setLoading(false)
-  }, [plotId])
+  }, [plotId, chantierId])
 
   /**
    * Create a new appartement with inherited tasks
@@ -181,7 +185,7 @@ export function useAppartementTaches(appartementId) {
     setLoading(true)
     setError(null)
 
-    const { data, error: updateError } = await updateTacheStatutService(tacheId, statut)
+    const { error: updateError } = await updateTacheStatutService(tacheId, statut)
 
     if (updateError) {
       setError(updateError.message || 'Erreur lors de la mise à jour du statut')

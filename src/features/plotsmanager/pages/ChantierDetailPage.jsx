@@ -260,7 +260,7 @@ export default function ChantierDetailPage() {
                     <PlotCardDisplay
                       key={plot.id}
                       plot={plot}
-                      appartementCount={0}
+                      appartementCount={plot.appartements_count || 0}
                       onClick={handlePlotClick}
                       onEdit={handleEditPlot}
                       onDelete={handleDeletePlot}
