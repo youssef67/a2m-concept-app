@@ -1,5 +1,5 @@
 import React from 'react'
-import { Building2, User, Phone, Mail, MapPin, Edit2, Trash2, Users } from 'lucide-react'
+import { Building2, User, Phone, Mail, MapPin, Edit2, Trash2, Users, StickyNote } from 'lucide-react'
 import Card from '../../../shared/components/ui/Card'
 import Button from '../../../shared/components/ui/Button'
 import {
@@ -52,6 +52,12 @@ export default function ContactCard({ contact, onView, onEdit, onDelete }) {
               {entityTypeLabel}
             </span>
           </div>
+          {/* Badge indicateur de notes */}
+          {contact.notes && contact.notes.trim() !== '' && (
+            <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0" title="A des notes">
+              <StickyNote className="w-4 h-4 text-amber-600" />
+            </div>
+          )}
         </div>
 
         {/* Contact details */}

@@ -1,12 +1,19 @@
 import React from 'react'
 import { NavLink, Link, useNavigate } from 'react-router-dom'
-import { Users, Construction, Euro, LogOut } from 'lucide-react'
+import { Home, Users, Construction, Euro, LogOut } from 'lucide-react'
 import { useAuth } from '../../../features/auth/hooks/useAuth'
 import Logo from '../ui/Logo'
 import Button from '../ui/Button'
 
 // Configuration des modules
 const MODULES = [
+  {
+    id: 'dashboard',
+    label: 'Accueil',
+    icon: Home,
+    path: '/dashboard/admin',
+    roles: ['admin']
+  },
   {
     id: 'contacts',
     label: 'Contacts',

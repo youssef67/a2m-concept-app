@@ -1,11 +1,18 @@
 import React, { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Users, Construction, Euro, User, LogOut } from 'lucide-react'
+import { Home, Users, Construction, Euro, User, LogOut } from 'lucide-react'
 import { useAuth } from '../../../features/auth/hooks/useAuth'
 import Button from '../ui/Button'
 
 // Configuration des modules (identique à Sidebar)
 const MODULES = [
+  {
+    id: 'dashboard',
+    label: 'Accueil',
+    icon: Home,
+    path: '/dashboard/admin',
+    roles: ['admin']
+  },
   {
     id: 'contacts',
     label: 'Contacts',

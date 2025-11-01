@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings, AlertCircle, XCircle, Building2 } from 'lucide-react'
+import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings, AlertCircle, XCircle, Building2, StickyNote } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
@@ -945,9 +945,17 @@ export default function FacturesPage() {
                       {/* Left: Main info */}
                       <div className="flex-1 space-y-2">
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {facture.numero_facture}
-                          </h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {facture.numero_facture}
+                            </h3>
+                            {/* Badge indicateur de notes */}
+                            {facture.notes && facture.notes.trim() !== '' && (
+                              <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0" title="A des notes">
+                                <StickyNote className="w-4 h-4 text-amber-600" />
+                              </div>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                             <User className="w-4 h-4" />
                             <span>{getContactDisplayName(facture.contact)}</span>

@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { Eye, Pencil, Trash2, MapPin, Calendar, Euro, User } from 'lucide-react'
+import { Eye, Pencil, Trash2, MapPin, Calendar, Euro, User, StickyNote } from 'lucide-react'
 import Card from '../../../shared/components/ui/Card'
 import Button from '../../../shared/components/ui/Button'
 import {
@@ -28,9 +28,17 @@ export default function ChantierCard({ chantier, onView, onEdit, onDelete }) {
             <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 flex-1">
               {chantier.titre}
             </h3>
-            <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatutColor(chantier.statut)}`}>
-              {getStatutLabel(chantier.statut)}
-            </span>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatutColor(chantier.statut)}`}>
+                {getStatutLabel(chantier.statut)}
+              </span>
+              {/* Badge indicateur de notes */}
+              {chantier.notes && chantier.notes.trim() !== '' && (
+                <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0" title="A des notes">
+                  <StickyNote className="w-4 h-4 text-amber-600" />
+                </div>
+              )}
+            </div>
           </div>
 
         {/* Client */}

@@ -21,7 +21,8 @@
       "WebSearch",
       "Bash(git branch:*)",
       "Bash(psql:*)",
-      "Bash(source .env.dev)"
+      "Bash(source .env.dev)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

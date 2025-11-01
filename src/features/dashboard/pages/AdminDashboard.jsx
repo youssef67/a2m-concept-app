@@ -64,6 +64,72 @@ export default function AdminDashboard() {
     }
   }, [factures])
 
+  // Calcul des factures clients en retard
+  const facturesClientsEnRetard = useMemo(() => {
+    if (!factures || factures.length === 0) return []
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    return factures
+      .filter(f => {
+        if (f.type !== 'client' || f.statut !== 'en_attente') return false
+
+        const dateEcheance = new Date(f.date_echeance)
+        dateEcheance.setHours(0, 0, 0, 0)
+
+        return dateEcheance < today
+      })
+      .map(f => {
+        const dateEcheance = new Date(f.date_echeance)
+        dateEcheance.setHours(0, 0, 0, 0)
+
+        const joursRetard = Math.floor((today - dateEcheance) / (1000 * 60 * 60 * 24))
+
+        return {
+          ...f,
+          joursRetard
+        }
+      })
+      .sort((a, b) => {
+        // Trier par échéance la plus ancienne en premier (plus de jours de retard)
+        return new Date(a.date_echeance) - new Date(b.date_echeance)
+      })
+  }, [factures])
+
+  // Calcul des factures fournisseurs en retard
+  const facturesFournisseursEnRetard = useMemo(() => {
+    if (!factures || factures.length === 0) return []
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    return factures
+      .filter(f => {
+        if (f.type !== 'fournisseur' || f.statut !== 'en_attente') return false
+
+        const dateEcheance = new Date(f.date_echeance)
+        dateEcheance.setHours(0, 0, 0, 0)
+
+        return dateEcheance < today
+      })
+      .map(f => {
+        const dateEcheance = new Date(f.date_echeance)
+        dateEcheance.setHours(0, 0, 0, 0)
+
+        const joursRetard = Math.floor((today - dateEcheance) / (1000 * 60 * 60 * 24))
+
+        return {
+          ...f,
+          joursRetard
+        }
+      })
+      .sort((a, b) => {
+        // Trier par échéance la plus ancienne en premier (plus de jours de retard)
+        return new Date(a.date_echeance) - new Date(b.date_echeance)
+      })
+  }, [factures])
+
   // Calcul des chantiers en retard (finalisation 95% et/ou retenues de garantie)
   const chantiersEnRetard = useMemo(() => {
     if (!chantiers || !factures) return []
@@ -237,6 +303,154 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* Section: Factures clients en retard */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-100 rounded-lg flex-shrink-0">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-800">
+              Factures clients en retard
+            </h2>
+          </div>
+
+          <Card>
+            {/* Loading State */}
+            {loading && (
+              <div className="flex items-center justify-center py-8">
+                <Spinner />
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && (
+              <Alert variant="error">
+                Erreur lors du chargement des factures clients en retard.
+              </Alert>
+            )}
+
+            {/* Empty State - Aucune facture client en retard */}
+            {!loading && !error && facturesClientsEnRetard.length === 0 && (
+              <div className="flex items-center gap-3 px-4 py-6 bg-green-50 border border-green-200 rounded-lg">
+                <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
+                <p className="text-base text-green-800 font-medium">
+                  Aucune facture client en retard
+                </p>
+              </div>
+            )}
+
+            {/* List of Factures clients en retard */}
+            {!loading && !error && facturesClientsEnRetard.length > 0 && (
+              <div className="space-y-3">
+                {facturesClientsEnRetard.map(facture => (
+                  <div
+                    key={facture.id}
+                    className="p-4 border border-red-200 bg-red-50 rounded-lg"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-base font-bold text-gray-900">
+                        {facture.numero_facture}
+                      </h3>
+                      <span className="px-3 py-1 bg-red-600 text-white rounded-full text-sm font-medium">
+                        {facture.joursRetard} jour{facture.joursRetard > 1 ? 's' : ''} de retard
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 text-sm text-gray-700">
+                      <p>
+                        <span className="font-medium">Client :</span>{' '}
+                        {getContactDisplayName(facture.contact)}
+                      </p>
+                      <p>
+                        <span className="font-medium">Chantier :</span>{' '}
+                        {facture.chantier?.titre || 'Aucun chantier'}
+                      </p>
+                      <p>
+                        <span className="font-medium">Montant :</span>{' '}
+                        <span className="text-red-700 font-semibold">{formatCurrency(facture.montant)}</span>
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Section: Factures fournisseurs en retard */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-orange-100 rounded-lg flex-shrink-0">
+              <AlertTriangle className="w-5 h-5 text-orange-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-800">
+              Factures fournisseurs en retard
+            </h2>
+          </div>
+
+          <Card>
+            {/* Loading State */}
+            {loading && (
+              <div className="flex items-center justify-center py-8">
+                <Spinner />
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && (
+              <Alert variant="error">
+                Erreur lors du chargement des factures fournisseurs en retard.
+              </Alert>
+            )}
+
+            {/* Empty State - Aucune facture fournisseur en retard */}
+            {!loading && !error && facturesFournisseursEnRetard.length === 0 && (
+              <div className="flex items-center gap-3 px-4 py-6 bg-green-50 border border-green-200 rounded-lg">
+                <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
+                <p className="text-base text-green-800 font-medium">
+                  Aucune facture fournisseur en retard
+                </p>
+              </div>
+            )}
+
+            {/* List of Factures fournisseurs en retard */}
+            {!loading && !error && facturesFournisseursEnRetard.length > 0 && (
+              <div className="space-y-3">
+                {facturesFournisseursEnRetard.map(facture => (
+                  <div
+                    key={facture.id}
+                    className="p-4 border border-orange-200 bg-orange-50 rounded-lg"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-base font-bold text-gray-900">
+                        {facture.numero_facture}
+                      </h3>
+                      <span className="px-3 py-1 bg-orange-600 text-white rounded-full text-sm font-medium">
+                        {facture.joursRetard} jour{facture.joursRetard > 1 ? 's' : ''} de retard
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 text-sm text-gray-700">
+                      <p>
+                        <span className="font-medium">Fournisseur :</span>{' '}
+                        {getContactDisplayName(facture.contact)}
+                      </p>
+                      <p>
+                        <span className="font-medium">Chantier :</span>{' '}
+                        {facture.chantier?.titre || 'Aucun chantier'}
+                      </p>
+                      <p>
+                        <span className="font-medium">Montant :</span>{' '}
+                        <span className="text-orange-700 font-semibold">{formatCurrency(facture.montant)}</span>
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
 
         {/* Section: Chantiers en retard */}
         <div className="space-y-4">
