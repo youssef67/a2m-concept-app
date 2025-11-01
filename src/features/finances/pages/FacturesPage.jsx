@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings, AlertCircle, XCircle, Building2, StickyNote } from 'lucide-react'
+import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings, AlertCircle, XCircle, Building2, StickyNote, CheckCircle } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
@@ -19,11 +19,12 @@ import BulkActionsToolbar from '../components/BulkActionsToolbar'
 import MultiPaiementModal from '../components/MultiPaiementModal'
 import DeleteMultipleModal from '../components/DeleteMultipleModal'
 import DeleteFactureModal from '../components/DeleteFactureModal'
+import MarquerPayeModal from '../components/MarquerPayeModal'
 import { useFactures } from '../hooks/useFactures'
 import { useContacts } from '../hooks/useContacts'
 import { useDocuments } from '../hooks/useDocuments'
 import { useChantiers } from '../../chantiers/hooks/useChantiers'
-import { getChantierById } from '../../chantiers/services/chantiersService'
+import { getChantierById, updateChantierPaiementStatus } from '../../chantiers/services/chantiersService'
 import { useToast } from '../../../shared/hooks/useToast'
 import {
   formatDate,
@@ -81,6 +82,10 @@ export default function FacturesPage() {
   // Delete single facture modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [factureToDelete, setFactureToDelete] = useState(null)
+
+  // Marquer comme payé modal (Fin de chantier)
+  const [isMarquerPayeModalOpen, setIsMarquerPayeModalOpen] = useState(false)
+  const [selectedChantierForPaiement, setSelectedChantierForPaiement] = useState(null)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -731,6 +736,29 @@ export default function FacturesPage() {
     }
   }
 
+  /**
+   * Handle open marquer payé modal
+   */
+  const handleOpenMarquerPaye = (chantier) => {
+    setSelectedChantierForPaiement(chantier)
+    setIsMarquerPayeModalOpen(true)
+  }
+
+  /**
+   * Handle confirm marquer payé
+   */
+  const handleConfirmMarquerPaye = async (chantierId, paymentStatus) => {
+    const result = await updateChantierPaiementStatus(chantierId, paymentStatus)
+
+    if (result.error) {
+      showToast('Erreur lors de la mise à jour du statut de paiement', 'error')
+    } else {
+      showToast('Statut de paiement mis à jour avec succès', 'success')
+      // Refresh chantiers to update the display
+      refreshFactures() // This will trigger a re-fetch of factures and chantiers
+    }
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -1179,10 +1207,18 @@ export default function FacturesPage() {
                     {chantier.finalisation_95 && (
                       <div className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                            Finalisation 95%
-                          </span>
-                          <span className="text-lg font-semibold text-blue-900">
+                          <div className="flex items-center gap-2">
+                            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                              Finalisation 95%
+                            </span>
+                            {chantier.finalisation_95_payee && (
+                              <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-medium flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3" />
+                                Payé
+                              </span>
+                            )}
+                          </div>
+                          <span className={`text-lg font-semibold text-blue-900 ${chantier.finalisation_95_payee ? 'line-through opacity-60' : ''}`}>
                             {formatChantierCurrency(calculateFinalisation95(chantier.montant_ht))}
                           </span>
                         </div>
@@ -1190,9 +1226,9 @@ export default function FacturesPage() {
                         {chantier.date_fin_reelle && (
                           <div className="flex items-center gap-2 text-sm pl-3">
                             <Calendar className="w-4 h-4 text-gray-400" />
-                            <span className="text-gray-600">
+                            <span className={chantier.finalisation_95_payee ? 'text-gray-400 line-through' : 'text-gray-600'}>
                               Échéance : {formatChantierDate(calculateEcheanceFinalisation95(chantier.date_fin_reelle))}
-                              {isEcheancePassee(calculateEcheanceFinalisation95(chantier.date_fin_reelle)) && " (dépassée)"}
+                              {!chantier.finalisation_95_payee && isEcheancePassee(calculateEcheanceFinalisation95(chantier.date_fin_reelle)) && " (dépassée)"}
                             </span>
                           </div>
                         )}
@@ -1203,10 +1239,18 @@ export default function FacturesPage() {
                     {chantierHasRetenueGarantie(chantier.id, factures) && (
                       <div className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-medium">
-                            Retenues de garantie
-                          </span>
-                          <span className="text-lg font-semibold text-orange-900">
+                          <div className="flex items-center gap-2">
+                            <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-medium">
+                              Retenues de garantie
+                            </span>
+                            {chantier.retenue_garantie_payee && (
+                              <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-medium flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3" />
+                                Payé
+                              </span>
+                            )}
+                          </div>
+                          <span className={`text-lg font-semibold text-orange-900 ${chantier.retenue_garantie_payee ? 'line-through opacity-60' : ''}`}>
                             {formatChantierCurrency(calculateTotalRetenuesGarantie(chantier.id, factures))}
                           </span>
                         </div>
@@ -1214,9 +1258,9 @@ export default function FacturesPage() {
                         {chantier.date_fin_reelle && (
                           <div className="flex items-center gap-2 text-sm pl-3">
                             <Calendar className="w-4 h-4 text-gray-400" />
-                            <span className="text-gray-600">
+                            <span className={chantier.retenue_garantie_payee ? 'text-gray-400 line-through' : 'text-gray-600'}>
                               Échéance : {formatChantierDate(calculateEcheanceRetenues(chantier.date_fin_reelle))}
-                              {isEcheancePassee(calculateEcheanceRetenues(chantier.date_fin_reelle)) && " (dépassée)"}
+                              {!chantier.retenue_garantie_payee && isEcheancePassee(calculateEcheanceRetenues(chantier.date_fin_reelle)) && " (dépassée)"}
                             </span>
                           </div>
                         )}
@@ -1235,6 +1279,18 @@ export default function FacturesPage() {
                         </span>
                       </div>
                     )}
+
+                    {/* Bouton Marquer comme payé */}
+                    <div className="pt-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => handleOpenMarquerPaye(chantier)}
+                        className="w-full flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Marquer comme payé</span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1759,6 +1815,19 @@ export default function FacturesPage() {
           }}
           facture={factureToDelete}
           onConfirm={handleConfirmDelete}
+        />
+
+        {/* Modal Marquer comme payé (Fin de chantier) */}
+        <MarquerPayeModal
+          isOpen={isMarquerPayeModalOpen}
+          onClose={() => {
+            setIsMarquerPayeModalOpen(false)
+            setSelectedChantierForPaiement(null)
+          }}
+          chantier={selectedChantierForPaiement}
+          hasFinalisation95={selectedChantierForPaiement?.finalisation_95 || false}
+          hasRetenueGarantie={selectedChantierForPaiement ? chantierHasRetenueGarantie(selectedChantierForPaiement.id, factures) : false}
+          onConfirm={handleConfirmMarquerPaye}
         />
       </div>
     </AppLayout>

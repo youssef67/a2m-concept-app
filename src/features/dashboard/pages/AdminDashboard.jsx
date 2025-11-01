@@ -147,14 +147,16 @@ export default function AdminDashboard() {
         // Doit avoir une date de fin réelle
         if (!chantier.date_fin_reelle) return false
 
-        // Vérifie si finalisation 95% en retard
+        // Vérifie si finalisation 95% en retard ET non payée
         const hasFinalisationRetard =
           chantier.finalisation_95 &&
+          !chantier.finalisation_95_payee &&
           isEcheancePassee(calculateEcheanceFinalisation95(chantier.date_fin_reelle))
 
-        // Vérifie si retenues de garantie en retard
+        // Vérifie si retenues de garantie en retard ET non payées
         const hasRetenuesRetard =
           chantierHasRetenueGarantie(chantier.id, factures) &&
+          !chantier.retenue_garantie_payee &&
           isEcheancePassee(calculateEcheanceRetenues(chantier.date_fin_reelle))
 
         return hasFinalisationRetard || hasRetenuesRetard
@@ -166,9 +168,12 @@ export default function AdminDashboard() {
         return {
           ...chantier,
           finalisationRetard:
-            chantier.finalisation_95 && isEcheancePassee(echeanceFinalisation),
+            chantier.finalisation_95 &&
+            !chantier.finalisation_95_payee &&
+            isEcheancePassee(echeanceFinalisation),
           retenuesRetard:
             chantierHasRetenueGarantie(chantier.id, factures) &&
+            !chantier.retenue_garantie_payee &&
             isEcheancePassee(echeanceRetenues),
           echeanceFinalisation,
           echeanceRetenues

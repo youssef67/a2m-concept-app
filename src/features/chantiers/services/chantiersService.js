@@ -243,3 +243,30 @@ export async function getChantiersCountByStatut() {
     return { data: null, error }
   }
 }
+
+/**
+ * Update payment status for chantier (finalisation 95% and retenue de garantie)
+ * @param {string} chantierId - UUID of the chantier
+ * @param {Object} paymentStatus - { finalisation_95_payee: boolean, retenue_garantie_payee: boolean }
+ * @returns {Promise<{data: Object|null, error: any}>}
+ */
+export async function updateChantierPaiementStatus(chantierId, paymentStatus) {
+  try {
+    const { data, error } = await supabase
+      .from('chantiers')
+      .update({
+        finalisation_95_payee: paymentStatus.finalisation_95_payee || false,
+        retenue_garantie_payee: paymentStatus.retenue_garantie_payee || false
+      })
+      .eq('id', chantierId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return { data, error: null }
+  } catch (error) {
+    console.error('Error updating chantier payment status:', error)
+    return { data: null, error }
+  }
+}

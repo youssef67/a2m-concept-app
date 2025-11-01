@@ -23,7 +23,9 @@
       "Bash(psql:*)",
       "Bash(source .env.dev)",
       "Bash(cat:*)",
-      "Bash(source .env.prod)"
+      "Bash(source .env.prod)",
+      "Bash(pkill:*)",
+      "Bash(npx eslint:*)"
     ],
     "deny": [],
     "ask": []
