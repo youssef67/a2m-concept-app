@@ -203,7 +203,7 @@ export default function FacturesPage() {
 
   // Tabs configuration with counts - Niveau 1 : Statut + Fin de chantier
   const statutTabs = useMemo(() => {
-    return [
+    const allTabs = [
       {
         id: 'en_attente',
         label: 'En attente',
@@ -223,8 +223,12 @@ export default function FacturesPage() {
         id: 'annulee',
         label: 'Annulées',
         count: factures.filter(f => f.statut === 'annulee').length
-      },
-      {
+      }
+    ]
+
+    // Ajouter "Fin de chantier" UNIQUEMENT pour les clients
+    if (activeType === 'client') {
+      allTabs.push({
         id: 'fin_chantier',
         label: 'Fin de chantier',
         count: chantiers.filter(c => {
@@ -233,9 +237,11 @@ export default function FacturesPage() {
           const hasRetenue = chantierHasRetenueGarantie(c.id, factures)
           return hasFinalisation95 || hasRetenue
         }).length
-      }
-    ]
-  }, [factures, chantiers])
+      })
+    }
+
+    return allTabs
+  }, [factures, chantiers, activeType])
 
   // Tabs configuration with counts - Niveau 2 : Type (basé sur statut actif)
   const typeTabs = useMemo(() => {
@@ -376,6 +382,13 @@ export default function FacturesPage() {
   useEffect(() => {
     setCurrentPage(1)
   }, [activeTab, activeType, selectedContactFilter, searchQuery, showOverdueOnly])
+
+  // Redirect if on "fin_chantier" tab with type "fournisseur"
+  useEffect(() => {
+    if (activeTab === 'fin_chantier' && activeType === 'fournisseur') {
+      setActiveTab('en_attente')
+    }
+  }, [activeType, activeTab])
 
   // Page change handler
   const handlePageChange = (page) => {
