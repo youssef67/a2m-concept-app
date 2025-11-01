@@ -216,8 +216,8 @@ export default function PlotDetailPage() {
                 <div className="mb-4">
                   <Tabs
                     tabs={[
-                      { id: 'en_attente', label: 'En attente', count: stats.en_attente },
                       { id: 'en_cours', label: 'En cours', count: stats.en_cours },
+                      { id: 'en_attente', label: 'En attente', count: stats.en_attente },
                       { id: 'pret', label: 'Prêt', count: stats.pret },
                       { id: 'finalise', label: 'Finalisé', count: stats.finalise }
                     ]}
