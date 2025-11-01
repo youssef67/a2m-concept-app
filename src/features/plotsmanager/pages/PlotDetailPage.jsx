@@ -291,41 +291,45 @@ export default function PlotDetailPage() {
                         onClick={() => handleAppartementClick(appartement)}
                         className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 hover:shadow-md transition-all cursor-pointer bg-white"
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <Home className="w-5 h-5 text-gray-600 flex-shrink-0" />
-                            <span className="font-medium text-gray-900 truncate">{appartement.nom}</span>
-                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statutConfig.color} flex-shrink-0`}>
-                              {statutConfig.label}
-                            </span>
+                        <div className="flex flex-col gap-2">
+                          {/* Main row */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <Home className="w-5 h-5 text-gray-600 flex-shrink-0" />
+                              <span className="font-medium text-gray-900 truncate">{appartement.nom}</span>
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statutConfig.color} flex-shrink-0`}>
+                                {statutConfig.label}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className="text-sm text-gray-600 hidden sm:inline">
+                                {appartement.taches_count} {appartement.taches_count <= 1 ? 'tâche' : 'tâches'}
+                              </span>
+                              <button
+                                onClick={(e) => handleEditAppartement(e, appartement)}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Modifier"
+                              >
+                                <Edit className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={(e) => handleDeleteAppartement(e, appartement)}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Supprimer"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
                           </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {statut === 'en_cours' && tacheEnCours ? (
-                            <span className="text-xs sm:text-sm text-yellow-700 font-medium hidden sm:inline truncate max-w-[200px]" title={tacheEnCours.intitule}>
-                              {tacheEnCours.intitule}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-gray-600 hidden sm:inline">
-                              {appartement.taches_count} {appartement.taches_count <= 1 ? 'tâche' : 'tâches'}
-                            </span>
+
+                          {/* Task intitule row (only for en_cours) */}
+                          {statut === 'en_cours' && tacheEnCours && (
+                            <div className="ml-8 text-xs sm:text-sm text-yellow-700 font-medium truncate" title={tacheEnCours.intitule}>
+                              📋 {tacheEnCours.intitule}
+                            </div>
                           )}
-                          <button
-                            onClick={(e) => handleEditAppartement(e, appartement)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Modifier"
-                          >
-                            <Edit className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={(e) => handleDeleteAppartement(e, appartement)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Supprimer"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
                         </div>
                       </div>
-                    </div>
                     )
                   })}
                 </div>

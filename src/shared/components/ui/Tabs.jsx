@@ -8,8 +8,8 @@ import React from 'react'
  */
 export default function Tabs({ tabs, activeTab, onChange }) {
   return (
-    <div className="border-b border-gray-200 -mx-6 px-6 md:mx-0 md:px-0">
-      <nav className="-mb-px flex space-x-4 md:space-x-8" aria-label="Tabs">
+    <div className="border-b border-gray-200 -mx-6 md:mx-0 overflow-x-auto">
+      <nav className="-mb-px flex space-x-2 md:space-x-8 px-6 md:px-0 min-w-max md:min-w-0" aria-label="Tabs">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id
 
@@ -18,7 +18,7 @@ export default function Tabs({ tabs, activeTab, onChange }) {
               key={tab.id}
               onClick={() => onChange(tab.id)}
               className={`
-                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex-shrink-0
                 ${
                   isActive
                     ? 'border-primary-500 text-primary-600'
@@ -31,7 +31,7 @@ export default function Tabs({ tabs, activeTab, onChange }) {
               {tab.count !== undefined && (
                 <span
                   className={`
-                    ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium
+                    ml-1 md:ml-2 py-0.5 px-1.5 md:px-2.5 rounded-full text-xs font-medium
                     ${
                       isActive
                         ? 'bg-primary-100 text-primary-600'
