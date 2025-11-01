@@ -212,7 +212,7 @@ export default function ChantierDetailPage() {
                   <Button
                     onClick={handleOpenCreatePlotModal}
                     disabled={!hasTaches || !hasDocuments}
-                    className="flex items-center justify-center gap-2 h-[64px] w-full text-xs leading-tight"
+                    className="flex items-center justify-center gap-2 h-[52px] sm:h-[56px] w-full text-xs leading-tight"
                   >
                     <Building2 className="w-4 h-4 flex-shrink-0" />
                     <span className="text-center">Créer un plot</span>
@@ -232,7 +232,7 @@ export default function ChantierDetailPage() {
                   <Button
                     onClick={handleOpenTachesModal}
                     variant={hasTaches ? 'secondary' : 'primary'}
-                    className="flex items-center justify-center gap-2 h-[64px] w-full text-xs leading-tight"
+                    className="flex items-center justify-center gap-2 h-[52px] sm:h-[56px] w-full text-xs leading-tight"
                   >
                     <FileText className="w-4 h-4 flex-shrink-0" />
                     <span className="text-center">{tachesButtonLabel}</span>
@@ -243,7 +243,7 @@ export default function ChantierDetailPage() {
                   <Button
                     onClick={handleOpenDocumentsModal}
                     variant={hasDocuments ? 'secondary' : 'primary'}
-                    className="flex items-center justify-center gap-2 h-[64px] w-full text-xs leading-tight"
+                    className="flex items-center justify-center gap-2 h-[52px] sm:h-[56px] w-full text-xs leading-tight"
                   >
                     <FolderOpen className="w-4 h-4 flex-shrink-0" />
                     <span className="text-center">{documentsButtonLabel}</span>
