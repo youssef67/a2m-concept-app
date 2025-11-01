@@ -25,6 +25,17 @@ export async function getAllChantiers(statut = null) {
           last_name,
           phone,
           email
+        ),
+        factures(
+          id,
+          type,
+          statut,
+          montant,
+          montant_ht,
+          montant_ttc,
+          tva_applicable,
+          retenue_garantie,
+          prorata_applicable
         )
       `)
       .order('created_at', { ascending: false })
@@ -64,6 +75,17 @@ export async function getChantierById(chantierId) {
           last_name,
           phone,
           email
+        ),
+        factures(
+          id,
+          type,
+          statut,
+          montant,
+          montant_ht,
+          montant_ttc,
+          tva_applicable,
+          retenue_garantie,
+          prorata_applicable
         )
       `)
       .eq('id', chantierId)

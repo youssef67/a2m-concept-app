@@ -508,3 +508,98 @@ export function calculateTotalTTCAvecAvenants(montantHT, montantTTC, avenants) {
 
   return initialTTC + avenantsTTC
 }
+
+/**
+ * Calculate montant d'une facture pour les statistiques
+ * - Prorata: DÉDUIT (2% perdu définitivement)
+ * - Retenue de garantie: NON DÉDUITE (5% récupéré plus tard)
+ * @param {Object} facture - Facture object
+ * @returns {number} Montant pour statistiques
+ */
+export function getMontantFacturePourStats(facture) {
+  if (!facture) return 0
+
+  let montantBase = 0
+
+  // Fournisseur: toujours TTC, pas de retenue ni prorata
+  if (facture.type === 'fournisseur') {
+    return facture.montant_ttc || facture.montant || 0
+  }
+
+  // Client: TTC si TVA applicable, sinon HT
+  if (facture.tva_applicable) {
+    montantBase = facture.montant_ttc || facture.montant || 0
+  } else {
+    montantBase = facture.montant_ht || facture.montant || 0
+  }
+
+  // Déduire UNIQUEMENT le prorata (2% du HT)
+  if (facture.prorata_applicable) {
+    const prorata = (facture.montant_ht || 0) * 0.02
+    montantBase -= prorata
+  }
+
+  // NE PAS déduire la retenue de garantie (récupérée plus tard)
+
+  return montantBase
+}
+
+/**
+ * Calculate total des factures clients pour un chantier
+ * @param {Array} factures - Liste des factures (filtrées par chantier_id)
+ * @returns {number} Total des montants factures clients (hors annulées)
+ */
+export function calculateTotalFacturesClients(factures) {
+  if (!factures || !Array.isArray(factures)) return 0
+
+  return factures
+    .filter(f => f.type === 'client' && f.statut !== 'annulee')
+    .reduce((sum, facture) => sum + getMontantFacturePourStats(facture), 0)
+}
+
+/**
+ * Calculate total des factures fournisseurs pour un chantier
+ * @param {Array} factures - Liste des factures (filtrées par chantier_id)
+ * @returns {number} Total des montants factures fournisseurs (hors annulées)
+ */
+export function calculateTotalFacturesFournisseurs(factures) {
+  if (!factures || !Array.isArray(factures)) return 0
+
+  return factures
+    .filter(f => f.type === 'fournisseur' && f.statut !== 'annulee')
+    .reduce((sum, facture) => sum + getMontantFacturePourStats(facture), 0)
+}
+
+/**
+ * Calculate la différence (marge) entre factures clients et fournisseurs
+ * @param {number} totalClients - Total factures clients
+ * @param {number} totalFournisseurs - Total factures fournisseurs
+ * @returns {number} Différence (positif = bénéfice, négatif = perte)
+ */
+export function calculateDifferenceFinanciere(totalClients, totalFournisseurs) {
+  return (totalClients || 0) - (totalFournisseurs || 0)
+}
+
+/**
+ * Get Tailwind color classes for différence financière
+ * @param {number} difference - Différence financière
+ * @returns {string} Tailwind classes (vert si positif, rouge si négatif)
+ */
+export function getDifferenceColor(difference) {
+  if (difference >= 0) {
+    return 'text-green-600' // Positif = vert
+  }
+  return 'text-red-600' // Négatif = rouge
+}
+
+/**
+ * Get Tailwind background color classes for différence financière
+ * @param {number} difference - Différence financière
+ * @returns {string} Tailwind classes (vert si positif, rouge si négatif)
+ */
+export function getDifferenceBgColor(difference) {
+  if (difference >= 0) {
+    return 'bg-green-50' // Positif = fond vert clair
+  }
+  return 'bg-red-50' // Négatif = fond rouge clair
+}

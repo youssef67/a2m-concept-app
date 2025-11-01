@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { Pencil, MapPin, Calendar, Euro, User, FileText } from 'lucide-react'
+import { Pencil, MapPin, Calendar, Euro, User, FileText, TrendingUp, TrendingDown } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import DocumentsSection from './DocumentsSection'
@@ -19,7 +19,12 @@ import {
   getStatutColor,
   getClientDisplayName,
   calculateTotalAvecAvenants,
-  calculateTotalTTCAvecAvenants
+  calculateTotalTTCAvecAvenants,
+  calculateTotalFacturesClients,
+  calculateTotalFacturesFournisseurs,
+  calculateDifferenceFinanciere,
+  getDifferenceColor,
+  getDifferenceBgColor
 } from '../utils/chantierHelpers'
 
 export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit, onUpdateStatut }) {
@@ -61,6 +66,14 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
 
   // Calculate total montant TTC avec avenants
   const totalMontantTTC = calculateTotalTTCAvecAvenants(chantier.montant_ht, chantier.montant_ttc, avenants)
+
+  // Calculate financial stats (factures)
+  const factures = chantier.factures || []
+  const totalClients = calculateTotalFacturesClients(factures)
+  const totalFournisseurs = calculateTotalFacturesFournisseurs(factures)
+  const marge = calculateDifferenceFinanciere(totalClients, totalFournisseurs)
+  const margeColor = getDifferenceColor(marge)
+  const margeBgColor = getDifferenceBgColor(marge)
 
   /**
    * Handle statut selection change
@@ -300,6 +313,56 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
                     </p>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Statistiques financières (Factures) */}
+        {factures.length > 0 && (
+          <div className="border-t border-gray-200 pt-6">
+            <div className="flex items-start gap-3">
+              <Euro className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-500 mb-4">Statistiques financières</p>
+
+                {/* Totaux des factures */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="text-sm font-medium text-green-700 mb-1">Total factures clients</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {formatCurrency(totalClients)}
+                    </p>
+                  </div>
+
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-sm font-medium text-red-700 mb-1">Total factures fournisseurs</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {formatCurrency(totalFournisseurs)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Marge (différence) */}
+                <div className={`${margeBgColor} border ${marge >= 0 ? 'border-green-300' : 'border-red-300'} rounded-lg p-6`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {marge >= 0 ? (
+                        <TrendingUp className={`w-8 h-8 ${margeColor}`} />
+                      ) : (
+                        <TrendingDown className={`w-8 h-8 ${margeColor}`} />
+                      )}
+                      <div>
+                        <p className={`text-sm font-medium ${marge >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                          Marge
+                        </p>
+                        <p className={`text-3xl font-bold ${margeColor}`}>
+                          {marge >= 0 ? '+' : ''}{formatCurrency(marge)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

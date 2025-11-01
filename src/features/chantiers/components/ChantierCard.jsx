@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { Eye, Pencil, Trash2, MapPin, Calendar, Euro, User, StickyNote } from 'lucide-react'
+import { Eye, Pencil, Trash2, MapPin, Calendar, Euro, User, StickyNote, TrendingUp, TrendingDown } from 'lucide-react'
 import Card from '../../../shared/components/ui/Card'
 import Button from '../../../shared/components/ui/Button'
 import {
@@ -12,11 +12,22 @@ import {
   formatCurrency,
   getStatutLabel,
   getStatutColor,
-  getClientDisplayName
+  getClientDisplayName,
+  calculateTotalFacturesClients,
+  calculateTotalFacturesFournisseurs,
+  calculateDifferenceFinanciere,
+  getDifferenceColor
 } from '../utils/chantierHelpers'
 
 export default function ChantierCard({ chantier, onView, onEdit, onDelete }) {
   if (!chantier) return null
+
+  // Calculate financial stats
+  const factures = chantier.factures || []
+  const totalClients = calculateTotalFacturesClients(factures)
+  const totalFournisseurs = calculateTotalFacturesFournisseurs(factures)
+  const marge = calculateDifferenceFinanciere(totalClients, totalFournisseurs)
+  const margeColor = getDifferenceColor(marge)
 
   return (
     <Card className="hover:shadow-lg transition-shadow duration-200 h-full">
@@ -83,6 +94,21 @@ export default function ChantierCard({ chantier, onView, onEdit, onDelete }) {
             <span>Budget: {formatCurrency(chantier.budget_estime)}</span>
           </div>
         )}
+
+        {/* Marge (différence financière) */}
+        <div className="flex items-center gap-2">
+          {marge >= 0 ? (
+            <TrendingUp className={`w-5 h-5 flex-shrink-0 ${margeColor}`} />
+          ) : (
+            <TrendingDown className={`w-5 h-5 flex-shrink-0 ${margeColor}`} />
+          )}
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-500">Marge</span>
+            <span className={`text-lg font-bold ${margeColor}`}>
+              {marge >= 0 ? '+' : ''}{formatCurrency(marge)}
+            </span>
+          </div>
+        </div>
 
           {/* Description (extrait) */}
           {chantier.description && (
