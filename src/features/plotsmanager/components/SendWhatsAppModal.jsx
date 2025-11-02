@@ -9,17 +9,21 @@ import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
 import Select from '../../../shared/components/ui/Select'
+import { useToast } from '../../../shared/hooks/useToast'
 import { getAllWorkers } from '../../workers/services/workersService'
 import { getAppartementDocumentsWithStatus } from '../services/appartementDocumentsService'
 import { getDocumentUrl } from '../services/appartementDocumentsService'
+import { updateAppartementTacheStatut } from '../services/appartementsService'
 import { getFirstTacheAFaire, buildWhatsAppMessage, openWhatsApp } from '../utils/whatsappHelpers'
 
 export default function SendWhatsAppModal({
   isOpen,
   onClose,
   appartements = [],
-  chantierId
+  chantierId,
+  onSuccess
 }) {
+  const { showToast } = useToast()
   const [workers, setWorkers] = useState([])
   const [selectedWorkerId, setSelectedWorkerId] = useState('')
   const [documentsMap, setDocumentsMap] = useState({}) // appartementId -> array of documents
@@ -60,8 +64,6 @@ export default function SendWhatsAppModal({
             chantierId
           )
 
-          console.log('📄 Documents pour appartement', appt.nom, ':', data)
-
           if (docsError) {
             console.error('Erreur chargement docs pour', appt.nom, ':', docsError)
             docsMap[appt.id] = []
@@ -75,7 +77,6 @@ export default function SendWhatsAppModal({
                 storage_path: doc.uploadedFile.storage_path
               }))
 
-            console.log('✅ Documents uploadés pour', appt.nom, ':', uploadedDocs)
             docsMap[appt.id] = uploadedDocs
           } else {
             docsMap[appt.id] = []
@@ -83,7 +84,6 @@ export default function SendWhatsAppModal({
         })
       )
 
-      console.log('📦 Documents map final:', docsMap)
       setDocumentsMap(docsMap)
 
       // Initialize selected documents to empty string (no document selected)
@@ -142,12 +142,18 @@ export default function SendWhatsAppModal({
         })
       )
 
-      // Build tasks map
+      // Build tasks map and collect tasks to update
       const tachesMap = {}
+      const tachesToUpdate = [] // [{appartementNom, tacheId}]
+
       appartements.forEach(appt => {
         const tache = getFirstTacheAFaire(appt.taches)
         if (tache) {
           tachesMap[appt.id] = tache.intitule
+          tachesToUpdate.push({
+            appartementNom: appt.nom,
+            tacheId: tache.id
+          })
         }
       })
 
@@ -157,8 +163,37 @@ export default function SendWhatsAppModal({
       // Open WhatsApp
       openWhatsApp(selectedWorker.phone, message)
 
-      // Close modal
+      // Close modal immediately
       onClose()
+
+      // Update tasks status to "en_cours" in background
+      const failedUpdates = []
+
+      for (const item of tachesToUpdate) {
+        const { error: updateError } = await updateAppartementTacheStatut(
+          item.tacheId,
+          'en_cours'
+        )
+
+        if (updateError) {
+          console.error(`Erreur mise à jour tâche pour ${item.appartementNom}:`, updateError)
+          failedUpdates.push(item.appartementNom)
+        }
+      }
+
+      // Show notification based on result
+      if (failedUpdates.length > 0) {
+        showToast(
+          `Erreur lors de la mise à jour du statut pour : ${failedUpdates.join(', ')}`,
+          'error'
+        )
+      } else {
+        showToast('Message WhatsApp envoyé avec succès', 'success')
+        // Call onSuccess to switch to "En cours" tab
+        if (onSuccess) {
+          onSuccess()
+        }
+      }
     } catch (err) {
       console.error('Error sending WhatsApp:', err)
       setError('Erreur lors de la préparation du message')

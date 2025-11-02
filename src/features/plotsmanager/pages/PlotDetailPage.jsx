@@ -619,6 +619,12 @@ export default function PlotDetailPage() {
               onClose={handleCloseWhatsAppModal}
               appartements={selectedAppartementsData}
               chantierId={chantierId}
+              onSuccess={() => {
+                // Switch to "En cours" tab
+                setActiveTab('en_cours')
+                // Reload appartements to reflect status changes
+                loadAppartements()
+              }}
             />
 
             {/* Selection Mode Actions - Fixed Bottom Bar */}
