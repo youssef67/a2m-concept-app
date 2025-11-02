@@ -14,13 +14,14 @@ import { getAllWorkers } from '../../workers/services/workersService'
 import { getAppartementDocumentsWithStatus } from '../services/appartementDocumentsService'
 import { getDocumentUrl } from '../services/appartementDocumentsService'
 import { updateAppartementTacheStatut } from '../services/appartementsService'
-import { getFirstTacheAFaire, buildWhatsAppMessage, openWhatsApp } from '../utils/whatsappHelpers'
+import { getFirstTacheAFaire, getTachesAFaire, hasTasksEnCours, buildWhatsAppMessage, openWhatsApp } from '../utils/whatsappHelpers'
 
 export default function SendWhatsAppModal({
   isOpen,
   onClose,
   appartements = [],
   chantierId,
+  isEnCoursMode = false,
   onSuccess
 }) {
   const { showToast } = useToast()
@@ -28,6 +29,7 @@ export default function SendWhatsAppModal({
   const [selectedWorkerId, setSelectedWorkerId] = useState('')
   const [documentsMap, setDocumentsMap] = useState({}) // appartementId -> array of documents
   const [selectedDocuments, setSelectedDocuments] = useState({}) // appartementId -> documentId
+  const [selectedTaches, setSelectedTaches] = useState({}) // appartementId -> tacheId (for isEnCoursMode)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
@@ -92,6 +94,21 @@ export default function SendWhatsAppModal({
         initialSelectedDocs[appt.id] = ''
       })
       setSelectedDocuments(initialSelectedDocs)
+
+      // Initialize selected tasks (for isEnCoursMode only)
+      if (isEnCoursMode) {
+        const initialSelectedTaches = {}
+        appartements.forEach(appt => {
+          // If appartement is blocked (has tasks en_cours), don't set default task
+          if (!hasTasksEnCours(appt.taches)) {
+            const firstTache = getFirstTacheAFaire(appt.taches)
+            initialSelectedTaches[appt.id] = firstTache ? firstTache.id : ''
+          } else {
+            initialSelectedTaches[appt.id] = ''
+          }
+        })
+        setSelectedTaches(initialSelectedTaches)
+      }
     } catch (err) {
       console.error('Error loading data:', err)
       setError(err.message)
@@ -105,6 +122,14 @@ export default function SendWhatsAppModal({
     setSelectedDocuments(prev => ({
       ...prev,
       [appartementId]: documentId === '' ? null : documentId
+    }))
+  }
+
+  // Handle task selection for an apartment (for isEnCoursMode)
+  const handleTacheChange = (appartementId, tacheId) => {
+    setSelectedTaches(prev => ({
+      ...prev,
+      [appartementId]: tacheId
     }))
   }
 
@@ -146,8 +171,21 @@ export default function SendWhatsAppModal({
       const tachesMap = {}
       const tachesToUpdate = [] // [{appartementNom, tacheId}]
 
+      // All appartements passed to the modal are already filtered (no blocked ones in isEnCoursMode)
       appartements.forEach(appt => {
-        const tache = getFirstTacheAFaire(appt.taches)
+        let tache = null
+
+        if (isEnCoursMode) {
+          // Use selected task
+          const selectedTacheId = selectedTaches[appt.id]
+          if (selectedTacheId) {
+            tache = appt.taches.find(t => t.id === selectedTacheId)
+          }
+        } else {
+          // Use first task "a_faire" automatically
+          tache = getFirstTacheAFaire(appt.taches)
+        }
+
         if (tache) {
           tachesMap[appt.id] = tache.intitule
           tachesToUpdate.push({
@@ -260,8 +298,8 @@ export default function SendWhatsAppModal({
 
               <div className="space-y-4">
                 {appartements.map(appt => {
-                  const tache = getFirstTacheAFaire(appt.taches)
                   const documents = documentsMap[appt.id] || []
+                  const tachesAFaire = getTachesAFaire(appt.taches)
 
                   return (
                     <div
@@ -274,14 +312,37 @@ export default function SendWhatsAppModal({
                         <h4 className="font-medium text-gray-900">{appt.nom}</h4>
                       </div>
 
-                      {/* Task info */}
-                      <div className="flex items-start gap-2 mb-2 text-sm">
-                        <span className="text-base">📋</span>
-                        <p className="text-gray-700">
-                          <span className="font-medium">Prochaine tâche :</span>{' '}
-                          {tache ? tache.intitule : 'Aucune tâche à faire'}
-                        </p>
-                      </div>
+                      {/* Task selection (only for isEnCoursMode) */}
+                      {isEnCoursMode && (
+                        <div className="flex items-start gap-2 mb-2">
+                          <span className="text-base mt-1">📋</span>
+                          <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Tâche à assigner :
+                            </label>
+                            <Select
+                              value={selectedTaches[appt.id] || ''}
+                              onChange={(value) => handleTacheChange(appt.id, value)}
+                              options={tachesAFaire.map(tache => ({
+                                value: tache.id,
+                                label: tache.intitule
+                              }))}
+                              placeholder="Sélectionner une tâche..."
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Task info (only for non-isEnCoursMode) */}
+                      {!isEnCoursMode && (
+                        <div className="flex items-start gap-2 mb-2 text-sm">
+                          <span className="text-base">📋</span>
+                          <p className="text-gray-700">
+                            <span className="font-medium">Prochaine tâche :</span>{' '}
+                            {getFirstTacheAFaire(appt.taches)?.intitule || 'Aucune tâche à faire'}
+                          </p>
+                        </div>
+                      )}
 
                       {/* Document selection */}
                       <div className="flex items-start gap-2">

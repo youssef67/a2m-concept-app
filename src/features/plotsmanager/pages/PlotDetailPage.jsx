@@ -5,18 +5,20 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle, MessageCircle, X, XCircle, FileCheck } from 'lucide-react'
+import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle, MessageCircle, X, XCircle, FileCheck, ListOrdered } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
 import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import Modal from '../../../shared/components/ui/Modal'
 import Tabs from '../../../shared/components/ui/Tabs'
+import Select from '../../../shared/components/ui/Select'
 import CreateAppartementModal from '../components/CreateAppartementModal'
 import CreateMultipleAppartementsModal from '../components/CreateMultipleAppartementsModal'
 import SendWhatsAppModal from '../components/SendWhatsAppModal'
 import { getPlotById } from '../services/plotsService'
 import { validateAppartements, invalidateAppartements } from '../services/appartementsService'
+import { getTachesByChantier } from '../services/tachesService'
 import { useAppartements } from '../hooks/useAppartements'
 import { useToast } from '../../../shared/hooks/useToast'
 import {
@@ -26,6 +28,7 @@ import {
   getStatutConfig,
   getTasksEnCours
 } from '../utils/appartementHelpers'
+import { hasTasksEnCours } from '../utils/whatsappHelpers'
 
 export default function PlotDetailPage() {
   const { chantierId, plotId } = useParams()
@@ -46,13 +49,21 @@ export default function PlotDetailPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState(initialTab)
   const [showOnlyWithAllDocuments, setShowOnlyWithAllDocuments] = useState(false)
+  const [sortByTaskCompletion, setSortByTaskCompletion] = useState(false)
+  const [selectedTacheFilter, setSelectedTacheFilter] = useState('') // '' = toutes, sinon tacheId
+  const [chantierTaches, setChantierTaches] = useState([]) // Liste des tâches du chantier
   const [creationResult, setCreationResult] = useState(null)
   const [showResultModal, setShowResultModal] = useState(false)
 
-  // WhatsApp selection states
+  // WhatsApp selection states (for "Prêt" tab)
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [selectedAppartements, setSelectedAppartements] = useState(new Set())
   const [isSendWhatsAppModalOpen, setIsSendWhatsAppModalOpen] = useState(false)
+
+  // WhatsApp selection states (for "En cours" tab)
+  const [isWhatsAppSelectionEnCours, setIsWhatsAppSelectionEnCours] = useState(false)
+  const [selectedForWhatsAppEnCours, setSelectedForWhatsAppEnCours] = useState(new Set())
+  const [isSendWhatsAppEnCoursModalOpen, setIsSendWhatsAppEnCoursModalOpen] = useState(false)
 
   // Validation/Invalidation selection states
   const [isValidationMode, setIsValidationMode] = useState(false)
@@ -102,6 +113,20 @@ export default function PlotDetailPage() {
     }
   }, [plotId, loadAppartements])
 
+  // Load chantier taches
+  useEffect(() => {
+    async function loadChantierTaches() {
+      if (!chantierId) return
+
+      const { data, error } = await getTachesByChantier(chantierId)
+      if (!error && data) {
+        setChantierTaches(data)
+      }
+    }
+
+    loadChantierTaches()
+  }, [chantierId])
+
   // Clean up activeTab URL parameter after reading it
   useEffect(() => {
     const activeTabParam = searchParams.get('activeTab')
@@ -126,11 +151,39 @@ export default function PlotDetailPage() {
     })
   }, [filteredBySearch, showOnlyWithAllDocuments])
 
-  const filteredByStatut = useMemo(() => {
-    return filterAppartementsByStatut(filteredByDocuments, activeTab)
-  }, [filteredByDocuments, activeTab])
+  const filteredByTache = useMemo(() => {
+    if (!selectedTacheFilter) return filteredByDocuments // Pas de filtre
 
-  const filteredAppartements = filteredByStatut
+    // Filtrer les appartements qui ont la tâche sélectionnée avec statut "terminee"
+    return filteredByDocuments.filter(appt => {
+      return appt.taches?.some(t =>
+        t.chantier_tache_id === selectedTacheFilter && t.statut === 'terminee'
+      )
+    })
+  }, [filteredByDocuments, selectedTacheFilter])
+
+  const filteredByStatut = useMemo(() => {
+    return filterAppartementsByStatut(filteredByTache, activeTab)
+  }, [filteredByTache, activeTab])
+
+  const sortedAppartements = useMemo(() => {
+    if (!sortByTaskCompletion) return filteredByStatut
+
+    // Sort by task completion percentage (descending)
+    return [...filteredByStatut].sort((a, b) => {
+      const aCompleted = (a.taches || []).filter(t => t.statut === 'terminee').length
+      const aTotal = a.taches_count || 0
+      const aPercentage = aTotal > 0 ? (aCompleted / aTotal) : 0
+
+      const bCompleted = (b.taches || []).filter(t => t.statut === 'terminee').length
+      const bTotal = b.taches_count || 0
+      const bPercentage = bTotal > 0 ? (bCompleted / bTotal) : 0
+
+      return bPercentage - aPercentage // Descending order
+    })
+  }, [filteredByStatut, sortByTaskCompletion])
+
+  const filteredAppartements = sortedAppartements
 
   // Calculate stats for tabs
   const stats = useMemo(() => ({
@@ -139,6 +192,23 @@ export default function PlotDetailPage() {
     pret: filterAppartementsByStatut(appartements, 'pret').length,
     finalise: filterAppartementsByStatut(appartements, 'finalise').length
   }), [appartements])
+
+  // Prepare taches options with count of appartements that completed each tache
+  const tachesOptions = useMemo(() => {
+    if (!chantierTaches || chantierTaches.length === 0) return []
+
+    return chantierTaches.map(tache => {
+      // Count appartements that have this tache with statut "terminee"
+      const count = appartements.filter(appt =>
+        appt.taches?.some(t => t.chantier_tache_id === tache.id && t.statut === 'terminee')
+      ).length
+
+      return {
+        value: tache.id,
+        label: `${tache.intitule} (${count})`
+      }
+    })
+  }, [chantierTaches, appartements])
 
   // Check if at least one "en_attente" appartement has all documents
   const hasAppartementsWithAllDocuments = useMemo(() => {
@@ -163,8 +233,11 @@ export default function PlotDetailPage() {
   const handleAppartementClick = (appartement) => {
     // Pass current tab in URL to remember it on back navigation
     // If in "en_attente" tab, open directly in Documents tab
+    // If in "en_cours" tab, open directly in Taches tab
     if (activeTab === 'en_attente') {
       navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?tab=documents&fromTab=${activeTab}`)
+    } else if (activeTab === 'en_cours') {
+      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?tab=taches&fromTab=${activeTab}`)
     } else {
       navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?fromTab=${activeTab}`)
     }
@@ -249,6 +322,54 @@ export default function PlotDetailPage() {
     setIsSendWhatsAppModalOpen(false)
     setIsSelectionMode(false)
     setSelectedAppartements(new Set())
+  }
+
+  // WhatsApp handlers for "En cours" tab
+  const handleStartWhatsAppSelectionEnCours = () => {
+    setIsWhatsAppSelectionEnCours(true)
+    setSelectedForWhatsAppEnCours(new Set())
+  }
+
+  const handleCancelWhatsAppSelectionEnCours = () => {
+    setIsWhatsAppSelectionEnCours(false)
+    setSelectedForWhatsAppEnCours(new Set())
+  }
+
+  const handleToggleWhatsAppEnCoursSelection = (appartementId) => {
+    setSelectedForWhatsAppEnCours(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(appartementId)) {
+        newSet.delete(appartementId)
+      } else {
+        newSet.add(appartementId)
+      }
+      return newSet
+    })
+  }
+
+  const handleContinueToWhatsAppEnCours = () => {
+    if (selectedForWhatsAppEnCours.size === 0) {
+      showToast('Veuillez sélectionner au moins un appartement', 'error')
+      return
+    }
+
+    // Vérifier qu'au moins un appartement OK existe (sans tâches en cours)
+    const validAppartements = appartements
+      .filter(appt => selectedForWhatsAppEnCours.has(appt.id))
+      .filter(appt => !hasTasksEnCours(appt.taches))
+
+    if (validAppartements.length === 0) {
+      showToast('Aucun appartement sélectionné ne peut être envoyé (tous ont des tâches en cours)', 'error')
+      return
+    }
+
+    setIsSendWhatsAppEnCoursModalOpen(true)
+  }
+
+  const handleCloseWhatsAppEnCoursModal = () => {
+    setIsSendWhatsAppEnCoursModalOpen(false)
+    setIsWhatsAppSelectionEnCours(false)
+    setSelectedForWhatsAppEnCours(new Set())
   }
 
   // Validation handlers
@@ -352,11 +473,21 @@ export default function PlotDetailPage() {
     setShowOnlyWithAllDocuments(prev => !prev)
   }
 
+  // Task sort handlers
+  const handleToggleTaskSort = () => {
+    setSortByTaskCompletion(prev => !prev)
+  }
+
   const handleClearAllFilters = () => {
     setSearchQuery('')
     // Only clear documents filter if in "en_attente" tab
     if (activeTab === 'en_attente') {
       setShowOnlyWithAllDocuments(false)
+    }
+    // Only clear task sort and tache filter if in "en_cours" tab
+    if (activeTab === 'en_cours') {
+      setSortByTaskCompletion(false)
+      setSelectedTacheFilter('')
     }
   }
 
@@ -365,12 +496,24 @@ export default function PlotDetailPage() {
     return appartements.filter(appt => selectedAppartements.has(appt.id))
   }, [appartements, selectedAppartements])
 
+  // Get selected appartements data for "En cours" WhatsApp
+  const selectedAppartementsEnCoursData = useMemo(() => {
+    return appartements
+      .filter(appt => selectedForWhatsAppEnCours.has(appt.id))
+      .filter(appt => !hasTasksEnCours(appt.taches)) // Exclure les appartements avec tâches en cours
+  }, [appartements, selectedForWhatsAppEnCours])
+
   // Reset selection modes when changing tabs
   useEffect(() => {
-    // Reset WhatsApp selection mode
+    // Reset WhatsApp selection mode (for "Prêt" tab)
     if (activeTab !== 'pret') {
       setIsSelectionMode(false)
       setSelectedAppartements(new Set())
+    }
+    // Reset WhatsApp selection mode (for "En cours" tab)
+    if (activeTab !== 'en_cours') {
+      setIsWhatsAppSelectionEnCours(false)
+      setSelectedForWhatsAppEnCours(new Set())
     }
     // Reset validation mode
     if (activeTab !== 'en_attente') {
@@ -383,6 +526,10 @@ export default function PlotDetailPage() {
     if (activeTab !== 'pret') {
       setIsInvalidationMode(false)
       setSelectedForInvalidation(new Set())
+    }
+    // Reset task sort when leaving "en_cours" tab
+    if (activeTab !== 'en_cours') {
+      setSortByTaskCompletion(false)
     }
   }, [activeTab])
 
@@ -480,6 +627,19 @@ export default function PlotDetailPage() {
                   </Button>
                 )}
 
+                {/* WhatsApp button - only in "En cours" tab */}
+                {!appartementsLoading && activeTab === 'en_cours' && stats.en_cours > 0 && !isWhatsAppSelectionEnCours && (
+                  <Button
+                    onClick={handleStartWhatsAppSelectionEnCours}
+                    variant="secondary"
+                    className="flex items-center gap-2 min-h-[44px]"
+                    title="Envoyer par WhatsApp"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    <span className="hidden sm:inline">Envoyer par WhatsApp</span>
+                  </Button>
+                )}
+
                 {/* Create button with dropdown */}
                 <div className="relative">
                   <Button
@@ -557,7 +717,7 @@ export default function PlotDetailPage() {
                 </div>
               )}
 
-              {/* Search Bar and Documents filter */}
+              {/* Search Bar and filters */}
               {!appartementsLoading && appartements.length > 0 && (
                 <div className="flex flex-col sm:flex-row gap-2 mb-4">
                   <div className="relative flex-1">
@@ -586,11 +746,42 @@ export default function PlotDetailPage() {
                       <span className="text-sm">Documents complets</span>
                     </button>
                   )}
+
+                  {/* Task sort button - only in "En cours" tab and if there are appartements */}
+                  {activeTab === 'en_cours' && stats.en_cours > 0 && (
+                    <button
+                      onClick={handleToggleTaskSort}
+                      className={`flex items-center gap-2 px-4 py-3 border rounded-lg transition-colors min-h-[44px] whitespace-nowrap ${
+                        sortByTaskCompletion
+                          ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                      title="Trier par progression des tâches"
+                    >
+                      <ListOrdered className="w-5 h-5" />
+                      <span className="text-sm">Trier par tâches</span>
+                    </button>
+                  )}
+
+                  {/* Tache filter - only in "En cours" tab and if there are taches */}
+                  {activeTab === 'en_cours' && stats.en_cours > 0 && tachesOptions.length > 0 && (
+                    <div className="min-w-[200px]">
+                      <Select
+                        value={selectedTacheFilter}
+                        onChange={setSelectedTacheFilter}
+                        options={[
+                          { value: '', label: 'Toutes les tâches' },
+                          ...tachesOptions
+                        ]}
+                        placeholder="Toutes les tâches"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Clear filters button */}
-              {!appartementsLoading && appartements.length > 0 && (searchQuery !== '' || (activeTab === 'en_attente' && showOnlyWithAllDocuments)) && (
+              {!appartementsLoading && appartements.length > 0 && (searchQuery !== '' || (activeTab === 'en_attente' && showOnlyWithAllDocuments) || (activeTab === 'en_cours' && (sortByTaskCompletion || selectedTacheFilter !== ''))) && (
                 <div className="flex justify-end mb-4">
                   <button
                     onClick={handleClearAllFilters}
@@ -646,10 +837,17 @@ export default function PlotDetailPage() {
                     const tachesEnCours = getTasksEnCours(appartement)
                     const tacheEnCours = tachesEnCours.length > 0 ? tachesEnCours[0] : null
 
+                    // Calculate completed tasks count
+                    const tachesTerminees = (appartement.taches || []).filter(t => t.statut === 'terminee').length
+                    const totalTaches = appartement.taches_count || 0
+
                     // Determine which selection mode is active and which set to use
-                    const inAnySelectionMode = isSelectionMode || isValidationMode || isInvalidationMode
+                    const inAnySelectionMode = isSelectionMode || isValidationMode || isInvalidationMode || isWhatsAppSelectionEnCours
                     let isSelected = false
                     let toggleHandler = null
+
+                    // Check if appartement is blocked for WhatsApp (has tasks in progress)
+                    const isBlockedForWhatsApp = isWhatsAppSelectionEnCours && hasTasksEnCours(appartement.taches)
 
                     if (isSelectionMode) {
                       isSelected = selectedAppartements.has(appartement.id)
@@ -660,22 +858,30 @@ export default function PlotDetailPage() {
                     } else if (isInvalidationMode) {
                       isSelected = selectedForInvalidation.has(appartement.id)
                       toggleHandler = handleToggleInvalidationSelection
+                    } else if (isWhatsAppSelectionEnCours) {
+                      isSelected = selectedForWhatsAppEnCours.has(appartement.id)
+                      toggleHandler = handleToggleWhatsAppEnCoursSelection
                     }
 
                     return (
                       <div
                         key={appartement.id}
                         onClick={() => {
+                          // Don't allow selection if blocked for WhatsApp
+                          if (isBlockedForWhatsApp) return
+
                           if (inAnySelectionMode && toggleHandler) {
                             toggleHandler(appartement.id)
                           } else {
                             handleAppartementClick(appartement)
                           }
                         }}
-                        className={`border rounded-lg p-4 transition-all cursor-pointer bg-white ${
-                          inAnySelectionMode && isSelected
-                            ? 'border-primary-500 bg-primary-50'
-                            : 'border-gray-200 hover:border-primary-500 hover:shadow-md'
+                        className={`border rounded-lg p-4 transition-all bg-white ${
+                          isBlockedForWhatsApp
+                            ? 'border-gray-200 opacity-60 cursor-not-allowed'
+                            : inAnySelectionMode && isSelected
+                            ? 'border-primary-500 bg-primary-50 cursor-pointer'
+                            : 'border-gray-200 hover:border-primary-500 hover:shadow-md cursor-pointer'
                         }`}
                       >
                         <div className="flex flex-col gap-2">
@@ -687,16 +893,27 @@ export default function PlotDetailPage() {
                                 <input
                                   type="checkbox"
                                   checked={isSelected}
+                                  disabled={isBlockedForWhatsApp}
                                   onChange={() => toggleHandler(appartement.id)}
                                   onClick={(e) => e.stopPropagation()}
-                                  className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded flex-shrink-0"
+                                  className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                                 />
                               )}
                               <Home className="w-5 h-5 text-gray-600 flex-shrink-0" />
-                              <span className="font-medium text-gray-900 truncate">{appartement.nom}</span>
-                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statutConfig.color} flex-shrink-0`}>
-                                {statutConfig.label}
-                              </span>
+                              <div className="flex flex-col gap-1 flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-900 truncate">{appartement.nom}</span>
+                                  <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statutConfig.color} flex-shrink-0`}>
+                                    {statutConfig.label}
+                                  </span>
+                                </div>
+                                {/* Warning message for blocked appartements */}
+                                {isBlockedForWhatsApp && (
+                                  <p className="text-xs text-red-600 font-medium">
+                                    ⚠️ Impossible de sélectionner : une tâche est en cours
+                                  </p>
+                                )}
+                              </div>
                             </div>
                             {!inAnySelectionMode && (
                               <div className="flex items-center gap-2 flex-shrink-0">
@@ -704,14 +921,14 @@ export default function PlotDetailPage() {
                                 <span className="text-sm text-gray-600 hidden sm:inline">
                                   {activeTab === 'en_attente'
                                     ? `${appartement.documents_uploaded_count || 0}/${appartement.documents_required_count || 0} documents`
-                                    : `${appartement.taches_count} ${appartement.taches_count <= 1 ? 'tâche' : 'tâches'}`
+                                    : `${tachesTerminees}/${totalTaches} ${totalTaches <= 1 ? 'tâche' : 'tâches'}`
                                   }
                                 </span>
                                 {/* Mobile: show compact version */}
                                 <span className="text-sm text-gray-600 sm:hidden">
                                   {activeTab === 'en_attente'
                                     ? `${appartement.documents_uploaded_count || 0}/${appartement.documents_required_count || 0}`
-                                    : `${appartement.taches_count}`
+                                    : `${tachesTerminees}/${totalTaches}`
                                   }
                                 </span>
                                 <button
@@ -871,7 +1088,7 @@ export default function PlotDetailPage() {
               )}
             </Modal>
 
-            {/* WhatsApp Modal */}
+            {/* WhatsApp Modal (for "Prêt" tab) */}
             <SendWhatsAppModal
               isOpen={isSendWhatsAppModalOpen}
               onClose={handleCloseWhatsAppModal}
@@ -885,7 +1102,20 @@ export default function PlotDetailPage() {
               }}
             />
 
-            {/* Selection Mode Actions - Fixed Bottom Bar */}
+            {/* WhatsApp Modal (for "En cours" tab) */}
+            <SendWhatsAppModal
+              isOpen={isSendWhatsAppEnCoursModalOpen}
+              onClose={handleCloseWhatsAppEnCoursModal}
+              appartements={selectedAppartementsEnCoursData}
+              chantierId={chantierId}
+              isEnCoursMode={true}
+              onSuccess={() => {
+                // Reload appartements to reflect status changes
+                loadAppartements()
+              }}
+            />
+
+            {/* Selection Mode Actions - Fixed Bottom Bar (for "Prêt" tab) */}
             {isSelectionMode && (
               <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg pb-16 md:pb-0">
                 <div className="max-w-7xl mx-auto px-4 py-4">
@@ -914,6 +1144,42 @@ export default function PlotDetailPage() {
                       >
                         <MessageCircle className="w-5 h-5" />
                         <span>Continuer ({selectedAppartements.size})</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* WhatsApp Selection Mode Actions - Fixed Bottom Bar (for "En cours" tab) */}
+            {isWhatsAppSelectionEnCours && (
+              <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg pb-16 md:pb-0">
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    {/* Left: Selection count */}
+                    <div className="text-center sm:text-left">
+                      <p className="text-sm text-gray-600">
+                        {selectedForWhatsAppEnCours.size} appartement{selectedForWhatsAppEnCours.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedForWhatsAppEnCours.size > 1 ? 's' : ''}
+                      </p>
+                    </div>
+
+                    {/* Right: Actions */}
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                      <Button
+                        onClick={handleCancelWhatsAppSelectionEnCours}
+                        variant="secondary"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
+                      >
+                        <X className="w-4 h-4" />
+                        <span>Annuler</span>
+                      </Button>
+                      <Button
+                        onClick={handleContinueToWhatsAppEnCours}
+                        disabled={selectedForWhatsAppEnCours.size === 0}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        <span>Continuer ({selectedForWhatsAppEnCours.size})</span>
                       </Button>
                     </div>
                   </div>

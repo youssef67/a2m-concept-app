@@ -55,8 +55,10 @@ export async function getAppartementsByPlotWithDetails(plotId, chantierId) {
         *,
         appartement_taches (
           id,
+          chantier_tache_id,
           intitule,
-          statut
+          statut,
+          ordre
         )
       `)
       .eq('plot_id', plotId)

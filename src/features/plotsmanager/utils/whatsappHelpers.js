@@ -95,3 +95,26 @@ export function getFirstTacheAFaire(taches) {
 
   return tachesAFaire.length > 0 ? tachesAFaire[0] : null
 }
+
+/**
+ * Check if appartement has tasks with status "en_cours"
+ * @param {Array} taches - Array of tasks
+ * @returns {boolean} - True if appartement has tasks in progress
+ */
+export function hasTasksEnCours(taches) {
+  if (!taches || taches.length === 0) return false
+  return taches.some(t => t.statut === 'en_cours')
+}
+
+/**
+ * Get all tasks with status "a_faire" sorted by ordre
+ * @param {Array} taches - Array of tasks
+ * @returns {Array} - Tasks with status "a_faire" sorted
+ */
+export function getTachesAFaire(taches) {
+  if (!taches || taches.length === 0) return []
+
+  return taches
+    .filter(t => t.statut === 'a_faire')
+    .sort((a, b) => a.ordre - b.ordre)
+}
