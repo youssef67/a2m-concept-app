@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle, MessageCircle, X } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
@@ -14,6 +14,7 @@ import Modal from '../../../shared/components/ui/Modal'
 import Tabs from '../../../shared/components/ui/Tabs'
 import CreateAppartementModal from '../components/CreateAppartementModal'
 import CreateMultipleAppartementsModal from '../components/CreateMultipleAppartementsModal'
+import SendWhatsAppModal from '../components/SendWhatsAppModal'
 import { getPlotById } from '../services/plotsService'
 import { useAppartements } from '../hooks/useAppartements'
 import {
@@ -40,6 +41,11 @@ export default function PlotDetailPage() {
   const [activeTab, setActiveTab] = useState('en_cours')
   const [creationResult, setCreationResult] = useState(null)
   const [showResultModal, setShowResultModal] = useState(false)
+
+  // WhatsApp selection states
+  const [isSelectionMode, setIsSelectionMode] = useState(false)
+  const [selectedAppartements, setSelectedAppartements] = useState(new Set())
+  const [isSendWhatsAppModalOpen, setIsSendWhatsAppModalOpen] = useState(false)
 
   // Appartements hook
   const { appartements, loading: appartementsLoading, loadAppartements, deleteAppartement } = useAppartements(plotId, chantierId)
@@ -156,6 +162,56 @@ export default function PlotDetailPage() {
     setAppartementToEdit(null)
   }
 
+  // WhatsApp handlers
+  const handleStartWhatsAppSelection = () => {
+    setIsSelectionMode(true)
+    setSelectedAppartements(new Set())
+  }
+
+  const handleCancelSelection = () => {
+    setIsSelectionMode(false)
+    setSelectedAppartements(new Set())
+  }
+
+  const handleToggleAppartementSelection = (appartementId) => {
+    setSelectedAppartements(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(appartementId)) {
+        newSet.delete(appartementId)
+      } else {
+        newSet.add(appartementId)
+      }
+      return newSet
+    })
+  }
+
+  const handleContinueToWhatsApp = () => {
+    if (selectedAppartements.size === 0) {
+      alert('Veuillez sélectionner au moins un appartement')
+      return
+    }
+    setIsSendWhatsAppModalOpen(true)
+  }
+
+  const handleCloseWhatsAppModal = () => {
+    setIsSendWhatsAppModalOpen(false)
+    setIsSelectionMode(false)
+    setSelectedAppartements(new Set())
+  }
+
+  // Get selected appartements data
+  const selectedAppartementsData = useMemo(() => {
+    return appartements.filter(appt => selectedAppartements.has(appt.id))
+  }, [appartements, selectedAppartements])
+
+  // Reset selection mode when changing tabs
+  useEffect(() => {
+    if (activeTab !== 'pret') {
+      setIsSelectionMode(false)
+      setSelectedAppartements(new Set())
+    }
+  }, [activeTab])
+
   // Type labels
   const TYPE_LABELS = {
     immeuble: 'Immeuble',
@@ -209,50 +265,66 @@ export default function PlotDetailPage() {
                 </div>
               </div>
 
-              {/* Right: Action button with dropdown */}
-              <div className="relative">
-                <Button
-                  onClick={() => setShowCreateMenu(!showCreateMenu)}
-                  className="flex items-center justify-center gap-2 min-h-[44px]"
-                >
-                  <Home className="w-5 h-5" />
-                  <span>Créer appartement(s)</span>
-                  <ChevronDown className="w-4 h-4 ml-1" />
-                </Button>
-
-                {showCreateMenu && (
-                  <>
-                    {/* Backdrop to close menu */}
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setShowCreateMenu(false)}
-                    />
-
-                    {/* Dropdown menu */}
-                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
-                      <button
-                        onClick={() => {
-                          setIsCreateAppartementModalOpen(true)
-                          setShowCreateMenu(false)
-                        }}
-                        className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
-                      >
-                        <Home className="w-5 h-5 text-primary-600" />
-                        <span className="text-gray-700 font-medium">Créer un appartement</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsCreateMultipleModalOpen(true)
-                          setShowCreateMenu(false)
-                        }}
-                        className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
-                      >
-                        <Building2 className="w-5 h-5 text-primary-600" />
-                        <span className="text-gray-700 font-medium">Créer plusieurs appartements</span>
-                      </button>
-                    </div>
-                  </>
+              {/* Right: Action buttons */}
+              <div className="flex items-center gap-2">
+                {/* WhatsApp button - only in "Prêt" tab */}
+                {!appartementsLoading && activeTab === 'pret' && stats.pret > 0 && !isSelectionMode && (
+                  <Button
+                    onClick={handleStartWhatsAppSelection}
+                    variant="secondary"
+                    className="flex items-center gap-2 min-h-[44px]"
+                    title="Envoyer par WhatsApp"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    <span className="hidden sm:inline">Envoyer par WhatsApp</span>
+                  </Button>
                 )}
+
+                {/* Create button with dropdown */}
+                <div className="relative">
+                  <Button
+                    onClick={() => setShowCreateMenu(!showCreateMenu)}
+                    className="flex items-center justify-center gap-2 min-h-[44px]"
+                  >
+                    <Home className="w-5 h-5" />
+                    <span>Créer appartement(s)</span>
+                    <ChevronDown className="w-4 h-4 ml-1" />
+                  </Button>
+
+                  {showCreateMenu && (
+                    <>
+                      {/* Backdrop to close menu */}
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setShowCreateMenu(false)}
+                      />
+
+                      {/* Dropdown menu */}
+                      <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
+                        <button
+                          onClick={() => {
+                            setIsCreateAppartementModalOpen(true)
+                            setShowCreateMenu(false)
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                        >
+                          <Home className="w-5 h-5 text-primary-600" />
+                          <span className="text-gray-700 font-medium">Créer un appartement</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsCreateMultipleModalOpen(true)
+                            setShowCreateMenu(false)
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                        >
+                          <Building2 className="w-5 h-5 text-primary-600" />
+                          <span className="text-gray-700 font-medium">Créer plusieurs appartements</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -265,7 +337,9 @@ export default function PlotDetailPage() {
 
             {/* Appartements list */}
             <div className="mt-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Appartements</h2>
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Appartements</h2>
+              </div>
 
               {/* Tabs */}
               {!appartementsLoading && appartements.length > 0 && (
@@ -339,42 +413,65 @@ export default function PlotDetailPage() {
                     const statutConfig = getStatutConfig(statut)
                     const tachesEnCours = getTasksEnCours(appartement)
                     const tacheEnCours = tachesEnCours.length > 0 ? tachesEnCours[0] : null
+                    const isSelected = selectedAppartements.has(appartement.id)
 
                     return (
                       <div
                         key={appartement.id}
-                        onClick={() => handleAppartementClick(appartement)}
-                        className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 hover:shadow-md transition-all cursor-pointer bg-white"
+                        onClick={() => {
+                          if (isSelectionMode) {
+                            handleToggleAppartementSelection(appartement.id)
+                          } else {
+                            handleAppartementClick(appartement)
+                          }
+                        }}
+                        className={`border rounded-lg p-4 transition-all cursor-pointer bg-white ${
+                          isSelectionMode && isSelected
+                            ? 'border-primary-500 bg-primary-50'
+                            : 'border-gray-200 hover:border-primary-500 hover:shadow-md'
+                        }`}
                       >
                         <div className="flex flex-col gap-2">
                           {/* Main row */}
                           <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
+                              {/* Checkbox in selection mode */}
+                              {isSelectionMode && (
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => handleToggleAppartementSelection(appartement.id)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded flex-shrink-0"
+                                />
+                              )}
                               <Home className="w-5 h-5 text-gray-600 flex-shrink-0" />
                               <span className="font-medium text-gray-900 truncate">{appartement.nom}</span>
                               <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statutConfig.color} flex-shrink-0`}>
                                 {statutConfig.label}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <span className="text-sm text-gray-600 hidden sm:inline">
-                                {appartement.taches_count} {appartement.taches_count <= 1 ? 'tâche' : 'tâches'}
-                              </span>
-                              <button
-                                onClick={(e) => handleEditAppartement(e, appartement)}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Modifier"
-                              >
-                                <Edit className="w-5 h-5" />
-                              </button>
-                              <button
-                                onClick={(e) => handleDeleteAppartement(e, appartement)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Supprimer"
-                              >
-                                <Trash2 className="w-5 h-5" />
-                              </button>
-                            </div>
+                            {!isSelectionMode && (
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <span className="text-sm text-gray-600 hidden sm:inline">
+                                  {appartement.taches_count} {appartement.taches_count <= 1 ? 'tâche' : 'tâches'}
+                                </span>
+                                <button
+                                  onClick={(e) => handleEditAppartement(e, appartement)}
+                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Modifier"
+                                >
+                                  <Edit className="w-5 h-5" />
+                                </button>
+                                <button
+                                  onClick={(e) => handleDeleteAppartement(e, appartement)}
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Supprimer"
+                                >
+                                  <Trash2 className="w-5 h-5" />
+                                </button>
+                              </div>
+                            )}
                           </div>
 
                           {/* Task intitule row (only for en_cours) */}
@@ -515,6 +612,50 @@ export default function PlotDetailPage() {
                 </div>
               )}
             </Modal>
+
+            {/* WhatsApp Modal */}
+            <SendWhatsAppModal
+              isOpen={isSendWhatsAppModalOpen}
+              onClose={handleCloseWhatsAppModal}
+              appartements={selectedAppartementsData}
+              chantierId={chantierId}
+            />
+
+            {/* Selection Mode Actions - Fixed Bottom Bar */}
+            {isSelectionMode && (
+              <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg pb-16 md:pb-0">
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    {/* Left: Selection count */}
+                    <div className="text-center sm:text-left">
+                      <p className="text-sm text-gray-600">
+                        {selectedAppartements.size} appartement{selectedAppartements.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedAppartements.size > 1 ? 's' : ''}
+                      </p>
+                    </div>
+
+                    {/* Right: Actions */}
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                      <Button
+                        onClick={handleCancelSelection}
+                        variant="secondary"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
+                      >
+                        <X className="w-4 h-4" />
+                        <span>Annuler</span>
+                      </Button>
+                      <Button
+                        onClick={handleContinueToWhatsApp}
+                        disabled={selectedAppartements.size === 0}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        <span>Continuer ({selectedAppartements.size})</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

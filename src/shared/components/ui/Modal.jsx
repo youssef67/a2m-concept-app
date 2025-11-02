@@ -80,7 +80,7 @@ export default function Modal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6">
+        <div className="flex-1 overflow-y-auto px-6 pt-4 pb-20 md:pb-6">
           {children}
         </div>
       </div>
