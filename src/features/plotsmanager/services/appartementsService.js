@@ -473,3 +473,101 @@ export async function createMultipleAppartementsWithTaches(plotId, chantierId, n
     }
   }
 }
+
+/**
+ * Validate multiple appartements (set valide = true)
+ * @param {Array<string>} appartementIds - Array of appartement IDs
+ * @returns {Promise<{success: boolean, updated: number, failed: number, errors: Array}>}
+ */
+export async function validateAppartements(appartementIds) {
+  try {
+    if (!Array.isArray(appartementIds) || appartementIds.length === 0) {
+      return {
+        success: false,
+        updated: 0,
+        failed: 0,
+        errors: ['Aucun appartement fourni']
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('appartements')
+      .update({ valide: true })
+      .in('id', appartementIds)
+      .select()
+
+    if (error) {
+      console.error('Error validating appartements:', error)
+      return {
+        success: false,
+        updated: 0,
+        failed: appartementIds.length,
+        errors: [error.message]
+      }
+    }
+
+    return {
+      success: true,
+      updated: data?.length || 0,
+      failed: 0,
+      errors: []
+    }
+  } catch (err) {
+    console.error('Exception in validateAppartements:', err)
+    return {
+      success: false,
+      updated: 0,
+      failed: appartementIds.length,
+      errors: [err.message]
+    }
+  }
+}
+
+/**
+ * Invalidate multiple appartements (set valide = false)
+ * @param {Array<string>} appartementIds - Array of appartement IDs
+ * @returns {Promise<{success: boolean, updated: number, failed: number, errors: Array}>}
+ */
+export async function invalidateAppartements(appartementIds) {
+  try {
+    if (!Array.isArray(appartementIds) || appartementIds.length === 0) {
+      return {
+        success: false,
+        updated: 0,
+        failed: 0,
+        errors: ['Aucun appartement fourni']
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('appartements')
+      .update({ valide: false })
+      .in('id', appartementIds)
+      .select()
+
+    if (error) {
+      console.error('Error invalidating appartements:', error)
+      return {
+        success: false,
+        updated: 0,
+        failed: appartementIds.length,
+        errors: [error.message]
+      }
+    }
+
+    return {
+      success: true,
+      updated: data?.length || 0,
+      failed: 0,
+      errors: []
+    }
+  } catch (err) {
+    console.error('Exception in invalidateAppartements:', err)
+    return {
+      success: false,
+      updated: 0,
+      failed: appartementIds.length,
+      errors: [err.message]
+    }
+  }
+}

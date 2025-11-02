@@ -23,20 +23,15 @@ export function searchAppartements(appartements, query) {
 }
 
 /**
- * Calcule le statut d'un appartement basé sur ses documents et tâches
- * @param {Object} appartement - Appartement avec taches, documents_uploaded_count, documents_required_count
+ * Calcule le statut d'un appartement basé sur sa validation et ses tâches
+ * @param {Object} appartement - Appartement avec taches, valide
  * @returns {'en_attente' | 'en_cours' | 'pret' | 'finalise'} Statut de l'appartement
  */
 export function calculateAppartementStatut(appartement) {
-  const { taches = [], documents_uploaded_count = 0, documents_required_count = 0 } = appartement
+  const { taches = [], valide = false } = appartement
 
   // Vérifier si au moins une tâche est en cours
   const hasTaskInProgress = taches.length > 0 && taches.some((t) => t.statut === 'en_cours')
-
-  // Vérifier si tous les documents sont uploadés
-  const allDocumentsUploaded =
-    documents_required_count === 0 || // Pas de documents requis = OK
-    (documents_required_count > 0 && documents_uploaded_count === documents_required_count)
 
   // Vérifier si toutes les tâches sont terminées
   const allTasksCompleted =
@@ -45,12 +40,12 @@ export function calculateAppartementStatut(appartement) {
   // Déterminer le statut (ordre de priorité)
   if (hasTaskInProgress) {
     return 'en_cours' // Priorité 1 : Au moins une tâche commencée
-  } else if (allTasksCompleted && allDocumentsUploaded) {
+  } else if (allTasksCompleted && valide) {
     return 'finalise' // Priorité 2 : Tout terminé
-  } else if (allDocumentsUploaded) {
-    return 'pret' // Priorité 3 : Documents OK, prêt à démarrer
+  } else if (valide === true) {
+    return 'pret' // Priorité 3 : Validé manuellement, prêt à démarrer
   } else {
-    return 'en_attente' // Priorité 4 : Documents manquants
+    return 'en_attente' // Priorité 4 : En attente de validation manuelle
   }
 }
 

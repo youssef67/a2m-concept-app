@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle, MessageCircle, X } from 'lucide-react'
+import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle, MessageCircle, X, XCircle } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
@@ -16,7 +16,9 @@ import CreateAppartementModal from '../components/CreateAppartementModal'
 import CreateMultipleAppartementsModal from '../components/CreateMultipleAppartementsModal'
 import SendWhatsAppModal from '../components/SendWhatsAppModal'
 import { getPlotById } from '../services/plotsService'
+import { validateAppartements, invalidateAppartements } from '../services/appartementsService'
 import { useAppartements } from '../hooks/useAppartements'
+import { useToast } from '../../../shared/hooks/useToast'
 import {
   searchAppartements,
   filterAppartementsByStatut,
@@ -46,6 +48,17 @@ export default function PlotDetailPage() {
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [selectedAppartements, setSelectedAppartements] = useState(new Set())
   const [isSendWhatsAppModalOpen, setIsSendWhatsAppModalOpen] = useState(false)
+
+  // Validation/Invalidation selection states
+  const [isValidationMode, setIsValidationMode] = useState(false)
+  const [isInvalidationMode, setIsInvalidationMode] = useState(false)
+  const [selectedForValidation, setSelectedForValidation] = useState(new Set())
+  const [selectedForInvalidation, setSelectedForInvalidation] = useState(new Set())
+  const [showValidationConfirm, setShowValidationConfirm] = useState(false)
+  const [showInvalidationConfirm, setShowInvalidationConfirm] = useState(false)
+
+  // Toast hook
+  const { showToast } = useToast()
 
   // Appartements hook
   const { appartements, loading: appartementsLoading, loadAppartements, deleteAppartement } = useAppartements(plotId, chantierId)
@@ -199,16 +212,123 @@ export default function PlotDetailPage() {
     setSelectedAppartements(new Set())
   }
 
+  // Validation handlers
+  const handleStartValidation = () => {
+    setIsValidationMode(true)
+    setSelectedForValidation(new Set())
+  }
+
+  const handleCancelValidation = () => {
+    setIsValidationMode(false)
+    setSelectedForValidation(new Set())
+  }
+
+  const handleToggleValidationSelection = (appartementId) => {
+    setSelectedForValidation(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(appartementId)) {
+        newSet.delete(appartementId)
+      } else {
+        newSet.add(appartementId)
+      }
+      return newSet
+    })
+  }
+
+  const handleContinueToValidation = () => {
+    if (selectedForValidation.size === 0) {
+      showToast('Veuillez sélectionner au moins un appartement', 'error')
+      return
+    }
+    setShowValidationConfirm(true)
+  }
+
+  const confirmValidation = async () => {
+    const ids = Array.from(selectedForValidation)
+    const result = await validateAppartements(ids)
+
+    if (result.success) {
+      showToast(`${result.updated} appartement(s) validé(s) avec succès`, 'success')
+      setIsValidationMode(false)
+      setSelectedForValidation(new Set())
+      setShowValidationConfirm(false)
+      loadAppartements()
+      setActiveTab('pret') // Switch to "Prêt" tab
+    } else {
+      showToast('Erreur lors de la validation', 'error')
+      setShowValidationConfirm(false)
+    }
+  }
+
+  // Invalidation handlers
+  const handleStartInvalidation = () => {
+    setIsInvalidationMode(true)
+    setSelectedForInvalidation(new Set())
+  }
+
+  const handleCancelInvalidation = () => {
+    setIsInvalidationMode(false)
+    setSelectedForInvalidation(new Set())
+  }
+
+  const handleToggleInvalidationSelection = (appartementId) => {
+    setSelectedForInvalidation(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(appartementId)) {
+        newSet.delete(appartementId)
+      } else {
+        newSet.add(appartementId)
+      }
+      return newSet
+    })
+  }
+
+  const handleContinueToInvalidation = () => {
+    if (selectedForInvalidation.size === 0) {
+      showToast('Veuillez sélectionner au moins un appartement', 'error')
+      return
+    }
+    setShowInvalidationConfirm(true)
+  }
+
+  const confirmInvalidation = async () => {
+    const ids = Array.from(selectedForInvalidation)
+    const result = await invalidateAppartements(ids)
+
+    if (result.success) {
+      showToast(`${result.updated} appartement(s) invalidé(s) avec succès`, 'success')
+      setIsInvalidationMode(false)
+      setSelectedForInvalidation(new Set())
+      setShowInvalidationConfirm(false)
+      loadAppartements()
+      setActiveTab('en_attente') // Switch to "En attente" tab
+    } else {
+      showToast('Erreur lors de l\'invalidation', 'error')
+      setShowInvalidationConfirm(false)
+    }
+  }
+
   // Get selected appartements data
   const selectedAppartementsData = useMemo(() => {
     return appartements.filter(appt => selectedAppartements.has(appt.id))
   }, [appartements, selectedAppartements])
 
-  // Reset selection mode when changing tabs
+  // Reset selection modes when changing tabs
   useEffect(() => {
+    // Reset WhatsApp selection mode
     if (activeTab !== 'pret') {
       setIsSelectionMode(false)
       setSelectedAppartements(new Set())
+    }
+    // Reset validation mode
+    if (activeTab !== 'en_attente') {
+      setIsValidationMode(false)
+      setSelectedForValidation(new Set())
+    }
+    // Reset invalidation mode
+    if (activeTab !== 'pret') {
+      setIsInvalidationMode(false)
+      setSelectedForInvalidation(new Set())
     }
   }, [activeTab])
 
@@ -267,8 +387,34 @@ export default function PlotDetailPage() {
 
               {/* Right: Action buttons */}
               <div className="flex items-center gap-2">
+                {/* Validation button - only in "En attente" tab */}
+                {!appartementsLoading && activeTab === 'en_attente' && stats.en_attente > 0 && !isValidationMode && (
+                  <Button
+                    onClick={handleStartValidation}
+                    variant="secondary"
+                    className="flex items-center gap-2 min-h-[44px]"
+                    title="Valider appartement(s)"
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="hidden sm:inline">Valider appartement(s)</span>
+                  </Button>
+                )}
+
+                {/* Invalidation button - only in "Prêt" tab */}
+                {!appartementsLoading && activeTab === 'pret' && stats.pret > 0 && !isInvalidationMode && !isSelectionMode && (
+                  <Button
+                    onClick={handleStartInvalidation}
+                    variant="secondary"
+                    className="flex items-center gap-2 min-h-[44px]"
+                    title="Invalider appartement(s)"
+                  >
+                    <XCircle className="w-5 h-5" />
+                    <span className="hidden sm:inline">Invalider appartement(s)</span>
+                  </Button>
+                )}
+
                 {/* WhatsApp button - only in "Prêt" tab */}
-                {!appartementsLoading && activeTab === 'pret' && stats.pret > 0 && !isSelectionMode && (
+                {!appartementsLoading && activeTab === 'pret' && stats.pret > 0 && !isSelectionMode && !isInvalidationMode && (
                   <Button
                     onClick={handleStartWhatsAppSelection}
                     variant="secondary"
@@ -413,20 +559,35 @@ export default function PlotDetailPage() {
                     const statutConfig = getStatutConfig(statut)
                     const tachesEnCours = getTasksEnCours(appartement)
                     const tacheEnCours = tachesEnCours.length > 0 ? tachesEnCours[0] : null
-                    const isSelected = selectedAppartements.has(appartement.id)
+
+                    // Determine which selection mode is active and which set to use
+                    const inAnySelectionMode = isSelectionMode || isValidationMode || isInvalidationMode
+                    let isSelected = false
+                    let toggleHandler = null
+
+                    if (isSelectionMode) {
+                      isSelected = selectedAppartements.has(appartement.id)
+                      toggleHandler = handleToggleAppartementSelection
+                    } else if (isValidationMode) {
+                      isSelected = selectedForValidation.has(appartement.id)
+                      toggleHandler = handleToggleValidationSelection
+                    } else if (isInvalidationMode) {
+                      isSelected = selectedForInvalidation.has(appartement.id)
+                      toggleHandler = handleToggleInvalidationSelection
+                    }
 
                     return (
                       <div
                         key={appartement.id}
                         onClick={() => {
-                          if (isSelectionMode) {
-                            handleToggleAppartementSelection(appartement.id)
+                          if (inAnySelectionMode && toggleHandler) {
+                            toggleHandler(appartement.id)
                           } else {
                             handleAppartementClick(appartement)
                           }
                         }}
                         className={`border rounded-lg p-4 transition-all cursor-pointer bg-white ${
-                          isSelectionMode && isSelected
+                          inAnySelectionMode && isSelected
                             ? 'border-primary-500 bg-primary-50'
                             : 'border-gray-200 hover:border-primary-500 hover:shadow-md'
                         }`}
@@ -435,12 +596,12 @@ export default function PlotDetailPage() {
                           {/* Main row */}
                           <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                              {/* Checkbox in selection mode */}
-                              {isSelectionMode && (
+                              {/* Checkbox in any selection mode */}
+                              {inAnySelectionMode && toggleHandler && (
                                 <input
                                   type="checkbox"
                                   checked={isSelected}
-                                  onChange={() => handleToggleAppartementSelection(appartement.id)}
+                                  onChange={() => toggleHandler(appartement.id)}
                                   onClick={(e) => e.stopPropagation()}
                                   className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded flex-shrink-0"
                                 />
@@ -451,7 +612,7 @@ export default function PlotDetailPage() {
                                 {statutConfig.label}
                               </span>
                             </div>
-                            {!isSelectionMode && (
+                            {!inAnySelectionMode && (
                               <div className="flex items-center gap-2 flex-shrink-0">
                                 <span className="text-sm text-gray-600 hidden sm:inline">
                                   {appartement.taches_count} {appartement.taches_count <= 1 ? 'tâche' : 'tâches'}
@@ -662,6 +823,101 @@ export default function PlotDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Validation Mode Actions - Fixed Bottom Bar */}
+            {isValidationMode && (
+              <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg pb-16 md:pb-0">
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    {/* Left: Selection count */}
+                    <div className="text-center sm:text-left">
+                      <p className="text-sm text-gray-600">
+                        {selectedForValidation.size} appartement{selectedForValidation.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedForValidation.size > 1 ? 's' : ''}
+                      </p>
+                    </div>
+
+                    {/* Right: Actions */}
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                      <Button
+                        onClick={handleCancelValidation}
+                        variant="secondary"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
+                      >
+                        <X className="w-4 h-4" />
+                        <span>Annuler</span>
+                      </Button>
+                      <Button
+                        onClick={handleContinueToValidation}
+                        disabled={selectedForValidation.size === 0}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
+                      >
+                        <CheckCircle className="w-5 h-5" />
+                        <span>Valider ({selectedForValidation.size})</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Invalidation Mode Actions - Fixed Bottom Bar */}
+            {isInvalidationMode && (
+              <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg pb-16 md:pb-0">
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    {/* Left: Selection count */}
+                    <div className="text-center sm:text-left">
+                      <p className="text-sm text-gray-600">
+                        {selectedForInvalidation.size} appartement{selectedForInvalidation.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedForInvalidation.size > 1 ? 's' : ''}
+                      </p>
+                    </div>
+
+                    {/* Right: Actions */}
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                      <Button
+                        onClick={handleCancelInvalidation}
+                        variant="secondary"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
+                      >
+                        <X className="w-4 h-4" />
+                        <span>Annuler</span>
+                      </Button>
+                      <Button
+                        onClick={handleContinueToInvalidation}
+                        disabled={selectedForInvalidation.size === 0}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
+                      >
+                        <XCircle className="w-5 h-5" />
+                        <span>Invalider ({selectedForInvalidation.size})</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Confirmation Modals */}
+            <ConfirmModal
+              isOpen={showValidationConfirm}
+              onClose={() => setShowValidationConfirm(false)}
+              onConfirm={confirmValidation}
+              title="Valider les appartements"
+              message={`Êtes-vous sûr de vouloir valider ${selectedForValidation.size} appartement(s) ? Ils passeront dans l'onglet 'Prêt'.`}
+              confirmLabel="Valider"
+              cancelLabel="Annuler"
+              variant="warning"
+            />
+
+            <ConfirmModal
+              isOpen={showInvalidationConfirm}
+              onClose={() => setShowInvalidationConfirm(false)}
+              onConfirm={confirmInvalidation}
+              title="Invalider les appartements"
+              message={`Êtes-vous sûr de vouloir invalider ${selectedForInvalidation.size} appartement(s) ? Ils reviendront dans l'onglet 'En attente'.`}
+              confirmLabel="Invalider"
+              cancelLabel="Annuler"
+              variant="warning"
+            />
           </>
         )}
       </div>
