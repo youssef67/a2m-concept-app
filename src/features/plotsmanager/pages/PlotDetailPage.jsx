@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle, MessageCircle, X, XCircle } from 'lucide-react'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle, MessageCircle, X, XCircle, FileCheck } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
@@ -30,6 +30,10 @@ import {
 export default function PlotDetailPage() {
   const { chantierId, plotId } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Initialize active tab from URL parameter or default to 'en_cours'
+  const initialTab = searchParams.get('activeTab') || 'en_cours'
 
   const [plot, setPlot] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -40,7 +44,8 @@ export default function PlotDetailPage() {
   const [appartementToEdit, setAppartementToEdit] = useState(null)
   const [appartementToDelete, setAppartementToDelete] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeTab, setActiveTab] = useState('en_cours')
+  const [activeTab, setActiveTab] = useState(initialTab)
+  const [showOnlyWithAllDocuments, setShowOnlyWithAllDocuments] = useState(false)
   const [creationResult, setCreationResult] = useState(null)
   const [showResultModal, setShowResultModal] = useState(false)
 
@@ -97,14 +102,33 @@ export default function PlotDetailPage() {
     }
   }, [plotId, loadAppartements])
 
+  // Clean up activeTab URL parameter after reading it
+  useEffect(() => {
+    const activeTabParam = searchParams.get('activeTab')
+    if (activeTabParam) {
+      // Remove the parameter from URL without triggering a navigation
+      searchParams.delete('activeTab')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, []) // Run only once on mount
+
   // Filter appartements based on search query and status
   const filteredBySearch = useMemo(() => {
     return searchAppartements(appartements, searchQuery)
   }, [appartements, searchQuery])
 
+  const filteredByDocuments = useMemo(() => {
+    if (!showOnlyWithAllDocuments) return filteredBySearch
+
+    return filteredBySearch.filter(appt => {
+      return appt.documents_uploaded_count === appt.documents_required_count &&
+             appt.documents_required_count > 0
+    })
+  }, [filteredBySearch, showOnlyWithAllDocuments])
+
   const filteredByStatut = useMemo(() => {
-    return filterAppartementsByStatut(filteredBySearch, activeTab)
-  }, [filteredBySearch, activeTab])
+    return filterAppartementsByStatut(filteredByDocuments, activeTab)
+  }, [filteredByDocuments, activeTab])
 
   const filteredAppartements = filteredByStatut
 
@@ -115,6 +139,15 @@ export default function PlotDetailPage() {
     pret: filterAppartementsByStatut(appartements, 'pret').length,
     finalise: filterAppartementsByStatut(appartements, 'finalise').length
   }), [appartements])
+
+  // Check if at least one "en_attente" appartement has all documents
+  const hasAppartementsWithAllDocuments = useMemo(() => {
+    const appartementsEnAttente = filterAppartementsByStatut(appartements, 'en_attente')
+    return appartementsEnAttente.some(appt =>
+      appt.documents_uploaded_count === appt.documents_required_count &&
+      appt.documents_required_count > 0
+    )
+  }, [appartements])
 
   // Get existing appartement names for duplicate validation
   const existingAppartementNames = useMemo(() => {
@@ -128,7 +161,13 @@ export default function PlotDetailPage() {
 
   // Handle appartement click
   const handleAppartementClick = (appartement) => {
-    navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}`)
+    // Pass current tab in URL to remember it on back navigation
+    // If in "en_attente" tab, open directly in Documents tab
+    if (activeTab === 'en_attente') {
+      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?tab=documents&fromTab=${activeTab}`)
+    } else {
+      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?fromTab=${activeTab}`)
+    }
   }
 
   // Handle appartement creation success
@@ -308,6 +347,19 @@ export default function PlotDetailPage() {
     }
   }
 
+  // Documents filter handlers
+  const handleToggleDocumentsFilter = () => {
+    setShowOnlyWithAllDocuments(prev => !prev)
+  }
+
+  const handleClearAllFilters = () => {
+    setSearchQuery('')
+    // Only clear documents filter if in "en_attente" tab
+    if (activeTab === 'en_attente') {
+      setShowOnlyWithAllDocuments(false)
+    }
+  }
+
   // Get selected appartements data
   const selectedAppartementsData = useMemo(() => {
     return appartements.filter(appt => selectedAppartements.has(appt.id))
@@ -324,6 +376,8 @@ export default function PlotDetailPage() {
     if (activeTab !== 'en_attente') {
       setIsValidationMode(false)
       setSelectedForValidation(new Set())
+      // Reset documents filter when leaving "en_attente" tab
+      setShowOnlyWithAllDocuments(false)
     }
     // Reset invalidation mode
     if (activeTab !== 'pret') {
@@ -503,17 +557,49 @@ export default function PlotDetailPage() {
                 </div>
               )}
 
-              {/* Search Bar */}
+              {/* Search Bar and Documents filter */}
               {!appartementsLoading && appartements.length > 0 && (
-                <div className="relative mb-4">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Rechercher un appartement..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[44px] text-base"
-                  />
+                <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Rechercher un appartement..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[44px] text-base"
+                    />
+                  </div>
+
+                  {/* Documents filter button - only in "En attente" tab and if at least one appt has all documents */}
+                  {activeTab === 'en_attente' && stats.en_attente > 0 && hasAppartementsWithAllDocuments && !isValidationMode && (
+                    <button
+                      onClick={handleToggleDocumentsFilter}
+                      className={`flex items-center gap-2 px-4 py-3 border rounded-lg transition-colors min-h-[44px] whitespace-nowrap ${
+                        showOnlyWithAllDocuments
+                          ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                      title="Afficher uniquement les appartements avec tous les documents"
+                    >
+                      <FileCheck className="w-5 h-5" />
+                      <span className="text-sm">Documents complets</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Clear filters button */}
+              {!appartementsLoading && appartements.length > 0 && (searchQuery !== '' || (activeTab === 'en_attente' && showOnlyWithAllDocuments)) && (
+                <div className="flex justify-end mb-4">
+                  <button
+                    onClick={handleClearAllFilters}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px]"
+                    title="Effacer les filtres"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Effacer les filtres</span>
+                  </button>
                 </div>
               )}
 
@@ -614,8 +700,19 @@ export default function PlotDetailPage() {
                             </div>
                             {!inAnySelectionMode && (
                               <div className="flex items-center gap-2 flex-shrink-0">
+                                {/* Desktop: show full text */}
                                 <span className="text-sm text-gray-600 hidden sm:inline">
-                                  {appartement.taches_count} {appartement.taches_count <= 1 ? 'tâche' : 'tâches'}
+                                  {activeTab === 'en_attente'
+                                    ? `${appartement.documents_uploaded_count || 0}/${appartement.documents_required_count || 0} documents`
+                                    : `${appartement.taches_count} ${appartement.taches_count <= 1 ? 'tâche' : 'tâches'}`
+                                  }
+                                </span>
+                                {/* Mobile: show compact version */}
+                                <span className="text-sm text-gray-600 sm:hidden">
+                                  {activeTab === 'en_attente'
+                                    ? `${appartement.documents_uploaded_count || 0}/${appartement.documents_required_count || 0}`
+                                    : `${appartement.taches_count}`
+                                  }
                                 </span>
                                 <button
                                   onClick={(e) => handleEditAppartement(e, appartement)}

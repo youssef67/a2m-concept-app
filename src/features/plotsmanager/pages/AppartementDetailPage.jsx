@@ -3,8 +3,8 @@
  * Page de détail d'un appartement avec liste des tâches héritées
  */
 
-import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import React, { useState, useEffect, useMemo } from 'react'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, Circle, Clock, FileText, Image as ImageIcon, Eye, Trash2, Plus } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
@@ -17,6 +17,7 @@ import { useAppartementTaches } from '../hooks/useAppartements'
 import { useAppartementDocuments } from '../hooks/useAppartementDocuments'
 import AppartementDocumentUploadModal from '../components/AppartementDocumentUploadModal'
 import { formatFileSize, isPDF } from '../services/appartementDocumentsService'
+import { calculateAppartementStatut } from '../utils/appartementHelpers'
 
 // Status options
 const STATUS_OPTIONS = [
@@ -50,13 +51,15 @@ const STATUS_CONFIG = {
 export default function AppartementDetailPage() {
   const { chantierId, plotId, appartementId } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const [appartement, setAppartement] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Tabs state
-  const [activeTab, setActiveTab] = useState('taches')
+  // Tabs state - initialize with URL parameter if present
+  const tabFromUrl = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'taches')
 
   // Upload modal state
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
@@ -123,7 +126,13 @@ export default function AppartementDetailPage() {
 
   // Handle back button
   const handleBack = () => {
-    navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}`)
+    // Get the tab we came from (if any) to navigate back to it
+    const fromTab = searchParams.get('fromTab')
+    if (fromTab) {
+      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}?activeTab=${fromTab}`)
+    } else {
+      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}`)
+    }
   }
 
   // Handle status change
@@ -192,6 +201,37 @@ export default function AppartementDetailPage() {
     ? Math.round((tachesStats.terminee / tachesStats.total) * 100)
     : 0
 
+  // Calculate appartement statut
+  const appartementStatut = useMemo(() => {
+    if (!appartement) return null
+    return calculateAppartementStatut({
+      ...appartement,
+      taches: taches || []
+    })
+  }, [appartement, taches])
+
+  // Determine available tabs - hide "Tâches" ONLY for "en_attente" appartements
+  const availableTabs = useMemo(() => {
+    const allTabs = [
+      { id: 'taches', label: 'Tâches', count: `${tachesStats.terminee}/${tachesStats.total}` },
+      { id: 'documents', label: 'Documents', count: `${documentsStats.uploaded}/${documentsStats.total}` }
+    ]
+
+    // If appartement statut is "en_attente", hide "Tâches" tab
+    if (appartementStatut === 'en_attente') {
+      return allTabs.filter(tab => tab.id !== 'taches')
+    }
+
+    return allTabs
+  }, [appartementStatut, tachesStats.terminee, tachesStats.total, documentsStats.uploaded, documentsStats.total])
+
+  // Switch to "documents" tab if "taches" is not available and currently active
+  useEffect(() => {
+    if (appartementStatut === 'en_attente' && activeTab === 'taches') {
+      setActiveTab('documents')
+    }
+  }, [appartementStatut, activeTab])
+
   return (
     <AppLayout>
       <div className="p-4 md:p-6">
@@ -231,10 +271,7 @@ export default function AppartementDetailPage() {
             {/* Tabs */}
             <div className="mb-6">
               <Tabs
-                tabs={[
-                  { id: 'taches', label: 'Tâches', count: `${tachesStats.terminee}/${tachesStats.total}` },
-                  { id: 'documents', label: 'Documents', count: `${documentsStats.uploaded}/${documentsStats.total}` }
-                ]}
+                tabs={availableTabs}
                 activeTab={activeTab}
                 onChange={setActiveTab}
               />
