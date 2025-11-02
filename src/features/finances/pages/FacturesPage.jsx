@@ -1030,7 +1030,7 @@ export default function FacturesPage() {
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="text-lg font-semibold text-gray-900">
-                              {facture.numero_facture}
+                              {facture.type === 'client' ? facture.numero_facture : getContactDisplayName(facture.contact)}
                             </h3>
                             {/* Badge indicateur de notes */}
                             {facture.notes && facture.notes.trim() !== '' && (
@@ -1039,10 +1039,12 @@ export default function FacturesPage() {
                               </div>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-                            <User className="w-4 h-4" />
-                            <span>{getContactDisplayName(facture.contact)}</span>
-                          </div>
+                          {facture.type === 'client' && (
+                            <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                              <User className="w-4 h-4" />
+                              <span>{getContactDisplayName(facture.contact)}</span>
+                            </div>
+                          )}
                           {facture.chantier && (
                             <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                               <Building2 className="w-4 h-4" />
@@ -1695,7 +1697,7 @@ export default function FacturesPage() {
             setIsDocumentsModalOpen(false)
             setSelectedFacture(null)
           }}
-          title={`Documents - ${selectedFacture?.numero_facture || ''}`}
+          title={`Documents - ${selectedFacture?.type === 'client' ? selectedFacture?.numero_facture : getContactDisplayName(selectedFacture?.contact) || ''}`}
           size="lg"
         >
           <div className="space-y-4">
