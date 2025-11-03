@@ -141,12 +141,20 @@ export default function FacturesPage() {
     }
   }, [selectedContactId, isModalOpen, editingFacture])
 
-  // Auto-calculate TTC when montantHT or TVA changes (clients only)
+  // Auto-calculate TTC when montantHT, TVA or retenue changes (clients only)
   React.useEffect(() => {
     if (factureType === 'client' && tvaApplicable && montantHT) {
       const ht = parseFloat(montantHT)
       if (!isNaN(ht) && ht > 0) {
-        const ttc = calculateTTC(ht, 20)
+        let baseCalcul = ht
+
+        // Si retenue de garantie, la déduire AVANT d'appliquer la TVA
+        if (retenueGarantie) {
+          const retenue = calculateRetenue(ht)
+          baseCalcul = ht - retenue
+        }
+
+        const ttc = calculateTTC(baseCalcul, 20)
         setMontantTTC(ttc.toFixed(2))
       } else {
         setMontantTTC('')
@@ -154,7 +162,7 @@ export default function FacturesPage() {
     } else {
       setMontantTTC('')
     }
-  }, [montantHT, tvaApplicable, factureType])
+  }, [montantHT, tvaApplicable, factureType, retenueGarantie])
 
   // Auto-calculate retenue when montantHT or retenueGarantie changes (clients only)
   React.useEffect(() => {
