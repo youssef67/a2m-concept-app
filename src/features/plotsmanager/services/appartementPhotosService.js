@@ -136,21 +136,23 @@ export async function uploadPhoto(appartementId, file, noteId = null) {
 }
 
 /**
- * Get public URL for a photo
+ * Get signed URL for a photo (valid for 1 hour)
  * @param {string} storagePath - Storage path of the photo
  * @returns {Promise<{data: string|null, error: any}>}
  */
 export async function getPhotoUrl(storagePath) {
   try {
-    const { data } = supabase.storage
+    const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
-      .getPublicUrl(storagePath)
+      .createSignedUrl(storagePath, 3600) // 1 hour validity
 
-    if (!data || !data.publicUrl) {
+    if (error) throw error
+
+    if (!data || !data.signedUrl) {
       throw new Error('Unable to generate photo URL')
     }
 
-    return { data: data.publicUrl, error: null }
+    return { data: data.signedUrl, error: null }
   } catch (error) {
     console.error('Error getting photo URL:', error)
     return { data: null, error }
