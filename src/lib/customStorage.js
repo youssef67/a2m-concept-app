@@ -1,59 +1,146 @@
 /**
  * Custom Storage for Supabase Auth
- * Plus robuste pour les PWA Android - Résout le problème de force quit
+ * Utilise IndexedDB pour une persistance robuste sur Android PWA
  *
- * Utilise localStorage avec :
- * - Préfixe unique pour éviter les conflits
- * - Gestion d'erreurs robuste pour contextes restrictifs
- * - Support des promesses pour compatibilité Supabase
+ * IndexedDB est plus fiable que localStorage sur Android car :
+ * - Ne se fait pas vider lors du force quit
+ * - Meilleure persistance sur mobile
+ * - Fallback vers localStorage si IndexedDB n'est pas disponible
  */
 
-const STORAGE_PREFIX = 'supabase-auth-pwa-'
+const DB_NAME = 'supabase-auth-pwa'
+const STORE_NAME = 'auth-storage'
+const DB_VERSION = 1
 
+/**
+ * Ouvre la connexion IndexedDB
+ * @returns {Promise<IDBDatabase>}
+ */
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION)
+
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => resolve(request.result)
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME)
+      }
+    }
+  })
+}
+
+/**
+ * Storage avec IndexedDB et fallback localStorage
+ */
 export const customStorage = {
   /**
-   * Récupère un item du localStorage
+   * Récupère un item du storage
    * @param {string} key - Clé de l'item
    * @returns {Promise<string|null>}
    */
-  getItem: (key) => {
+  async getItem(key) {
     try {
-      const item = localStorage.getItem(`${STORAGE_PREFIX}${key}`)
-      return Promise.resolve(item)
+      // Essayer IndexedDB d'abord
+      const db = await openDB()
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readonly')
+        const store = transaction.objectStore(STORE_NAME)
+        const request = store.get(key)
+
+        request.onsuccess = () => {
+          const value = request.result
+          db.close()
+          resolve(value ?? null)
+        }
+
+        request.onerror = () => {
+          db.close()
+          reject(request.error)
+        }
+      })
     } catch (error) {
-      console.warn('[customStorage] getItem error:', error)
-      return Promise.resolve(null)
+      // Fallback vers localStorage
+      console.warn('[customStorage] IndexedDB getItem failed, using localStorage:', error)
+      try {
+        return localStorage.getItem(key)
+      } catch (localStorageError) {
+        console.error('[customStorage] localStorage getItem failed:', localStorageError)
+        return null
+      }
     }
   },
 
   /**
-   * Enregistre un item dans le localStorage
+   * Enregistre un item dans le storage
    * @param {string} key - Clé de l'item
    * @param {string} value - Valeur à enregistrer
    * @returns {Promise<void>}
    */
-  setItem: (key, value) => {
+  async setItem(key, value) {
     try {
-      localStorage.setItem(`${STORAGE_PREFIX}${key}`, value)
-      return Promise.resolve()
+      // Essayer IndexedDB d'abord
+      const db = await openDB()
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite')
+        const store = transaction.objectStore(STORE_NAME)
+        const request = store.put(value, key)
+
+        request.onsuccess = () => {
+          db.close()
+          resolve()
+        }
+
+        request.onerror = () => {
+          db.close()
+          reject(request.error)
+        }
+      })
     } catch (error) {
-      console.error('[customStorage] setItem error:', error)
-      return Promise.resolve()
+      // Fallback vers localStorage
+      console.warn('[customStorage] IndexedDB setItem failed, using localStorage:', error)
+      try {
+        localStorage.setItem(key, value)
+      } catch (localStorageError) {
+        console.error('[customStorage] localStorage setItem failed:', localStorageError)
+      }
     }
   },
 
   /**
-   * Supprime un item du localStorage
+   * Supprime un item du storage
    * @param {string} key - Clé de l'item
    * @returns {Promise<void>}
    */
-  removeItem: (key) => {
+  async removeItem(key) {
     try {
-      localStorage.removeItem(`${STORAGE_PREFIX}${key}`)
-      return Promise.resolve()
+      // Essayer IndexedDB d'abord
+      const db = await openDB()
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite')
+        const store = transaction.objectStore(STORE_NAME)
+        const request = store.delete(key)
+
+        request.onsuccess = () => {
+          db.close()
+          resolve()
+        }
+
+        request.onerror = () => {
+          db.close()
+          reject(request.error)
+        }
+      })
     } catch (error) {
-      console.warn('[customStorage] removeItem error:', error)
-      return Promise.resolve()
+      // Fallback vers localStorage
+      console.warn('[customStorage] IndexedDB removeItem failed, using localStorage:', error)
+      try {
+        localStorage.removeItem(key)
+      } catch (localStorageError) {
+        console.error('[customStorage] localStorage removeItem failed:', localStorageError)
+      }
     }
   }
 }
