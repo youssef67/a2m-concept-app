@@ -16,6 +16,7 @@ import Select from '../../../shared/components/ui/Select'
 import CreateAppartementModal from '../components/CreateAppartementModal'
 import CreateMultipleAppartementsModal from '../components/CreateMultipleAppartementsModal'
 import SendWhatsAppModal from '../components/SendWhatsAppModal'
+import ExceptionalWhatsAppModal from '../components/ExceptionalWhatsAppModal'
 import { getPlotById } from '../services/plotsService'
 import { validateAppartements, invalidateAppartements } from '../services/appartementsService'
 import { getTachesByChantier } from '../services/tachesService'
@@ -64,6 +65,7 @@ export default function PlotDetailPage() {
   const [isWhatsAppSelectionEnCours, setIsWhatsAppSelectionEnCours] = useState(false)
   const [selectedForWhatsAppEnCours, setSelectedForWhatsAppEnCours] = useState(new Set())
   const [isSendWhatsAppEnCoursModalOpen, setIsSendWhatsAppEnCoursModalOpen] = useState(false)
+  const [isExceptionalWhatsAppModalOpen, setIsExceptionalWhatsAppModalOpen] = useState(false)
 
   // Validation/Invalidation selection states
   const [isValidationMode, setIsValidationMode] = useState(false)
@@ -640,6 +642,19 @@ export default function PlotDetailPage() {
                   </Button>
                 )}
 
+                {/* Exceptional WhatsApp button - only in "En cours" tab */}
+                {!appartementsLoading && activeTab === 'en_cours' && stats.en_cours > 0 && !isWhatsAppSelectionEnCours && (
+                  <Button
+                    onClick={() => setIsExceptionalWhatsAppModalOpen(true)}
+                    variant="secondary"
+                    className="flex items-center gap-2 min-h-[44px]"
+                    title="Envoi exceptionnel"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    <span className="hidden sm:inline">Envoi exceptionnel</span>
+                  </Button>
+                )}
+
                 {/* Create button with dropdown */}
                 <div className="relative">
                   <Button
@@ -1113,6 +1128,14 @@ export default function PlotDetailPage() {
                 // Reload appartements to reflect status changes
                 loadAppartements()
               }}
+            />
+
+            {/* Exceptional WhatsApp Modal */}
+            <ExceptionalWhatsAppModal
+              isOpen={isExceptionalWhatsAppModalOpen}
+              onClose={() => setIsExceptionalWhatsAppModalOpen(false)}
+              appartements={filterAppartementsByStatut(appartements, 'en_cours')}
+              chantierId={chantierId}
             />
 
             {/* Selection Mode Actions - Fixed Bottom Bar (for "Prêt" tab) */}
