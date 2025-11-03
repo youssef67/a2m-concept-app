@@ -33,6 +33,18 @@ export default function Select({ value, onChange, options, placeholder, classNam
     }
   }, [isOpen])
 
+  // Scroll into view when dropdown opens
+  useEffect(() => {
+    if (isOpen && selectRef.current) {
+      setTimeout(() => {
+        selectRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        })
+      }, 100)
+    }
+  }, [isOpen])
+
   // Get selected option label
   const selectedOption = options.find(opt => opt.value === value)
   const displayText = selectedOption ? selectedOption.label : placeholder

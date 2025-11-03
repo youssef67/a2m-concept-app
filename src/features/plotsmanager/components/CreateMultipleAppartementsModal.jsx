@@ -256,7 +256,7 @@ export default function CreateMultipleAppartementsModal({
           )}
 
           {/* Actions */}
-          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 pb-64 md:pb-4 border-t border-gray-200">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-gray-200">
             <Button
               type="button"
               variant="secondary"
