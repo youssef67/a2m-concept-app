@@ -30,7 +30,7 @@ export function formatPhoneForWhatsApp(phone) {
 /**
  * Build WhatsApp message for apartments
  * @param {Array} appartements - Array of apartments with their data
- * @param {Object} documentsDataMap - Map of appartementId -> {intitule, url}
+ * @param {Object} documentsDataMap - Map of appartementId -> [{intitule, url}, ...]
  * @param {Object} tachesMap - Map of appartementId -> task intitule
  * @returns {string} - Formatted WhatsApp message
  */
@@ -49,10 +49,12 @@ export function buildWhatsAppMessage(appartements, documentsDataMap = {}, taches
       message += `📋 Prochaine tâche : Aucune tâche à faire\n`
     }
 
-    // Add document info
-    const documentData = documentsDataMap[appt.id]
-    if (documentData && documentData.url) {
-      message += `📄 ${documentData.intitule} : ${documentData.url}\n`
+    // Add documents info (multiple documents)
+    const documents = documentsDataMap[appt.id]
+    if (documents && documents.length > 0) {
+      documents.forEach((doc) => {
+        message += `📄 ${doc.intitule} : ${doc.url}\n`
+      })
     } else {
       message += `📄 Aucun document\n`
     }

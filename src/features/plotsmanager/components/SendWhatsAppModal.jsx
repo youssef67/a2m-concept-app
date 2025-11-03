@@ -28,11 +28,15 @@ export default function SendWhatsAppModal({
   const [workers, setWorkers] = useState([])
   const [selectedWorkerId, setSelectedWorkerId] = useState('')
   const [documentsMap, setDocumentsMap] = useState({}) // appartementId -> array of documents
-  const [selectedDocuments, setSelectedDocuments] = useState({}) // appartementId -> documentId
+  const [selectedDocuments, setSelectedDocuments] = useState({}) // appartementId -> array of documentIds
   const [selectedTaches, setSelectedTaches] = useState({}) // appartementId -> tacheId (for isEnCoursMode)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
+
+  // Limite de sélection
+  const MAX_DOCUMENTS_PER_APPARTEMENT = 3
+  const MAX_APPARTEMENTS = 5
 
   // Load workers and documents when modal opens
   useEffect(() => {
@@ -89,10 +93,10 @@ export default function SendWhatsAppModal({
 
       setDocumentsMap(docsMap)
 
-      // Initialize selected documents to empty string (no document selected)
+      // Initialize selected documents to empty array (no documents selected)
       const initialSelectedDocs = {}
       appartements.forEach(appt => {
-        initialSelectedDocs[appt.id] = ''
+        initialSelectedDocs[appt.id] = []
       })
       setSelectedDocuments(initialSelectedDocs)
 
@@ -118,12 +122,29 @@ export default function SendWhatsAppModal({
     }
   }
 
-  // Handle document selection for an apartment
-  const handleDocumentChange = (appartementId, documentId) => {
-    setSelectedDocuments(prev => ({
-      ...prev,
-      [appartementId]: documentId === '' ? null : documentId
-    }))
+  // Handle document toggle for an apartment (checkbox)
+  const handleDocumentToggle = (appartementId, documentId) => {
+    setSelectedDocuments(prev => {
+      const currentSelection = prev[appartementId] || []
+      const isSelected = currentSelection.includes(documentId)
+
+      if (isSelected) {
+        // Retirer le document
+        return {
+          ...prev,
+          [appartementId]: currentSelection.filter(id => id !== documentId)
+        }
+      } else {
+        // Ajouter le document si limite non atteinte
+        if (currentSelection.length >= MAX_DOCUMENTS_PER_APPARTEMENT) {
+          return prev // Ne rien faire si limite atteinte
+        }
+        return {
+          ...prev,
+          [appartementId]: [...currentSelection, documentId]
+        }
+      }
+    })
   }
 
   // Handle task selection for an apartment (for isEnCoursMode)
@@ -148,25 +169,37 @@ export default function SendWhatsAppModal({
       return
     }
 
+    // Validate maximum appartements
+    if (appartements.length > MAX_APPARTEMENTS) {
+      setError(`Vous ne pouvez envoyer qu&apos;un maximum de ${MAX_APPARTEMENTS} appartements à la fois. Veuillez réduire votre sélection.`)
+      return
+    }
+
     setSending(true)
     setError(null)
 
     try {
-      // Build documents map with URLs and intitules
+      // Build documents map with URLs and intitules (multiple documents per appartement)
       const documentsDataMap = {}
       await Promise.all(
         appartements.map(async (appt) => {
-          const selectedDocId = selectedDocuments[appt.id]
-          if (selectedDocId) {
+          const selectedDocIds = selectedDocuments[appt.id] || []
+          if (selectedDocIds.length > 0) {
             const docs = documentsMap[appt.id] || []
-            const doc = docs.find(d => d.id === selectedDocId)
-            if (doc && doc.storage_path) {
-              const { data: url } = await getDocumentUrl(doc.storage_path)
-              documentsDataMap[appt.id] = {
-                intitule: doc.nom_document,
-                url: url
-              }
-            }
+            const selectedDocs = docs.filter(d => selectedDocIds.includes(d.id))
+
+            // Charger toutes les URLs en parallèle
+            const docsWithUrls = await Promise.all(
+              selectedDocs.map(async (doc) => {
+                const { data: url } = await getDocumentUrl(doc.storage_path)
+                return {
+                  intitule: doc.nom_document,
+                  url: url
+                }
+              })
+            )
+
+            documentsDataMap[appt.id] = docsWithUrls // Array de documents
           }
         })
       )
@@ -259,6 +292,15 @@ export default function SendWhatsAppModal({
           </div>
         )}
 
+        {/* Warning if more than MAX_APPARTEMENTS */}
+        {!loading && appartements.length > MAX_APPARTEMENTS && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="text-sm text-amber-800">
+              ⚠️ Attention : Vous avez sélectionné {appartements.length} appartements, mais l'envoi WhatsApp est limité à {MAX_APPARTEMENTS} appartements maximum.
+            </p>
+          </div>
+        )}
+
         {/* Error State */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -348,30 +390,55 @@ export default function SendWhatsAppModal({
                         </div>
                       )}
 
-                      {/* Document selection */}
+                      {/* Document selection (checkboxes - max 3) */}
                       <div className="flex items-start gap-2">
                         <span className="text-base mt-1">📄</span>
                         <div className="flex-1">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Document :
-                          </label>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="block text-sm font-medium text-gray-700">
+                              Documents (max {MAX_DOCUMENTS_PER_APPARTEMENT}) :
+                            </label>
+                            {documents.length > 0 && (
+                              <span className="text-xs text-gray-500">
+                                {(selectedDocuments[appt.id] || []).length}/{MAX_DOCUMENTS_PER_APPARTEMENT}
+                              </span>
+                            )}
+                          </div>
                           {documents.length === 0 ? (
                             <p className="text-sm text-gray-500 italic">
                               Aucun document disponible
                             </p>
                           ) : (
-                            <Select
-                              value={selectedDocuments[appt.id] || ''}
-                              onChange={(value) => handleDocumentChange(appt.id, value)}
-                              options={[
-                                { value: '', label: 'Aucun document' },
-                                ...documents.map(doc => ({
-                                  value: doc.id,
-                                  label: doc.nom_document
-                                }))
-                              ]}
-                              placeholder="Aucun document"
-                            />
+                            <div className="space-y-2">
+                              {documents.map(doc => {
+                                const isSelected = (selectedDocuments[appt.id] || []).includes(doc.id)
+                                const isDisabled = !isSelected && (selectedDocuments[appt.id] || []).length >= MAX_DOCUMENTS_PER_APPARTEMENT
+
+                                return (
+                                  <label
+                                    key={doc.id}
+                                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${
+                                      isSelected
+                                        ? 'bg-primary-50 border-primary-300'
+                                        : isDisabled
+                                        ? 'bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed'
+                                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      disabled={isDisabled}
+                                      onChange={() => handleDocumentToggle(appt.id, doc.id)}
+                                      className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 cursor-pointer disabled:cursor-not-allowed"
+                                    />
+                                    <span className={`text-base flex-1 ${isSelected ? 'text-primary-900 font-medium' : 'text-gray-900'}`}>
+                                      {doc.nom_document}
+                                    </span>
+                                  </label>
+                                )
+                              })}
+                            </div>
                           )}
                         </div>
                       </div>
