@@ -174,7 +174,7 @@ export default function CreateAppartementModal({
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 pb-64 md:pb-4">
             <Button
               type="button"
               variant="secondary"

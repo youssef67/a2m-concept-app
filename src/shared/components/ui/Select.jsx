@@ -49,14 +49,18 @@ export default function Select({ value, onChange, options, placeholder, classNam
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white flex items-center justify-between text-left ${
-          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        className={`w-full h-12 px-4 border-2 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-base bg-white flex items-center justify-between text-left transition-all ${
+          disabled
+            ? 'opacity-50 cursor-not-allowed border-gray-300'
+            : isOpen
+            ? 'cursor-pointer border-primary-500 shadow-sm'
+            : 'cursor-pointer border-gray-300 hover:border-gray-400 hover:shadow-sm'
         }`}
       >
         <span className={value ? 'text-gray-900' : 'text-gray-500'}>
           {displayText}
         </span>
-        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180 text-primary-600' : 'text-gray-400'}`} />
       </button>
 
       {/* Dropdown menu */}
