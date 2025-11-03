@@ -132,11 +132,6 @@ export default function ContactModal({
       }
     }
 
-    // Phone validation
-    if (!data.phone || !data.phone.trim()) {
-      errors.phone = 'Téléphone requis'
-    }
-
     return errors
   }
 
