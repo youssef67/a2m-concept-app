@@ -6,6 +6,7 @@
 import { supabase } from '../../../lib/supabaseClient'
 import { sendInvoiceCreatedNotification, sendInvoiceDeletedNotification } from './emailNotificationService'
 import { getMontantAPayer } from '../utils/factureHelpers'
+import { createPaiement } from './paiementsService'
 
 /**
  * Get all factures with contact information and payment totals
@@ -141,12 +142,31 @@ export async function createFacture(factureData) {
 
     if (error) throw error
 
-    // New factures have no payments yet
+    // Calculate montant à payer
     const montantAPayer = getMontantAPayer(data)
+
+    // If facture is created with status "payee", automatically create a payment
+    let montantPaye = 0
+    if (data.statut === 'payee') {
+      const paiementResult = await createPaiement({
+        facture_id: data.id,
+        montant: montantAPayer,
+        date_paiement: data.date_emission || new Date().toISOString().split('T')[0],
+        reference: 'Paiement initial',
+        notes: 'Paiement créé automatiquement lors de la création de la facture avec statut "payée"'
+      })
+
+      if (paiementResult.success) {
+        montantPaye = montantAPayer
+      } else {
+        console.error('[Auto-payment] Failed to create automatic payment:', paiementResult.error)
+      }
+    }
+
     const factureWithPaiements = {
       ...data,
-      montant_paye: 0,
-      montant_restant: montantAPayer
+      montant_paye: montantPaye,
+      montant_restant: montantAPayer - montantPaye
     }
 
     // Send email notification (non-blocking, async)
