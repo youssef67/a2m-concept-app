@@ -1358,10 +1358,8 @@ export default function FacturesPage() {
                 disabled={!!editingFacture}
                 placeholder="Sélectionner un type"
               />
-              {/* Hidden input to submit type when select is disabled */}
-              {editingFacture && (
-                <input type="hidden" name="type" value={editingFacture.type} />
-              )}
+              {/* Hidden input to submit type */}
+              <input type="hidden" name="type" value={factureType} />
             </div>
 
             {/* Contact */}
