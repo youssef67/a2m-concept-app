@@ -32,7 +32,7 @@ import {
   getTasksEnCours
 } from '../utils/appartementHelpers'
 import { hasTasksEnCours } from '../utils/whatsappHelpers'
-import { formatEtage, getEtageOptions } from '../utils/etageConstants'
+import { formatEtage } from '../utils/etageConstants'
 
 export default function PlotDetailPage() {
   const { chantierId, plotId } = useParams()
@@ -227,6 +227,31 @@ export default function PlotDetailPage() {
       }
     })
   }, [chantierTaches, appartements])
+
+  // Generate etage options based on existing appartements
+  const etageOptions = useMemo(() => {
+    // Extract unique etages from appartements
+    const uniqueEtages = new Set()
+    appartements.forEach(appt => {
+      if (appt.etage !== undefined) {
+        uniqueEtages.add(appt.etage)
+      }
+    })
+
+    // Convert to array and sort
+    const etagesArray = Array.from(uniqueEtages).sort((a, b) => {
+      // null first, then 0 (RdC), then 1, 2, 3...
+      if (a === null) return -1
+      if (b === null) return 1
+      return a - b
+    })
+
+    // Generate options with labels
+    return etagesArray.map(etage => ({
+      value: etage,
+      label: formatEtage(etage)
+    }))
+  }, [appartements])
 
   // Check if at least one "en_attente" appartement has all documents
   const hasAppartementsWithAllDocuments = useMemo(() => {
@@ -815,14 +840,14 @@ export default function PlotDetailPage() {
                   )}
 
                   {/* Etage filter - only in "Tous" tab */}
-                  {activeTab === 'tous' && appartements.length > 0 && (
+                  {activeTab === 'tous' && appartements.length > 0 && etageOptions.length > 0 && (
                     <div className="min-w-[200px]">
                       <Select
                         value={selectedEtageFilter}
                         onChange={setSelectedEtageFilter}
                         options={[
                           { value: '', label: 'Tous les étages' },
-                          ...getEtageOptions()
+                          ...etageOptions
                         ]}
                         placeholder="Tous les étages"
                       />
