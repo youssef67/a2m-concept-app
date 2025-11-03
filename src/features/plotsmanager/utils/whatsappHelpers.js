@@ -30,16 +30,16 @@ export function formatPhoneForWhatsApp(phone) {
 /**
  * Build WhatsApp message for apartments
  * @param {Array} appartements - Array of apartments with their data
- * @param {Object} documentsMap - Map of appartementId -> document URL
+ * @param {Object} documentsDataMap - Map of appartementId -> {intitule, url}
  * @param {Object} tachesMap - Map of appartementId -> task intitule
  * @returns {string} - Formatted WhatsApp message
  */
-export function buildWhatsAppMessage(appartements, documentsMap = {}, tachesMap = {}) {
+export function buildWhatsAppMessage(appartements, documentsDataMap = {}, tachesMap = {}) {
   let message = 'Bonjour,\n\n'
   message += 'Voici les détails des appartements prêts :\n\n'
 
   appartements.forEach((appt, index) => {
-    message += `🏠 ${appt.nom}\n`
+    message += `Appartement concerné : ${appt.nom}\n`
 
     // Add task info
     const tacheIntitule = tachesMap[appt.id]
@@ -50,20 +50,20 @@ export function buildWhatsAppMessage(appartements, documentsMap = {}, tachesMap 
     }
 
     // Add document info
-    const documentUrl = documentsMap[appt.id]
-    if (documentUrl) {
-      message += `📄 Document : ${documentUrl}\n`
+    const documentData = documentsDataMap[appt.id]
+    if (documentData && documentData.url) {
+      message += `📄 ${documentData.intitule} : ${documentData.url}\n`
     } else {
-      message += `📄 Document : Aucun document\n`
+      message += `📄 Aucun document\n`
     }
 
-    // Add spacing between apartments (except last one)
+    // Add separator between apartments (except last one)
     if (index < appartements.length - 1) {
-      message += '\n'
+      message += '\n─────────────────────\n\n'
     }
   })
 
-  message += '\nCordialement'
+  message += '\n\nCordialement'
 
   return message
 }

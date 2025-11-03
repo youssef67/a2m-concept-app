@@ -76,6 +76,7 @@ export default function SendWhatsAppModal({
               .map(doc => ({
                 id: doc.uploadedFile.id,
                 nom_fichier: doc.uploadedFile.nom_fichier,
+                nom_document: doc.documentRequis.nom_document,
                 storage_path: doc.uploadedFile.storage_path
               }))
 
@@ -151,8 +152,8 @@ export default function SendWhatsAppModal({
     setError(null)
 
     try {
-      // Build documents map with URLs
-      const documentUrlsMap = {}
+      // Build documents map with URLs and intitules
+      const documentsDataMap = {}
       await Promise.all(
         appartements.map(async (appt) => {
           const selectedDocId = selectedDocuments[appt.id]
@@ -161,7 +162,10 @@ export default function SendWhatsAppModal({
             const doc = docs.find(d => d.id === selectedDocId)
             if (doc && doc.storage_path) {
               const { data: url } = await getDocumentUrl(doc.storage_path)
-              documentUrlsMap[appt.id] = url
+              documentsDataMap[appt.id] = {
+                intitule: doc.nom_document,
+                url: url
+              }
             }
           }
         })
@@ -196,7 +200,7 @@ export default function SendWhatsAppModal({
       })
 
       // Build message
-      const message = buildWhatsAppMessage(appartements, documentUrlsMap, tachesMap)
+      const message = buildWhatsAppMessage(appartements, documentsDataMap, tachesMap)
 
       // Open WhatsApp
       openWhatsApp(selectedWorker.phone, message)
@@ -363,7 +367,7 @@ export default function SendWhatsAppModal({
                                 { value: '', label: 'Aucun document' },
                                 ...documents.map(doc => ({
                                   value: doc.id,
-                                  label: doc.nom_fichier
+                                  label: doc.nom_document
                                 }))
                               ]}
                               placeholder="Aucun document"
