@@ -4,9 +4,10 @@
  */
 
 import React, { useEffect, useState } from 'react'
-import { Plus, Edit2, Trash2, FileText } from 'lucide-react'
+import { Plus, Edit2, Trash2, FileText, Image as ImageIcon } from 'lucide-react'
 import { useAppartementNotes } from '../hooks/useAppartementNotes'
 import { formatNoteDate } from '../services/appartementNotesService'
+import { getPhotoUrl } from '../services/appartementPhotosService'
 import Button from '../../../shared/components/ui/Button'
 import NoteFormModal from './NoteFormModal'
 
@@ -57,6 +58,16 @@ export default function AppartementNotesTab({ appartement }) {
     setDeletingNoteId(noteId)
     await deleteNote(noteId)
     setDeletingNoteId(null)
+  }
+
+  // Handle view photo
+  const handleViewPhoto = async (photo) => {
+    const { data: url, error } = await getPhotoUrl(photo.storage_path)
+    if (url) {
+      window.open(url, '_blank')
+    } else {
+      alert('Erreur lors de l\'ouverture de la photo')
+    }
   }
 
   if (loading && notes.length === 0) {
@@ -154,6 +165,31 @@ export default function AppartementNotesTab({ appartement }) {
               <div className="text-sm text-gray-900 whitespace-pre-wrap">
                 {note.contenu}
               </div>
+
+              {/* Linked photos */}
+              {note.photos && note.photos.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ImageIcon className="w-4 h-4 text-blue-600" />
+                    <span className="text-xs font-medium text-blue-600">
+                      {note.photos.length} photo{note.photos.length > 1 ? 's' : ''} liée{note.photos.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {note.photos.map((photo) => (
+                      <button
+                        key={photo.id}
+                        onClick={() => handleViewPhoto(photo)}
+                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs text-blue-700 transition-colors"
+                        title={`Voir ${photo.nom_fichier}`}
+                      >
+                        <ImageIcon className="w-3 h-3" />
+                        <span className="truncate max-w-[150px]">{photo.nom_fichier}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

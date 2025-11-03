@@ -6,7 +6,7 @@
 import { supabase } from '../../../lib/supabaseClient'
 
 /**
- * Get all notes for an appartement (sorted by date, most recent first)
+ * Get all notes for an appartement with linked photos (sorted by date, most recent first)
  * @param {string} appartementId - UUID of the appartement
  * @returns {Promise<{data: Array|null, error: any}>}
  */
@@ -14,7 +14,10 @@ export async function getAppartementNotes(appartementId) {
   try {
     const { data, error } = await supabase
       .from('appartement_notes')
-      .select('*')
+      .select(`
+        *,
+        photos:appartement_photos(id, nom_fichier, storage_path, created_at)
+      `)
       .eq('appartement_id', appartementId)
       .order('created_at', { ascending: false })
 
