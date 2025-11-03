@@ -7,7 +7,7 @@ import { supabase } from '../../../lib/supabaseClient'
 import { getTachesByChantier } from './tachesService'
 
 /**
- * Get all appartements for a specific plot with task counts
+ * Get all appartements for a specific plot with task counts and note counts
  * @param {string} plotId - Plot ID
  * @returns {Promise<{data: Array, error: Error|null}>}
  */
@@ -17,7 +17,8 @@ export async function getAppartementsByPlot(plotId) {
       .from('appartements')
       .select(`
         *,
-        appartement_taches (count)
+        appartement_taches (count),
+        appartement_notes (count)
       `)
       .eq('plot_id', plotId)
       .order('ordre', { ascending: true })
@@ -27,10 +28,11 @@ export async function getAppartementsByPlot(plotId) {
       return { data: null, error }
     }
 
-    // Transform data to include task count
+    // Transform data to include task count and note count
     const transformedData = (data || []).map(appt => ({
       ...appt,
-      taches_count: appt.appartement_taches?.[0]?.count || 0
+      taches_count: appt.appartement_taches?.[0]?.count || 0,
+      notes_count: appt.appartement_notes?.[0]?.count || 0
     }))
 
     return { data: transformedData, error: null }
@@ -76,11 +78,16 @@ export async function getAppartementsByPlotWithDetails(plotId, chantierId) {
 
     const totalDocumentsRequis = documentsRequis?.length || 0
 
-    // 3. Pour chaque appartement, récupérer ses documents uploadés
+    // 3. Pour chaque appartement, récupérer ses documents uploadés et notes
     const appartementsWithDetails = await Promise.all(
       (appartements || []).map(async (appt) => {
         const { data: docs } = await supabase
           .from('appartement_documents')
+          .select('id')
+          .eq('appartement_id', appt.id)
+
+        const { data: notes } = await supabase
+          .from('appartement_notes')
           .select('id')
           .eq('appartement_id', appt.id)
 
@@ -89,7 +96,8 @@ export async function getAppartementsByPlotWithDetails(plotId, chantierId) {
           taches: appt.appartement_taches || [],
           documents_uploaded_count: docs?.length || 0,
           documents_required_count: totalDocumentsRequis,
-          taches_count: appt.appartement_taches?.length || 0
+          taches_count: appt.appartement_taches?.length || 0,
+          notes_count: notes?.length || 0
         }
       })
     )

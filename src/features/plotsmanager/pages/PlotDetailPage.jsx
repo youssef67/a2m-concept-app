@@ -1013,6 +1013,20 @@ export default function PlotDetailPage() {
                                     : `${tachesTerminees}/${totalTaches}`
                                   }
                                 </span>
+                                {/* Notes indicator */}
+                                {appartement.notes_count > 0 && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?tab=notes&fromTab=${activeTab}`)
+                                    }}
+                                    className="flex items-center gap-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs text-blue-700 transition-colors"
+                                    title={`${appartement.notes_count} note${appartement.notes_count > 1 ? 's' : ''}`}
+                                  >
+                                    <FileText className="w-4 h-4" />
+                                    <span className="font-medium">{appartement.notes_count}</span>
+                                  </button>
+                                )}
                                 <button
                                   onClick={(e) => handleEditAppartement(e, appartement)}
                                   className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
