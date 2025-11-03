@@ -124,6 +124,17 @@ export default function AppartementDetailPage() {
     }
   }, [appartementId, chantierId, loadDocuments])
 
+  // Synchronize activeTab with URL parameter when appartement changes
+  useEffect(() => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam) {
+      setActiveTab(tabParam)
+    } else {
+      // Reset to default 'taches' if no tab parameter
+      setActiveTab('taches')
+    }
+  }, [appartementId, searchParams])
+
   // Handle back button
   const handleBack = () => {
     // Get the tab we came from (if any) to navigate back to it
@@ -226,11 +237,18 @@ export default function AppartementDetailPage() {
   }, [appartementStatut, tachesStats.terminee, tachesStats.total, documentsStats.uploaded, documentsStats.total])
 
   // Switch to "documents" tab if "taches" is not available and currently active
+  // BUT only if we don't have an explicit tab parameter in the URL
   useEffect(() => {
-    if (appartementStatut === 'en_attente' && activeTab === 'taches') {
+    const tabParam = searchParams.get('tab')
+
+    // Only force the switch if:
+    // 1. Appartement is en_attente
+    // 2. Current tab is taches
+    // 3. NO explicit tab parameter in URL (meaning user didn't navigate with ?tab=taches)
+    if (appartementStatut === 'en_attente' && activeTab === 'taches' && !tabParam) {
       setActiveTab('documents')
     }
-  }, [appartementStatut, activeTab])
+  }, [appartementStatut, activeTab, searchParams])
 
   return (
     <AppLayout>

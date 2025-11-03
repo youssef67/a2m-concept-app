@@ -113,3 +113,35 @@ export function getStatutConfig(statut) {
 
   return configs[statut] || configs.en_attente
 }
+
+/**
+ * Filtre les appartements par étage spécifique
+ * @param {Array} appartements - Liste des appartements
+ * @param {number|null} etageFilter - Étage à filtrer (null = non spécifié, 0 = RdC, 1-10 = étages)
+ * @returns {Array} Appartements filtrés
+ */
+export function filterAppartementsByEtage(appartements, etageFilter) {
+  if (etageFilter === '') return appartements // Pas de filtre = tous
+
+  return appartements.filter((appt) => {
+    // Si filtre = null, chercher les appartements avec etage null ou undefined
+    if (etageFilter === null) {
+      return appt.etage === null || appt.etage === undefined
+    }
+    // Sinon, filtrer par étage spécifique
+    return appt.etage === etageFilter
+  })
+}
+
+/**
+ * Trie les appartements par ordre alphabétique (nom)
+ * @param {Array} appartements - Liste des appartements
+ * @returns {Array} Appartements triés
+ */
+export function sortAppartementsAlphabetically(appartements) {
+  return [...appartements].sort((a, b) => {
+    const nomA = a.nom?.toLowerCase() || ''
+    const nomB = b.nom?.toLowerCase() || ''
+    return nomA.localeCompare(nomB, 'fr')
+  })
+}

@@ -25,20 +25,22 @@ import { useToast } from '../../../shared/hooks/useToast'
 import {
   searchAppartements,
   filterAppartementsByStatut,
+  filterAppartementsByEtage,
+  sortAppartementsAlphabetically,
   calculateAppartementStatut,
   getStatutConfig,
   getTasksEnCours
 } from '../utils/appartementHelpers'
 import { hasTasksEnCours } from '../utils/whatsappHelpers'
-import { formatEtage } from '../utils/etageConstants'
+import { formatEtage, getEtageOptions } from '../utils/etageConstants'
 
 export default function PlotDetailPage() {
   const { chantierId, plotId } = useParams()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  // Initialize active tab from URL parameter or default to 'en_cours'
-  const initialTab = searchParams.get('activeTab') || 'en_cours'
+  // Initialize active tab from URL parameter or default to 'tous'
+  const initialTab = searchParams.get('activeTab') || 'tous'
 
   const [plot, setPlot] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -53,6 +55,7 @@ export default function PlotDetailPage() {
   const [showOnlyWithAllDocuments, setShowOnlyWithAllDocuments] = useState(false)
   const [sortByTaskCompletion, setSortByTaskCompletion] = useState(false)
   const [selectedTacheFilter, setSelectedTacheFilter] = useState('') // '' = toutes, sinon tacheId
+  const [selectedEtageFilter, setSelectedEtageFilter] = useState('') // '' = tous, null = non spécifié, 0-10 = étage
   const [chantierTaches, setChantierTaches] = useState([]) // Liste des tâches du chantier
   const [creationResult, setCreationResult] = useState(null)
   const [showResultModal, setShowResultModal] = useState(false)
@@ -154,22 +157,34 @@ export default function PlotDetailPage() {
     })
   }, [filteredBySearch, showOnlyWithAllDocuments])
 
+  const filteredByEtage = useMemo(() => {
+    return filterAppartementsByEtage(filteredByDocuments, selectedEtageFilter)
+  }, [filteredByDocuments, selectedEtageFilter])
+
   const filteredByTache = useMemo(() => {
-    if (!selectedTacheFilter) return filteredByDocuments // Pas de filtre
+    if (!selectedTacheFilter) return filteredByEtage // Pas de filtre
 
     // Filtrer les appartements qui ont la tâche sélectionnée avec statut "terminee"
-    return filteredByDocuments.filter(appt => {
+    return filteredByEtage.filter(appt => {
       return appt.taches?.some(t =>
         t.chantier_tache_id === selectedTacheFilter && t.statut === 'terminee'
       )
     })
-  }, [filteredByDocuments, selectedTacheFilter])
+  }, [filteredByEtage, selectedTacheFilter])
 
   const filteredByStatut = useMemo(() => {
+    // Si onglet "Tous", ne pas filtrer par statut
+    if (activeTab === 'tous') return filteredByTache
     return filterAppartementsByStatut(filteredByTache, activeTab)
   }, [filteredByTache, activeTab])
 
   const sortedAppartements = useMemo(() => {
+    // Si onglet "Tous", tri alphabétique par défaut
+    if (activeTab === 'tous') {
+      return sortAppartementsAlphabetically(filteredByStatut)
+    }
+
+    // Pour les autres onglets, tri par completion si activé
     if (!sortByTaskCompletion) return filteredByStatut
 
     // Sort by task completion percentage (descending)
@@ -184,7 +199,7 @@ export default function PlotDetailPage() {
 
       return bPercentage - aPercentage // Descending order
     })
-  }, [filteredByStatut, sortByTaskCompletion])
+  }, [filteredByStatut, sortByTaskCompletion, activeTab])
 
   const filteredAppartements = sortedAppartements
 
@@ -492,6 +507,10 @@ export default function PlotDetailPage() {
       setSortByTaskCompletion(false)
       setSelectedTacheFilter('')
     }
+    // Only clear etage filter if in "tous" tab
+    if (activeTab === 'tous') {
+      setSelectedEtageFilter('')
+    }
   }
 
   // Get selected appartements data
@@ -722,6 +741,7 @@ export default function PlotDetailPage() {
                 <div className="mb-4">
                   <Tabs
                     tabs={[
+                      { id: 'tous', label: 'Tous', count: appartements.length },
                       { id: 'en_cours', label: 'En cours', count: stats.en_cours },
                       { id: 'en_attente', label: 'En attente', count: stats.en_attente },
                       { id: 'pret', label: 'Prêt', count: stats.pret },
@@ -793,11 +813,26 @@ export default function PlotDetailPage() {
                       />
                     </div>
                   )}
+
+                  {/* Etage filter - only in "Tous" tab */}
+                  {activeTab === 'tous' && appartements.length > 0 && (
+                    <div className="min-w-[200px]">
+                      <Select
+                        value={selectedEtageFilter}
+                        onChange={setSelectedEtageFilter}
+                        options={[
+                          { value: '', label: 'Tous les étages' },
+                          ...getEtageOptions()
+                        ]}
+                        placeholder="Tous les étages"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Clear filters button */}
-              {!appartementsLoading && appartements.length > 0 && (searchQuery !== '' || (activeTab === 'en_attente' && showOnlyWithAllDocuments) || (activeTab === 'en_cours' && (sortByTaskCompletion || selectedTacheFilter !== ''))) && (
+              {!appartementsLoading && appartements.length > 0 && (searchQuery !== '' || (activeTab === 'en_attente' && showOnlyWithAllDocuments) || (activeTab === 'en_cours' && (sortByTaskCompletion || selectedTacheFilter !== '')) || (activeTab === 'tous' && selectedEtageFilter !== '')) && (
                 <div className="flex justify-end mb-4">
                   <button
                     onClick={handleClearAllFilters}
@@ -832,10 +867,11 @@ export default function PlotDetailPage() {
                   <Home className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                   {searchQuery ? (
                     <p className="text-gray-600">
-                      Aucun appartement {activeTab === 'en_attente' ? 'en attente' : activeTab === 'en_cours' ? 'en cours' : activeTab === 'pret' ? 'prêt' : 'finalisé'} trouvé pour &quot;{searchQuery}&quot;
+                      Aucun appartement {activeTab === 'tous' ? '' : activeTab === 'en_attente' ? 'en attente' : activeTab === 'en_cours' ? 'en cours' : activeTab === 'pret' ? 'prêt' : 'finalisé'} trouvé pour &quot;{searchQuery}&quot;
                     </p>
                   ) : (
                     <p className="text-gray-600">
+                      {activeTab === 'tous' && 'Aucun appartement'}
                       {activeTab === 'en_attente' && 'Aucun appartement en attente'}
                       {activeTab === 'en_cours' && 'Aucun appartement en cours'}
                       {activeTab === 'pret' && 'Aucun appartement prêt'}
