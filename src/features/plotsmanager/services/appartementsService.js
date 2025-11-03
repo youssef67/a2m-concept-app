@@ -218,7 +218,8 @@ export async function createAppartementWithTaches(plotId, chantierId, appartemen
       .insert({
         plot_id: plotId,
         nom: appartementData.nom.trim(),
-        ordre: nextOrdre
+        ordre: nextOrdre,
+        etage: appartementData.etage !== undefined ? appartementData.etage : null
       })
       .select()
       .single()
@@ -290,6 +291,10 @@ export async function updateAppartement(appartementId, appartementData) {
       updateData.ordre = appartementData.ordre
     }
 
+    if (appartementData.etage !== undefined) {
+      updateData.etage = appartementData.etage
+    }
+
     const { data, error: updateError } = await supabase
       .from('appartements')
       .update(updateData)
@@ -337,33 +342,36 @@ export async function deleteAppartement(appartementId) {
  * Create multiple appartements WITH automatic task inheritance from chantier
  * @param {string} plotId - Plot ID
  * @param {string} chantierId - Chantier ID (for task inheritance)
- * @param {Array<string>} nomsAppartements - Array of apartment names
+ * @param {Array<Object>} appartementsData - Array of apartment objects {nom, etage}
  * @returns {Promise<{success: boolean, created: number, failed: number, errors: Array, data: Array}>}
  */
-export async function createMultipleAppartementsWithTaches(plotId, chantierId, nomsAppartements) {
+export async function createMultipleAppartementsWithTaches(plotId, chantierId, appartementsData) {
   try {
     // Validate input
-    if (!Array.isArray(nomsAppartements) || nomsAppartements.length === 0) {
+    if (!Array.isArray(appartementsData) || appartementsData.length === 0) {
       return {
         success: false,
         created: 0,
         failed: 0,
-        errors: ['Aucun nom d\'appartement fourni'],
+        errors: ['Aucun appartement fourni'],
         data: []
       }
     }
 
     // Remove empty names and trim
-    const validNoms = nomsAppartements
-      .map(nom => nom.trim())
-      .filter(nom => nom.length > 0)
+    const validAppartements = appartementsData
+      .map(appt => ({
+        nom: typeof appt === 'string' ? appt.trim() : appt.nom?.trim() || '',
+        etage: typeof appt === 'string' ? null : (appt.etage !== undefined ? appt.etage : null)
+      }))
+      .filter(appt => appt.nom.length > 0)
 
-    if (validNoms.length === 0) {
+    if (validAppartements.length === 0) {
       return {
         success: false,
         created: 0,
         failed: 0,
-        errors: ['Aucun nom valide fourni'],
+        errors: ['Aucun appartement valide fourni'],
         data: []
       }
     }
@@ -381,7 +389,7 @@ export async function createMultipleAppartementsWithTaches(plotId, chantierId, n
       return {
         success: false,
         created: 0,
-        failed: validNoms.length,
+        failed: validAppartements.length,
         errors: [fetchError.message],
         data: []
       }
@@ -406,22 +414,23 @@ export async function createMultipleAppartementsWithTaches(plotId, chantierId, n
     let createdCount = 0
     let failedCount = 0
 
-    for (const nom of validNoms) {
+    for (const apptData of validAppartements) {
       try {
         // Create appartement
         const { data: appartement, error: insertError } = await supabase
           .from('appartements')
           .insert({
             plot_id: plotId,
-            nom: nom,
-            ordre: nextOrdre
+            nom: apptData.nom,
+            ordre: nextOrdre,
+            etage: apptData.etage
           })
           .select()
           .single()
 
         if (insertError) {
-          console.error(`Error creating appartement "${nom}":`, insertError)
-          errors.push(`${nom}: ${insertError.message}`)
+          console.error(`Error creating appartement "${apptData.nom}":`, insertError)
+          errors.push(`${apptData.nom}: ${insertError.message}`)
           failedCount++
           continue
         }
@@ -441,9 +450,9 @@ export async function createMultipleAppartementsWithTaches(plotId, chantierId, n
             .insert(appartementTachesToInsert)
 
           if (insertTachesError) {
-            console.error(`Error inserting tasks for "${nom}":`, insertTachesError)
+            console.error(`Error inserting tasks for "${apptData.nom}":`, insertTachesError)
             // Don't fail the appartement creation, but log warning
-            console.warn(`Appartement "${nom}" created but tasks inheritance failed`)
+            console.warn(`Appartement "${apptData.nom}" created but tasks inheritance failed`)
           }
         }
 
@@ -451,8 +460,8 @@ export async function createMultipleAppartementsWithTaches(plotId, chantierId, n
         createdCount++
         nextOrdre++ // Increment for next appartement
       } catch (err) {
-        console.error(`Exception creating appartement "${nom}":`, err)
-        errors.push(`${nom}: ${err.message}`)
+        console.error(`Exception creating appartement "${apptData.nom}":`, err)
+        errors.push(`${apptData.nom}: ${err.message}`)
         failedCount++
       }
     }
@@ -469,7 +478,7 @@ export async function createMultipleAppartementsWithTaches(plotId, chantierId, n
     return {
       success: false,
       created: 0,
-      failed: nomsAppartements.length,
+      failed: appartementsData.length,
       errors: [err.message],
       data: []
     }

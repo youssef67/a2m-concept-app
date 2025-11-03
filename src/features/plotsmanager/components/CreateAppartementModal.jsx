@@ -8,7 +8,9 @@ import React, { useState, useEffect } from 'react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Input from '../../../shared/components/ui/Input'
+import Select from '../../../shared/components/ui/Select'
 import { useAppartements } from '../hooks/useAppartements'
+import { getEtageOptions } from '../utils/etageConstants'
 
 export default function CreateAppartementModal({
   isOpen,
@@ -23,7 +25,8 @@ export default function CreateAppartementModal({
   const isEditMode = !!appartementToEdit
 
   const [formData, setFormData] = useState({
-    nom: ''
+    nom: '',
+    etage: null
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -33,12 +36,14 @@ export default function CreateAppartementModal({
       if (isEditMode && appartementToEdit) {
         // Edit mode: pre-fill with existing data
         setFormData({
-          nom: appartementToEdit.nom
+          nom: appartementToEdit.nom,
+          etage: appartementToEdit.etage !== undefined ? appartementToEdit.etage : null
         })
       } else {
         // Create mode: reset form
         setFormData({
-          nom: ''
+          nom: '',
+          etage: null
         })
       }
     }
@@ -50,6 +55,14 @@ export default function CreateAppartementModal({
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }))
+  }
+
+  // Handle etage change
+  const handleEtageChange = (value) => {
+    setFormData(prev => ({
+      ...prev,
+      etage: value
     }))
   }
 
@@ -96,7 +109,8 @@ export default function CreateAppartementModal({
   const handleClose = () => {
     if (!isSubmitting) {
       setFormData({
-        nom: ''
+        nom: '',
+        etage: null
       })
       onClose()
     }
@@ -141,6 +155,20 @@ export default function CreateAppartementModal({
               onChange={handleChange}
               placeholder="Ex: Appartement 101, Studio A..."
               required
+              disabled={isSubmitting}
+            />
+          </div>
+
+          {/* Étage de l'appartement */}
+          <div>
+            <label htmlFor="etage" className="block text-sm font-medium text-gray-700 mb-1">
+              Étage (facultatif)
+            </label>
+            <Select
+              value={formData.etage}
+              onChange={handleEtageChange}
+              options={getEtageOptions()}
+              placeholder="Sélectionner un étage..."
               disabled={isSubmitting}
             />
           </div>

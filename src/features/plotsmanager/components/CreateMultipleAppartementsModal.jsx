@@ -8,8 +8,10 @@ import React, { useState, useEffect } from 'react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Input from '../../../shared/components/ui/Input'
+import Select from '../../../shared/components/ui/Select'
 import { Plus, Trash2 } from 'lucide-react'
 import { useAppartements } from '../hooks/useAppartements'
+import { getEtageOptions } from '../utils/etageConstants'
 
 const MAX_APPARTEMENTS = 20
 
@@ -24,57 +26,66 @@ export default function CreateMultipleAppartementsModal({
 }) {
   const { createMultipleAppartements } = useAppartements(plotId, chantierId)
 
-  const [noms, setNoms] = useState([''])
+  const [appartements, setAppartements] = useState([{ nom: '', etage: null }])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setNoms([''])
+      setAppartements([{ nom: '', etage: null }])
       setError(null)
     }
   }, [isOpen])
 
   // Add new appartement field
   const handleAddAppartement = () => {
-    if (noms.length >= MAX_APPARTEMENTS) {
+    if (appartements.length >= MAX_APPARTEMENTS) {
       setError(`Vous ne pouvez pas créer plus de ${MAX_APPARTEMENTS} appartements à la fois`)
       return
     }
-    setNoms([...noms, ''])
+    setAppartements([...appartements, { nom: '', etage: null }])
     setError(null)
   }
 
   // Remove appartement field
   const handleRemoveAppartement = (index) => {
-    if (noms.length === 1) return // Don't remove last field
-    const newNoms = noms.filter((_, i) => i !== index)
-    setNoms(newNoms)
+    if (appartements.length === 1) return // Don't remove last field
+    const newAppartements = appartements.filter((_, i) => i !== index)
+    setAppartements(newAppartements)
     setError(null)
   }
 
   // Update appartement name
   const handleNomChange = (index, value) => {
-    const newNoms = [...noms]
-    newNoms[index] = value
-    setNoms(newNoms)
+    const newAppartements = [...appartements]
+    newAppartements[index] = { ...newAppartements[index], nom: value }
+    setAppartements(newAppartements)
     setError(null)
   }
 
-  // Validate names
-  const validateNoms = () => {
-    // Remove empty names
-    const nonEmptyNoms = noms.filter(nom => nom.trim() !== '')
+  // Update appartement etage
+  const handleEtageChange = (index, value) => {
+    const newAppartements = [...appartements]
+    newAppartements[index] = { ...newAppartements[index], etage: value }
+    setAppartements(newAppartements)
+    setError(null)
+  }
 
-    if (nonEmptyNoms.length === 0) {
+  // Validate appartements
+  const validateAppartements = () => {
+    // Remove empty names
+    const nonEmptyAppartements = appartements.filter(appt => appt.nom.trim() !== '')
+
+    if (nonEmptyAppartements.length === 0) {
       setError('Veuillez entrer au moins un nom d\'appartement')
       return null
     }
 
     // Check for duplicates within the list
-    const duplicates = nonEmptyNoms.filter((nom, index) =>
-      nonEmptyNoms.indexOf(nom.trim()) !== index
+    const noms = nonEmptyAppartements.map(appt => appt.nom.trim())
+    const duplicates = noms.filter((nom, index) =>
+      noms.indexOf(nom) !== index
     )
     if (duplicates.length > 0) {
       setError('Certains noms sont en double. Chaque appartement doit avoir un nom unique.')
@@ -82,9 +93,9 @@ export default function CreateMultipleAppartementsModal({
     }
 
     // Check for duplicates with existing appartements
-    const existingDuplicates = nonEmptyNoms.filter(nom =>
+    const existingDuplicates = noms.filter(nom =>
       existingAppartementNames.some(existingNom =>
-        existingNom.toLowerCase() === nom.trim().toLowerCase()
+        existingNom.toLowerCase() === nom.toLowerCase()
       )
     )
     if (existingDuplicates.length > 0) {
@@ -92,21 +103,24 @@ export default function CreateMultipleAppartementsModal({
       return null
     }
 
-    return nonEmptyNoms.map(nom => nom.trim())
+    return nonEmptyAppartements.map(appt => ({
+      nom: appt.nom.trim(),
+      etage: appt.etage
+    }))
   }
 
   // Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    const validatedNoms = validateNoms()
-    if (!validatedNoms) return
+    const validatedAppartements = validateAppartements()
+    if (!validatedAppartements) return
 
     setIsSubmitting(true)
     setError(null)
 
     try {
-      const result = await createMultipleAppartements(validatedNoms)
+      const result = await createMultipleAppartements(validatedAppartements)
 
       if (result.success) {
         handleClose()
@@ -114,7 +128,7 @@ export default function CreateMultipleAppartementsModal({
           onSuccess({
             created: result.created,
             failed: result.failed,
-            total: validatedNoms.length
+            total: validatedAppartements.length
           })
         }
       } else {
@@ -131,7 +145,7 @@ export default function CreateMultipleAppartementsModal({
   // Handle modal close
   const handleClose = () => {
     if (!isSubmitting) {
-      setNoms([''])
+      setAppartements([{ nom: '', etage: null }])
       setError(null)
       onClose()
     }
@@ -168,36 +182,61 @@ export default function CreateMultipleAppartementsModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Appartement names list */}
-          <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {noms.map((nom, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <div className="flex-1">
+          {/* Appartements list */}
+          <div className="space-y-4 max-h-[400px] overflow-y-auto">
+            {appartements.map((appt, index) => (
+              <div key={index} className="border border-gray-200 rounded-lg p-3 bg-white">
+                {/* Header with appartement number and delete button */}
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-medium text-gray-700">
+                    Appartement {index + 1}
+                  </h4>
+                  {appartements.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAppartement(index)}
+                      disabled={isSubmitting}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                      title="Supprimer"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Nom field */}
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nom
+                  </label>
                   <Input
                     type="text"
-                    value={nom}
+                    value={appt.nom}
                     onChange={(e) => handleNomChange(index, e.target.value)}
                     placeholder={`Ex: Appartement ${index + 1}, Studio ${String.fromCharCode(65 + index)}...`}
                     disabled={isSubmitting}
                   />
                 </div>
-                {noms.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveAppartement(index)}
+
+                {/* Étage field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Étage (facultatif)
+                  </label>
+                  <Select
+                    value={appt.etage}
+                    onChange={(value) => handleEtageChange(index, value)}
+                    options={getEtageOptions()}
+                    placeholder="Sélectionner un étage..."
                     disabled={isSubmitting}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-                    title="Supprimer"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                )}
+                  />
+                </div>
               </div>
             ))}
           </div>
 
           {/* Add button */}
-          {noms.length < MAX_APPARTEMENTS && (
+          {appartements.length < MAX_APPARTEMENTS && (
             <Button
               type="button"
               variant="outline"
@@ -210,7 +249,7 @@ export default function CreateMultipleAppartementsModal({
             </Button>
           )}
 
-          {noms.length >= MAX_APPARTEMENTS && (
+          {appartements.length >= MAX_APPARTEMENTS && (
             <p className="text-xs text-orange-600 text-center">
               Limite de {MAX_APPARTEMENTS} appartements atteinte
             </p>
@@ -235,7 +274,7 @@ export default function CreateMultipleAppartementsModal({
             >
               {isSubmitting
                 ? 'Création en cours...'
-                : `Créer ${noms.filter(n => n.trim()).length} appartement${noms.filter(n => n.trim()).length > 1 ? 's' : ''}`
+                : `Créer ${appartements.filter(a => a.nom.trim()).length} appartement${appartements.filter(a => a.nom.trim()).length > 1 ? 's' : ''}`
               }
             </Button>
           </div>
