@@ -16,6 +16,8 @@ import { getAppartementById } from '../services/appartementsService'
 import { useAppartementTaches } from '../hooks/useAppartements'
 import { useAppartementDocuments } from '../hooks/useAppartementDocuments'
 import AppartementDocumentUploadModal from '../components/AppartementDocumentUploadModal'
+import AppartementNotesTab from '../components/AppartementNotesTab'
+import AppartementPhotosTab from '../components/AppartementPhotosTab'
 import { formatFileSize, isPDF } from '../services/appartementDocumentsService'
 import { calculateAppartementStatut } from '../utils/appartementHelpers'
 
@@ -225,7 +227,9 @@ export default function AppartementDetailPage() {
   const availableTabs = useMemo(() => {
     const allTabs = [
       { id: 'taches', label: 'Tâches', count: `${tachesStats.terminee}/${tachesStats.total}` },
-      { id: 'documents', label: 'Documents', count: `${documentsStats.uploaded}/${documentsStats.total}` }
+      { id: 'documents', label: 'Documents', count: `${documentsStats.uploaded}/${documentsStats.total}` },
+      { id: 'notes', label: 'Notes' },
+      { id: 'photos', label: 'Photos' }
     ]
 
     // If appartement statut is "en_attente", hide "Tâches" tab
@@ -493,6 +497,16 @@ export default function AppartementDetailPage() {
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Notes Tab */}
+              {activeTab === 'notes' && (
+                <AppartementNotesTab appartement={appartement} />
+              )}
+
+              {/* Photos Tab */}
+              {activeTab === 'photos' && (
+                <AppartementPhotosTab appartement={appartement} />
               )}
             </div>
 
