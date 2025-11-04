@@ -185,38 +185,24 @@ export function calculateProrata(montantHT) {
 }
 
 /**
- * Get montant à payer according to facture type, TVA, retenue de garantie and prorata
+ * Get montant à afficher (TTC si TVA applicable, sinon HT)
  * @param {Object} facture - Facture object
- * @returns {number} Montant à payer
+ * @returns {number} Montant à afficher
  */
 export function getMontantAPayer(facture) {
   if (!facture) return 0
 
-  let montantBase = 0
-
-  // Fournisseur : toujours TTC, pas de retenue ni prorata
+  // Fournisseur : toujours TTC
   if (facture.type === 'fournisseur') {
     return facture.montant_ttc || facture.montant || 0
   }
 
   // Client : TTC si TVA applicable, sinon HT
   if (facture.tva_applicable) {
-    montantBase = facture.montant_ttc || facture.montant || 0
+    return facture.montant_ttc || facture.montant || 0
   } else {
-    montantBase = facture.montant_ht || facture.montant || 0
+    return facture.montant_ht || facture.montant || 0
   }
-
-  // Déduire le montant de retenue stocké (si applicable)
-  if (facture.retenue_garantie) {
-    montantBase -= facture.montant_retenue || 0
-  }
-
-  // Déduire le montant de prorata stocké (si applicable)
-  if (facture.prorata_applicable) {
-    montantBase -= facture.montant_prorata || 0
-  }
-
-  return montantBase
 }
 
 /**
