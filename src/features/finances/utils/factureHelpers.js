@@ -206,16 +206,14 @@ export function getMontantAPayer(facture) {
     montantBase = facture.montant_ht || facture.montant || 0
   }
 
-  // Déduire la retenue de garantie si applicable (5% du HT)
+  // Déduire le montant de retenue stocké (si applicable)
   if (facture.retenue_garantie) {
-    const retenue = calculateRetenue(facture.montant_ht || 0)
-    montantBase -= retenue
+    montantBase -= facture.montant_retenue || 0
   }
 
-  // Déduire le prorata si applicable (2% du HT)
+  // Déduire le montant de prorata stocké (si applicable)
   if (facture.prorata_applicable) {
-    const prorata = calculateProrata(facture.montant_ht || 0)
-    montantBase -= prorata
+    montantBase -= facture.montant_prorata || 0
   }
 
   return montantBase

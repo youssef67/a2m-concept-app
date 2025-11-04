@@ -536,6 +536,19 @@ export default function FacturesPage() {
       if (data.tva_applicable) {
         data.montant_ttc = parseFloat(formData.get('montant_ttc'))
       }
+
+      // Enregistrer les montants de retenue et prorata (manuels ou calculés)
+      if (data.retenue_garantie) {
+        data.montant_retenue = parseFloat(montantRetenue) || 0
+      } else {
+        data.montant_retenue = 0
+      }
+
+      if (data.prorata_applicable) {
+        data.montant_prorata = parseFloat(montantProrata) || 0
+      } else {
+        data.montant_prorata = 0
+      }
     }
 
     // Garder l'ancien champ montant pour compatibilité (deprecated)
