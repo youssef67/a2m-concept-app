@@ -141,19 +141,30 @@ export default function FacturesPage() {
     }
   }, [selectedContactId, isModalOpen, editingFacture])
 
-  // Auto-calculate TTC when montantHT, TVA or retenue changes (clients only)
+  // Auto-calculate TTC when montantHT, TVA, retenue or prorata changes (clients only)
   React.useEffect(() => {
     if (factureType === 'client' && tvaApplicable && montantHT) {
       const ht = parseFloat(montantHT)
       if (!isNaN(ht) && ht > 0) {
         let baseCalcul = ht
 
-        // Si retenue de garantie, la déduire AVANT d'appliquer la TVA
-        if (retenueGarantie) {
-          const retenue = calculateRetenue(ht)
-          baseCalcul = ht - retenue
+        // Déduire la retenue de garantie si applicable (utilise le montant saisi)
+        if (retenueGarantie && montantRetenue) {
+          const retenue = parseFloat(montantRetenue)
+          if (!isNaN(retenue)) {
+            baseCalcul -= retenue
+          }
         }
 
+        // Déduire le prorata si applicable (utilise le montant saisi)
+        if (prorataApplicable && montantProrata) {
+          const prorata = parseFloat(montantProrata)
+          if (!isNaN(prorata)) {
+            baseCalcul -= prorata
+          }
+        }
+
+        // Appliquer la TVA sur la base calculée
         const ttc = calculateTTC(baseCalcul, 20)
         setMontantTTC(ttc.toFixed(2))
       } else {
@@ -162,7 +173,7 @@ export default function FacturesPage() {
     } else {
       setMontantTTC('')
     }
-  }, [montantHT, tvaApplicable, factureType, retenueGarantie])
+  }, [montantHT, tvaApplicable, factureType, retenueGarantie, montantRetenue, prorataApplicable, montantProrata])
 
   // Auto-calculate retenue when montantHT or retenueGarantie changes (clients only)
   React.useEffect(() => {
