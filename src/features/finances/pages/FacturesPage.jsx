@@ -1496,11 +1496,11 @@ export default function FacturesPage() {
                   </label>
                 </div>
 
-                {/* Montant TTC (auto-calculé si TVA cochée) */}
+                {/* Montant TTC (pré-rempli si TVA cochée, modifiable manuellement) */}
                 {tvaApplicable && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Montant TTC (calculé automatiquement)
+                      Montant TTC (€)
                     </label>
                     <div className="relative">
                       <input
@@ -1509,9 +1509,9 @@ export default function FacturesPage() {
                         step="0.01"
                         min="0.01"
                         value={montantTTC}
-                        readOnly
+                        onChange={(e) => setMontantTTC(e.target.value)}
                         placeholder="1200.00"
-                        className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
+                        className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
                         €
@@ -1535,11 +1535,11 @@ export default function FacturesPage() {
                   </label>
                 </div>
 
-                {/* Montant Retenue (auto-calculé si checkbox cochée) */}
+                {/* Montant Retenue (pré-rempli si checkbox cochée, modifiable manuellement) */}
                 {retenueGarantie && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Montant retenue (5% du HT)
+                      Montant retenue (€)
                     </label>
                     <div className="relative">
                       <input
@@ -1547,9 +1547,9 @@ export default function FacturesPage() {
                         step="0.01"
                         min="0"
                         value={montantRetenue}
-                        readOnly
+                        onChange={(e) => setMontantRetenue(e.target.value)}
                         placeholder="50.00"
-                        className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
+                        className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
                         €
@@ -1573,11 +1573,11 @@ export default function FacturesPage() {
                   </label>
                 </div>
 
-                {/* Montant Prorata (auto-calculé si checkbox cochée) */}
+                {/* Montant Prorata (pré-rempli si checkbox cochée, modifiable manuellement) */}
                 {prorataApplicable && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Montant prorata (2% du HT)
+                      Montant prorata (€)
                     </label>
                     <div className="relative">
                       <input
@@ -1585,9 +1585,9 @@ export default function FacturesPage() {
                         step="0.01"
                         min="0"
                         value={montantProrata}
-                        readOnly
+                        onChange={(e) => setMontantProrata(e.target.value)}
                         placeholder="20.00"
-                        className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
+                        className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
                         €
