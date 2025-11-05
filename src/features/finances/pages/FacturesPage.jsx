@@ -96,6 +96,7 @@ export default function FacturesPage() {
   const [selectedChantierId, setSelectedChantierId] = useState('')
   const [dateEmission, setDateEmission] = useState(new Date().toISOString().split('T')[0])
   const [dateEcheance, setDateEcheance] = useState('')
+  const [lot, setLot] = useState('')
 
   // TVA states
   const [factureType, setFactureType] = useState('client')
@@ -512,6 +513,7 @@ export default function FacturesPage() {
       type: currentType,
       contact_id: formData.get('contact_id'),
       chantier_id: formData.get('chantier_id') || null,
+      lot: formData.get('lot') || null,
       date_emission: formData.get('date_emission'),
       date_echeance: formData.get('date_echeance'),
       statut: formData.get('statut') || 'en_attente',
@@ -634,6 +636,7 @@ export default function FacturesPage() {
     // Initialize form states with existing facture data
     setSelectedContactId(facture.contact_id || '')
     setSelectedChantierId(facture.chantier_id || '')
+    setLot(facture.lot || '')
     setDateEmission(facture.date_emission || new Date().toISOString().split('T')[0])
     setDateEcheance(facture.date_echeance || '')
     setFactureStatut(facture.statut || 'en_attente')
@@ -662,6 +665,7 @@ export default function FacturesPage() {
     // Reset form states for new facture
     setSelectedContactId('')
     setSelectedChantierId('')
+    setLot('')
     setDateEmission(new Date().toISOString().split('T')[0])
     setDateEcheance('')
     setFactureStatut('en_attente')
@@ -1083,6 +1087,12 @@ export default function FacturesPage() {
                               <span className="truncate">{facture.chantier.titre}</span>
                             </div>
                           )}
+                          {facture.lot && (
+                            <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                              <span className="text-xs text-gray-500">Lot:</span>
+                              <span className="truncate">{facture.lot}</span>
+                            </div>
+                          )}
                         </div>
 
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
@@ -1453,6 +1463,22 @@ export default function FacturesPage() {
                 placeholder={!selectedContactId ? 'Sélectionner d\'abord un contact' : 'Sélectionner un chantier...'}
               />
               <input type="hidden" name="chantier_id" value={selectedChantierId} />
+            </div>
+
+            {/* Lot */}
+            <div>
+              <label htmlFor="lot" className="block text-sm font-medium text-gray-700 mb-2">
+                Lot
+              </label>
+              <input
+                type="text"
+                id="lot"
+                name="lot"
+                value={lot}
+                onChange={(e) => setLot(e.target.value)}
+                placeholder="Ex: Lot 1, A1, Bâtiment Nord..."
+                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
             </div>
 
             {/* Montant - Logique conditionnelle selon type */}
