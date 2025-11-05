@@ -275,3 +275,38 @@ export function filterFacturesNonExclues(factures) {
   if (!Array.isArray(factures)) return []
   return factures.filter(f => !isFactureExclue(f))
 }
+
+/**
+ * Validate the format of a client invoice number
+ * @param {string} numeroFacture - Invoice number to validate
+ * @returns {Object} { valid: boolean, error: string|null }
+ */
+export function validateNumeroFacture(numeroFacture) {
+  // If empty, valid (auto-generation)
+  if (!numeroFacture || numeroFacture.trim() === '') {
+    return { valid: true, error: null }
+  }
+
+  // Expected format: FAC/C-YYYY-NNNNN
+  const regex = /^FAC\/C-\d{4}-\d{5}$/
+
+  if (!regex.test(numeroFacture)) {
+    return {
+      valid: false,
+      error: 'Format invalide. Attendu : FAC/C-YYYY-NNNNN (ex: FAC/C-2025-00123)'
+    }
+  }
+
+  // Check that year is current year only (strict validation)
+  const year = parseInt(numeroFacture.split('-')[1], 10)
+  const currentYear = new Date().getFullYear()
+
+  if (year !== currentYear) {
+    return {
+      valid: false,
+      error: `L'année doit être ${currentYear} (année courante)`
+    }
+  }
+
+  return { valid: true, error: null }
+}

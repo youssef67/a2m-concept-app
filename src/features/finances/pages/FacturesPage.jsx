@@ -38,7 +38,8 @@ import {
   calculateRetenue,
   calculateProrata,
   getMontantAPayer,
-  getMontantLabel
+  getMontantLabel,
+  validateNumeroFacture
 } from '../utils/factureHelpers'
 import {
   getClientDisplayName as getChantierClientName,
@@ -120,6 +121,9 @@ export default function FacturesPage() {
   // Exclusion calculs states
   const [exclueCalculs, setExclueCalculs] = useState(false)
   const [raisonExclusion, setRaisonExclusion] = useState('')
+
+  // Numero facture state (editable for clients)
+  const [numeroFacture, setNumeroFacture] = useState('')
 
   // Hooks
   const { factures, loading, error, createFacture, updateFacture, deleteFacture, deleteMultipleFactures, refreshFactures } = useFactures()
@@ -542,7 +546,15 @@ export default function FacturesPage() {
       exclue_finalisation: false,
       // Champs exclusion des calculs
       exclue_calculs: false,
-      raison_exclusion: null
+      raison_exclusion: null,
+      // Numero facture (for clients, optional - auto-generated if empty)
+      numero_facture: null
+    }
+
+    // Gérer le numero facture (clients only)
+    if (currentType === 'client') {
+      const numeroFromForm = formData.get('numero_facture')
+      data.numero_facture = numeroFromForm && numeroFromForm.trim() !== '' ? numeroFromForm.trim() : null
     }
 
     // Gérer l'exclusion des calculs (commun aux deux types)
@@ -601,6 +613,15 @@ export default function FacturesPage() {
       return
     }
 
+    // Validation numero facture (for clients only)
+    if (currentType === 'client' && data.numero_facture) {
+      const validation = validateNumeroFacture(data.numero_facture)
+      if (!validation.valid) {
+        showToast(validation.error, 'error')
+        return
+      }
+    }
+
     // Validation exclusion des calculs
     if (data.exclue_calculs && (!data.raison_exclusion || data.raison_exclusion.trim() === '')) {
       showToast('La raison de l\'exclusion est obligatoire', 'error')
@@ -615,10 +636,14 @@ export default function FacturesPage() {
     }
 
     if (result.success) {
-      showToast(
-        editingFacture ? 'Facture modifiée avec succès' : 'Facture créée avec succès',
-        'success'
-      )
+      // Show success toast with numero facture if it's a new client invoice
+      let successMessage = editingFacture ? 'Facture modifiée avec succès' : 'Facture créée avec succès'
+
+      if (!editingFacture && currentType === 'client' && result.data?.numero_facture) {
+        successMessage = `Facture créée avec succès : ${result.data.numero_facture}`
+      }
+
+      showToast(successMessage, 'success')
       setIsModalOpen(false)
       setEditingFacture(null)
     } else {
@@ -680,6 +705,8 @@ export default function FacturesPage() {
     // Initialize exclusion calculs states
     setExclueCalculs(facture.exclue_calculs || false)
     setRaisonExclusion(facture.raison_exclusion || '')
+    // Initialize numero facture (for clients only)
+    setNumeroFacture(facture.numero_facture || '')
     setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
@@ -712,6 +739,8 @@ export default function FacturesPage() {
     // Reset exclusion calculs states
     setExclueCalculs(false)
     setRaisonExclusion('')
+    // Reset numero facture
+    setNumeroFacture('')
     setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
@@ -1445,6 +1474,26 @@ export default function FacturesPage() {
               {/* Hidden input to submit type */}
               <input type="hidden" name="type" value={factureType} />
             </div>
+
+            {/* Numero Facture (clients only) */}
+            {factureType === 'client' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Numéro de facture (optionnel)
+                </label>
+                <input
+                  type="text"
+                  name="numero_facture"
+                  value={numeroFacture}
+                  onChange={(e) => setNumeroFacture(e.target.value)}
+                  placeholder={`FAC/C-${new Date().getFullYear()}-NNNNN`}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Laissez vide pour générer automatiquement
+                </p>
+              </div>
+            )}
 
             {/* Contact */}
             <div>
