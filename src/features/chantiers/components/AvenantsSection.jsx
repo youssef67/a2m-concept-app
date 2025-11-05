@@ -14,6 +14,7 @@ import { useToast } from '../../../shared/hooks/useToast'
 import { formatCurrency, formatNumeroAvenant } from '../utils/chantierHelpers'
 
 export default function AvenantsSection({
+  // eslint-disable-next-line no-unused-vars
   chantierId,
   avenants = [],
   loading = false,

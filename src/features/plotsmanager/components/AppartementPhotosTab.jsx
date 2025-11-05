@@ -43,7 +43,7 @@ export default function AppartementPhotosTab({ appartement }) {
 
   // Handle view photo (open in new tab)
   const handleViewPhoto = async (photo) => {
-    const { url, error } = await viewPhoto(photo.storage_path)
+    const { url } = await viewPhoto(photo.storage_path)
     if (url) {
       window.open(url, '_blank')
     } else {

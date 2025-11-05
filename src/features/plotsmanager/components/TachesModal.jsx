@@ -20,6 +20,7 @@ const STATUS_OPTIONS = [
 export default function TachesModal({
   isOpen,
   onClose,
+  // eslint-disable-next-line no-unused-vars
   chantierId,
   chantierTitre,
   initialTaches = [],

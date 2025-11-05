@@ -382,7 +382,7 @@ export default function AppartementDetailPage() {
                             <span className="font-medium text-gray-900">{tache.intitule}</span>
                             {isDisabled && (
                               <span className="text-xs text-gray-500 italic">
-                                (Non modifiable tant qu'une tâche est en cours)
+                                (Non modifiable tant qu&apos;une tâche est en cours)
                               </span>
                             )}
                           </div>

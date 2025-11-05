@@ -48,6 +48,7 @@ export default function SendWhatsAppModal({
       setSelectedDocuments({})
       setError(null)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, appartements, chantierId])
 
   // Load workers and documents for each apartment
@@ -296,7 +297,7 @@ export default function SendWhatsAppModal({
         {!loading && appartements.length > MAX_APPARTEMENTS && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
             <p className="text-sm text-amber-800">
-              ⚠️ Attention : Vous avez sélectionné {appartements.length} appartements, mais l'envoi WhatsApp est limité à {MAX_APPARTEMENTS} appartements maximum.
+              ⚠️ Attention : Vous avez sélectionné {appartements.length} appartements, mais l&apos;envoi WhatsApp est limité à {MAX_APPARTEMENTS} appartements maximum.
             </p>
           </div>
         )}

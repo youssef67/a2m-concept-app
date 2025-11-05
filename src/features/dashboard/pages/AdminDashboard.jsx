@@ -193,14 +193,20 @@ export default function AdminDashboard() {
       })
   }, [chantiers, factures])
 
-  // Calcul des 3 dernières factures
+  // Calcul des 3 dernières factures (triées par numéro décroissant)
   const dernieresFactures = useMemo(() => {
     if (!factures || factures.length === 0) return []
 
-    // Filtrer uniquement les factures clients et prendre les 3 premières
-    // Les factures sont déjà triées par date_emission DESC dans le service
+    // Filtrer les factures clients et trier par numéro décroissant
     return factures
       .filter(f => f.type === 'client')
+      .sort((a, b) => {
+        // Extraire le numéro séquentiel (partie après le dernier tiret)
+        // FAC/C-2025-00123 -> 123
+        const numA = parseInt(a.numero_facture.split('-').pop(), 10) || 0
+        const numB = parseInt(b.numero_facture.split('-').pop(), 10) || 0
+        return numB - numA // Tri décroissant (plus grand en premier)
+      })
       .slice(0, 3)
   }, [factures])
 

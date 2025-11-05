@@ -141,6 +141,7 @@ export default function PlotDetailPage() {
       searchParams.delete('activeTab')
       setSearchParams(searchParams, { replace: true })
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Run only once on mount
 
   // Filter appartements based on search query and status

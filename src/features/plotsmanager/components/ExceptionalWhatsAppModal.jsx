@@ -58,6 +58,7 @@ export default function ExceptionalWhatsAppModal({
       setDocumentsMap({})
       setSelectedDocuments([])
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAppartementId])
 
   // Load workers

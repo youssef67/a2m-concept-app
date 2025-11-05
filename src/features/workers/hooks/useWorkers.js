@@ -87,7 +87,7 @@ export function useWorkers(itemsPerPage = 10) {
 
   // Supprimer un worker
   const deleteWorker = useCallback(async (workerId) => {
-    const { success, error } = await workersService.deleteWorker(workerId)
+    const { error } = await workersService.deleteWorker(workerId)
 
     if (error) {
       return { success: false, error }

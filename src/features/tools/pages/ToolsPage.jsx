@@ -69,6 +69,7 @@ export default function ToolsPage() {
         </div>
 
         {/* Test WhatsApp - Masqué temporairement */}
+        {/* eslint-disable-next-line no-constant-binary-expression */}
         {false && (
           <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -122,7 +123,7 @@ export default function ToolsPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-800">
                   <strong>Comment ça marche :</strong> Ce bouton ouvrira WhatsApp avec le message pré-rempli.
-                  Vous devrez juste cliquer sur "Envoyer" dans WhatsApp. 100% gratuit et officiel !
+                  Vous devrez juste cliquer sur &quot;Envoyer&quot; dans WhatsApp. 100% gratuit et officiel !
                 </p>
               </div>
             </div>

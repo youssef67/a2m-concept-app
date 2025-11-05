@@ -14,7 +14,7 @@ export default function WorkerForm({ formData, onChange, errors }) {
     onChange({ ...formData, phone: cleaned })
   }
 
-  const handlePhoneBlur = (e) => {
+  const handlePhoneBlur = () => {
     // Formater le téléphone au blur
     const formatted = formatPhoneNumber(formData.phone)
     onChange({ ...formData, phone: formatted })

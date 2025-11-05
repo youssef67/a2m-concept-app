@@ -87,7 +87,7 @@ export default function WorkersPage() {
           'error'
         )
       }
-    } catch (err) {
+    } catch {
       showToast('Une erreur inattendue est survenue', 'error')
     } finally {
       setIsSubmitting(false)
@@ -112,7 +112,7 @@ export default function WorkersPage() {
           'error'
         )
       }
-    } catch (err) {
+    } catch {
       showToast('Une erreur inattendue est survenue', 'error')
     } finally {
       setIsSubmitting(false)

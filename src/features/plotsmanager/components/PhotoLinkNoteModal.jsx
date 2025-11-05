@@ -19,6 +19,7 @@ export default function PhotoLinkNoteModal({
   photo,
   notes = [],
   onLinkChange,
+  // eslint-disable-next-line no-unused-vars
   appartementId
 }) {
   const [selectedNoteId, setSelectedNoteId] = useState('')

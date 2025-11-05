@@ -33,13 +33,13 @@ export default function ChantierDetailPage() {
   const [plotToDelete, setPlotToDelete] = useState(null)
 
   // Taches hook
-  const { taches, loading: _tachesLoading, loadTaches, saveTaches } = useTaches(id)
+  const { taches, loadTaches, saveTaches } = useTaches(id)
 
   // Plots hook
   const { plots, loading: plotsLoading, loadPlots, deletePlot } = usePlots(id)
 
   // Documents hook
-  const { documents, loading: _documentsLoading, loadDocuments, saveDocuments } = useDocuments(id)
+  const { documents, loadDocuments, saveDocuments } = useDocuments(id)
 
   // Load chantier data
   useEffect(() => {
@@ -265,7 +265,7 @@ export default function ChantierDetailPage() {
                   <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-600">Aucun plot créé pour ce chantier</p>
                   <p className="text-sm text-gray-500 mt-1">
-                    Cliquez sur "Créer un plot" pour commencer
+                    Cliquez sur &quot;Créer un plot&quot; pour commencer
                   </p>
                 </div>
               )}

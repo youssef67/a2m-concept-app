@@ -62,7 +62,7 @@ export default function AppartementNotesTab({ appartement }) {
 
   // Handle view photo
   const handleViewPhoto = async (photo) => {
-    const { data: url, error } = await getPhotoUrl(photo.storage_path)
+    const { data: url } = await getPhotoUrl(photo.storage_path)
     if (url) {
       window.open(url, '_blank')
     } else {

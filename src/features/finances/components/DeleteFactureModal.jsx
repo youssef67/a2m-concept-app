@@ -116,7 +116,7 @@ export default function DeleteFactureModal({
                 <Calendar className="w-4 h-4 text-gray-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs text-gray-500 mb-0.5">Date d'émission</div>
+                <div className="text-xs text-gray-500 mb-0.5">Date d&apos;émission</div>
                 <div className="font-medium text-gray-900">
                   {formatDate(facture.date_emission)}
                 </div>
