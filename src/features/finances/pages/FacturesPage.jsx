@@ -327,7 +327,14 @@ export default function FacturesPage() {
       : overdueFiltered
 
     // 5. Appliquer la recherche
-    return searchFactures(contactFiltered, searchQuery)
+    const searched = searchFactures(contactFiltered, searchQuery)
+
+    // 6. Trier par numéro de facture (du plus élevé au plus bas)
+    return searched.sort((a, b) => {
+      const numA = parseInt(a.numero_facture.split('-').pop(), 10) || 0
+      const numB = parseInt(b.numero_facture.split('-').pop(), 10) || 0
+      return numB - numA // Tri décroissant
+    })
   }, [factures, activeTab, activeType, showOverdueOnly, selectedContactFilter, searchQuery])
 
   // Filter and search chantiers (for "Fin de chantier" tab)
