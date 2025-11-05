@@ -117,6 +117,10 @@ export default function FacturesPage() {
   const [exclueFinalization, setExclueFinalization] = useState(false)
   const [chantierLie, setChantierLie] = useState(null)
 
+  // Exclusion calculs states
+  const [exclueCalculs, setExclueCalculs] = useState(false)
+  const [raisonExclusion, setRaisonExclusion] = useState('')
+
   // Hooks
   const { factures, loading, error, createFacture, updateFacture, deleteFacture, deleteMultipleFactures, refreshFactures } = useFactures()
   const { contacts } = useContacts()
@@ -535,8 +539,15 @@ export default function FacturesPage() {
       // Champ prorata
       prorata_applicable: false,
       // Champ exclue de finalisation
-      exclue_finalisation: false
+      exclue_finalisation: false,
+      // Champs exclusion des calculs
+      exclue_calculs: false,
+      raison_exclusion: null
     }
+
+    // Gérer l'exclusion des calculs (commun aux deux types)
+    data.exclue_calculs = formData.get('exclue_calculs') === 'on'
+    data.raison_exclusion = data.exclue_calculs ? (formData.get('raison_exclusion') || null) : null
 
     if (currentType === 'fournisseur') {
       // Fournisseur: toujours TTC, pas de retenue ni prorata ni exclusion finalisation
@@ -587,6 +598,12 @@ export default function FacturesPage() {
 
     if (!data.date_emission || !data.date_echeance) {
       showToast('Les dates sont obligatoires', 'error')
+      return
+    }
+
+    // Validation exclusion des calculs
+    if (data.exclue_calculs && (!data.raison_exclusion || data.raison_exclusion.trim() === '')) {
+      showToast('La raison de l\'exclusion est obligatoire', 'error')
       return
     }
 
@@ -660,6 +677,9 @@ export default function FacturesPage() {
     setMontantProrata(facture.prorata_applicable && facture.montant_ht ? calculateProrata(facture.montant_ht).toFixed(2) : '')
     // Initialize finalisation states
     setExclueFinalization(facture.exclue_finalisation || false)
+    // Initialize exclusion calculs states
+    setExclueCalculs(facture.exclue_calculs || false)
+    setRaisonExclusion(facture.raison_exclusion || '')
     setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
@@ -689,6 +709,9 @@ export default function FacturesPage() {
     setMontantProrata('')
     // Reset finalisation states
     setExclueFinalization(false)
+    // Reset exclusion calculs states
+    setExclueCalculs(false)
+    setRaisonExclusion('')
     setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
@@ -1081,6 +1104,13 @@ export default function FacturesPage() {
                                 <StickyNote className="w-4 h-4 text-amber-600" />
                               </div>
                             )}
+                            {/* Badge facture exclue */}
+                            {facture.exclue_calculs && (
+                              <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium" title="Exclue des calculs">
+                                <XCircle className="w-3 h-3" />
+                                <span>Exclue</span>
+                              </div>
+                            )}
                           </div>
                           {facture.type === 'client' && (
                             <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
@@ -1098,6 +1128,11 @@ export default function FacturesPage() {
                             <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                               <span className="text-xs text-gray-500">Lot:</span>
                               <span className="truncate">{facture.lot}</span>
+                            </div>
+                          )}
+                          {facture.exclue_calculs && facture.raison_exclusion && (
+                            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                              <span className="font-medium">Raison de l&apos;exclusion:</span> {facture.raison_exclusion}
                             </div>
                           )}
                         </div>
@@ -1732,6 +1767,44 @@ export default function FacturesPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
                 placeholder="Notes additionnelles..."
               />
+            </div>
+
+            {/* Exclusion des calculs */}
+            <div className="space-y-4 pt-4 border-t border-gray-200">
+              <div className="flex items-start">
+                <input
+                  id="exclue_calculs"
+                  name="exclue_calculs"
+                  type="checkbox"
+                  checked={exclueCalculs}
+                  onChange={(e) => setExclueCalculs(e.target.checked)}
+                  className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer mt-0.5"
+                />
+                <label htmlFor="exclue_calculs" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
+                  Exclure cette facture de tous les calculs (dashboard, totaux)
+                </label>
+              </div>
+
+              {exclueCalculs && (
+                <div>
+                  <label htmlFor="raison_exclusion" className="block text-sm font-medium text-gray-700 mb-2">
+                    Raison de l&apos;exclusion *
+                  </label>
+                  <textarea
+                    id="raison_exclusion"
+                    name="raison_exclusion"
+                    value={raisonExclusion}
+                    onChange={(e) => setRaisonExclusion(e.target.value)}
+                    rows={3}
+                    required={exclueCalculs}
+                    placeholder="Ex: Facture de test, Avoir, Erreur de saisie..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Cette facture sera ignorée dans tous les calculs de totaux et statistiques.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Actions */}

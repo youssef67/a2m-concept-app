@@ -256,3 +256,22 @@ export function validateFactureData(data) {
 
   return errors
 }
+
+/**
+ * Check if facture should be excluded from calculations
+ * @param {Object} facture - Facture object
+ * @returns {boolean} True if excluded
+ */
+export function isFactureExclue(facture) {
+  return facture?.exclue_calculs === true
+}
+
+/**
+ * Filter out excluded factures from array
+ * @param {Array} factures - Array of factures
+ * @returns {Array} Filtered factures (non-excluded only)
+ */
+export function filterFacturesNonExclues(factures) {
+  if (!Array.isArray(factures)) return []
+  return factures.filter(f => !isFactureExclue(f))
+}
