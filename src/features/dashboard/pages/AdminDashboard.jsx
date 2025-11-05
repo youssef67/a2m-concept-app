@@ -4,7 +4,7 @@ import { Clock, CheckCircle, AlertTriangle, Calendar, CheckCircle2, TrendingUp, 
 import { useAuth } from '../../auth/hooks/useAuth'
 import { useFactures } from '../../finances/hooks/useFactures'
 import { useChantiers } from '../../chantiers/hooks/useChantiers'
-import { formatCurrency } from '../../finances/utils/factureHelpers'
+import { formatCurrency, filterFacturesNonExclues } from '../../finances/utils/factureHelpers'
 import {
   calculateEcheanceFinalisation95,
   calculateEcheanceRetenues,
@@ -42,13 +42,16 @@ export default function AdminDashboard() {
       }
     }
 
+    // Filtrer les factures exclues des calculs
+    const facturesNonExclues = filterFacturesNonExclues(factures)
+
     // Factures CLIENTS (exclure annulées)
-    const facturesClients = factures.filter(f => f.type === 'client' && f.statut !== 'annulee')
+    const facturesClients = facturesNonExclues.filter(f => f.type === 'client' && f.statut !== 'annulee')
     const clientsEnAttente = facturesClients.filter(f => f.statut === 'en_attente')
     const clientsPayees = facturesClients.filter(f => f.statut === 'payee' || f.statut === 'partiellement_payee')
 
     // Factures FOURNISSEURS (exclure annulées)
-    const facturesFournisseurs = factures.filter(f => f.type === 'fournisseur' && f.statut !== 'annulee')
+    const facturesFournisseurs = facturesNonExclues.filter(f => f.type === 'fournisseur' && f.statut !== 'annulee')
     const fournisseursEnAttente = facturesFournisseurs.filter(f => f.statut === 'en_attente')
     const fournisseursPayees = facturesFournisseurs.filter(f => f.statut === 'payee' || f.statut === 'partiellement_payee')
 
@@ -79,7 +82,10 @@ export default function AdminDashboard() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    return factures
+    // Filtrer les factures exclues des calculs
+    const facturesNonExclues = filterFacturesNonExclues(factures)
+
+    return facturesNonExclues
       .filter(f => {
         if (f.type !== 'client' || f.statut !== 'en_attente') return false
 
@@ -112,7 +118,10 @@ export default function AdminDashboard() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    return factures
+    // Filtrer les factures exclues des calculs
+    const facturesNonExclues = filterFacturesNonExclues(factures)
+
+    return facturesNonExclues
       .filter(f => {
         if (f.type !== 'fournisseur' || f.statut !== 'en_attente') return false
 
@@ -197,8 +206,11 @@ export default function AdminDashboard() {
   const dernieresFactures = useMemo(() => {
     if (!factures || factures.length === 0) return []
 
+    // Filtrer les factures exclues des calculs
+    const facturesNonExclues = filterFacturesNonExclues(factures)
+
     // Filtrer les factures clients et trier par numéro décroissant
-    return factures
+    return facturesNonExclues
       .filter(f => f.type === 'client')
       .sort((a, b) => {
         // Extraire le numéro séquentiel (partie après le dernier tiret)
