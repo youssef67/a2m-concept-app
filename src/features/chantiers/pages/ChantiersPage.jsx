@@ -3,13 +3,14 @@
  * Display chantiers in tabs: En cours, Planifié, Devis
  */
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Construction, Plus, Search } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
 import Spinner from '../../../shared/components/ui/Spinner'
 import Alert from '../../../shared/components/ui/Alert'
+import Pagination from '../../../shared/components/ui/Pagination'
 import ChantierCard from '../components/ChantierCard'
 import ChantierModal from '../components/ChantierModal'
 import ChantierDetailModal from '../components/ChantierDetailModal'
@@ -18,10 +19,14 @@ import { useChantiers } from '../hooks/useChantiers'
 import { searchChantiers } from '../utils/chantierHelpers'
 import { useToast } from '../../../shared/hooks/useToast'
 
+// Nombre de chantiers par page
+const ITEMS_PER_PAGE = 9
+
 export default function ChantiersPage() {
   // State
   const [activeTab, setActiveTab] = useState('en_cours')
   const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
@@ -66,6 +71,21 @@ export default function ChantiersPage() {
     // Apply search query
     return searchChantiers(statusFiltered, searchQuery)
   }, [chantiers, activeTab, searchQuery])
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredChantiers.length / ITEMS_PER_PAGE)
+
+  // Get chantiers for current page
+  const paginatedChantiers = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+    const endIndex = startIndex + ITEMS_PER_PAGE
+    return filteredChantiers.slice(startIndex, endIndex)
+  }, [filteredChantiers, currentPage])
+
+  // Reset to page 1 when tab or search changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeTab, searchQuery])
 
   /**
    * Handle create chantier
@@ -207,17 +227,27 @@ export default function ChantiersPage() {
 
         {/* Chantiers Grid */}
         {!loading && !error && filteredChantiers.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredChantiers.map(chantier => (
-              <ChantierCard
-                key={chantier.id}
-                chantier={chantier}
-                onView={handleView}
-                onEdit={handleEdit}
-                onDelete={handleDeleteClick}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedChantiers.map(chantier => (
+                <ChantierCard
+                  key={chantier.id}
+                  chantier={chantier}
+                  onView={handleView}
+                  onEdit={handleEdit}
+                  onDelete={handleDeleteClick}
+                />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              className="mt-6"
+            />
+          </>
         )}
 
         {/* Modals */}
