@@ -222,17 +222,8 @@ export function validateChantierData(data) {
     errors.client_id = 'Le client est obligatoire'
   }
 
-  if (!data.adresse_ligne1 || data.adresse_ligne1.trim() === '') {
-    errors.adresse_ligne1 = 'L\'adresse est obligatoire'
-  }
-
-  if (!data.ville || data.ville.trim() === '') {
-    errors.ville = 'La ville est obligatoire'
-  }
-
-  if (!data.code_postal || data.code_postal.trim() === '') {
-    errors.code_postal = 'Le code postal est obligatoire'
-  }
+  // Adresse complètement optionnelle - Pas de validation requise
+  // Les champs adresse_ligne1, ville, code_postal peuvent être vides
 
   // Montant HT validation (obligatoire)
   if (!data.montant_ht || data.montant_ht === '' || parseFloat(data.montant_ht) === 0) {
@@ -274,7 +265,6 @@ export function prepareChantierData(formData) {
   if (data.titre) data.titre = data.titre.trim()
   if (data.description) data.description = data.description.trim()
   if (data.adresse_ligne1) data.adresse_ligne1 = data.adresse_ligne1.trim()
-  if (data.adresse_ligne2) data.adresse_ligne2 = data.adresse_ligne2.trim()
   if (data.ville) data.ville = data.ville.trim()
   if (data.code_postal) data.code_postal = data.code_postal.trim()
   if (data.notes) data.notes = data.notes.trim()

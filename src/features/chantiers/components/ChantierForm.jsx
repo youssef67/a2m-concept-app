@@ -31,7 +31,6 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
     montant_ttc: '',
     finalisation_95: false,
     adresse_ligne1: '',
-    adresse_ligne2: '',
     ville: '',
     code_postal: '',
     pays: 'France',
@@ -279,49 +278,42 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
 
       {/* Adresse du chantier */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900">Adresse du chantier</h3>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Adresse du chantier</h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Vous pouvez indiquer une adresse complète, seulement un code postal et une ville, ou laisser vide.
+          </p>
+        </div>
 
         <Input
-          label="Adresse (ligne 1) *"
+          label="Adresse"
           type="text"
           name="adresse_ligne1"
           value={formData.adresse_ligne1}
           onChange={handleChange}
           error={errors.adresse_ligne1}
           placeholder="Numéro et nom de rue"
-          required
-        />
-
-        <Input
-          label="Adresse (ligne 2)"
-          type="text"
-          name="adresse_ligne2"
-          value={formData.adresse_ligne2}
-          onChange={handleChange}
-          placeholder="Complément d'adresse"
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
-            label="Code postal *"
+            label="Code postal"
             type="text"
             name="code_postal"
             value={formData.code_postal}
             onChange={handleChange}
             error={errors.code_postal}
             placeholder="75001"
-            required
           />
 
           <Input
-            label="Ville *"
+            label="Ville"
             type="text"
             name="ville"
             value={formData.ville}
             onChange={handleChange}
             error={errors.ville}
             placeholder="Paris"
-            required
           />
         </div>
 
