@@ -16,15 +16,17 @@ export async function getAllChantiers(statut = null) {
       .from('chantiers')
       .select(`
         *,
-        client:contacts(
-          id,
-          type,
-          contact_type,
-          company_name,
-          first_name,
-          last_name,
-          phone,
-          email
+        chantier_clients(
+          contact:contacts(
+            id,
+            type,
+            contact_type,
+            company_name,
+            first_name,
+            last_name,
+            phone,
+            email
+          )
         ),
         factures(
           id,
@@ -48,7 +50,15 @@ export async function getAllChantiers(statut = null) {
 
     if (error) throw error
 
-    return { data, error: null }
+    // Transform chantier_clients array to clients array
+    const transformedData = data?.map(chantier => ({
+      ...chantier,
+      clients: chantier.chantier_clients?.map(cc => cc.contact) || [],
+      client: chantier.chantier_clients?.[0]?.contact || null, // First client for backward compatibility
+      chantier_clients: undefined // Remove to clean up response
+    }))
+
+    return { data: transformedData, error: null }
   } catch (error) {
     console.error('Error fetching chantiers:', error)
     return { data: null, error }
@@ -66,15 +76,17 @@ export async function getChantierById(chantierId) {
       .from('chantiers')
       .select(`
         *,
-        client:contacts(
-          id,
-          type,
-          contact_type,
-          company_name,
-          first_name,
-          last_name,
-          phone,
-          email
+        chantier_clients(
+          contact:contacts(
+            id,
+            type,
+            contact_type,
+            company_name,
+            first_name,
+            last_name,
+            phone,
+            email
+          )
         ),
         factures(
           id,
@@ -93,7 +105,15 @@ export async function getChantierById(chantierId) {
 
     if (error) throw error
 
-    return { data, error: null }
+    // Transform chantier_clients array to clients array
+    const transformedData = {
+      ...data,
+      clients: data.chantier_clients?.map(cc => cc.contact) || [],
+      client: data.chantier_clients?.[0]?.contact || null, // First client for backward compatibility
+      chantier_clients: undefined // Remove to clean up response
+    }
+
+    return { data: transformedData, error: null }
   } catch (error) {
     console.error('Error fetching chantier:', error)
     return { data: null, error }
@@ -102,32 +122,41 @@ export async function getChantierById(chantierId) {
 
 /**
  * Create a new chantier
- * @param {Object} chantierData - Chantier data
+ * @param {Object} chantierData - Chantier data (must include client_ids array)
  * @returns {Promise<{data: Object|null, error: any}>}
  */
 export async function createChantier(chantierData) {
   try {
-    const { data, error } = await supabase
+    // Extract client_ids from chantierData
+    const { client_ids, ...chantierFields } = chantierData
+
+    if (!client_ids || !Array.isArray(client_ids) || client_ids.length === 0) {
+      throw new Error('Au moins un client est requis')
+    }
+
+    // Create chantier
+    const { data: chantier, error: chantierError } = await supabase
       .from('chantiers')
-      .insert([chantierData])
-      .select(`
-        *,
-        client:contacts(
-          id,
-          type,
-          contact_type,
-          company_name,
-          first_name,
-          last_name,
-          phone,
-          email
-        )
-      `)
+      .insert([chantierFields])
+      .select()
       .single()
 
-    if (error) throw error
+    if (chantierError) throw chantierError
 
-    return { data, error: null }
+    // Create chantier_clients relationships
+    const chantierClientsData = client_ids.map(client_id => ({
+      chantier_id: chantier.id,
+      contact_id: client_id
+    }))
+
+    const { error: clientsError } = await supabase
+      .from('chantier_clients')
+      .insert(chantierClientsData)
+
+    if (clientsError) throw clientsError
+
+    // Fetch complete chantier with clients
+    return await getChantierById(chantier.id)
   } catch (error) {
     console.error('Error creating chantier:', error)
     return { data: null, error }
@@ -137,33 +166,51 @@ export async function createChantier(chantierData) {
 /**
  * Update an existing chantier
  * @param {string} chantierId - UUID of the chantier
- * @param {Object} chantierData - Updated chantier data
+ * @param {Object} chantierData - Updated chantier data (may include client_ids array)
  * @returns {Promise<{data: Object|null, error: any}>}
  */
 export async function updateChantier(chantierId, chantierData) {
   try {
-    const { data, error } = await supabase
+    // Extract client_ids from chantierData
+    const { client_ids, ...chantierFields } = chantierData
+
+    // Update chantier fields
+    const { error: chantierError } = await supabase
       .from('chantiers')
-      .update(chantierData)
+      .update(chantierFields)
       .eq('id', chantierId)
-      .select(`
-        *,
-        client:contacts(
-          id,
-          type,
-          contact_type,
-          company_name,
-          first_name,
-          last_name,
-          phone,
-          email
-        )
-      `)
-      .single()
 
-    if (error) throw error
+    if (chantierError) throw chantierError
 
-    return { data, error: null }
+    // Update clients if client_ids provided
+    if (client_ids && Array.isArray(client_ids)) {
+      if (client_ids.length === 0) {
+        throw new Error('Au moins un client est requis')
+      }
+
+      // Delete existing client relationships
+      const { error: deleteError } = await supabase
+        .from('chantier_clients')
+        .delete()
+        .eq('chantier_id', chantierId)
+
+      if (deleteError) throw deleteError
+
+      // Insert new client relationships
+      const chantierClientsData = client_ids.map(client_id => ({
+        chantier_id: chantierId,
+        contact_id: client_id
+      }))
+
+      const { error: insertError } = await supabase
+        .from('chantier_clients')
+        .insert(chantierClientsData)
+
+      if (insertError) throw insertError
+    }
+
+    // Fetch complete chantier with clients
+    return await getChantierById(chantierId)
   } catch (error) {
     console.error('Error updating chantier:', error)
     return { data: null, error }

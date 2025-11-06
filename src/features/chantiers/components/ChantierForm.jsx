@@ -7,6 +7,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { Upload, FileText, X } from 'lucide-react'
 import Input from '../../../shared/components/ui/Input'
 import Select from '../../../shared/components/ui/Select'
+import SearchableSelect from '../../../shared/components/ui/SearchableSelect'
 import { getAllContacts } from '../../contacts/services/contactsService'
 import { getClientDisplayName } from '../utils/chantierHelpers'
 import { validatePDFFile, formatFileSize } from '../services/documentsService'
@@ -21,7 +22,7 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
     titre: '',
     description: '',
     statut: 'devis',
-    client_id: '',
+    client_ids: [],
     date_debut: '',
     date_fin_prevue: '',
     date_fin_reelle: '',
@@ -117,18 +118,38 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
 
   // Options for Client select
   const clientOptions = useMemo(() => {
-    const placeholder = {
-      value: '',
-      label: loadingClients ? 'Chargement des clients...' : 'Sélectionner un client'
-    }
+    // Filter out already selected clients
+    const selectedIds = formData.client_ids || []
+    const availableClients = clients.filter(c => !selectedIds.includes(c.id))
 
-    const clientsList = clients.map(client => ({
+    return availableClients.map(client => ({
       value: client.id,
       label: getClientDisplayName(client)
     }))
+  }, [clients, formData.client_ids])
 
-    return [placeholder, ...clientsList]
-  }, [clients, loadingClients])
+  // Get selected clients details
+  const selectedClients = useMemo(() => {
+    const selectedIds = formData.client_ids || []
+    return selectedIds
+      .map(id => clients.find(c => c.id === id))
+      .filter(Boolean)
+  }, [formData.client_ids, clients])
+
+  // Handle adding a client
+  const handleAddClient = (clientId) => {
+    if (!clientId) return
+    const currentIds = formData.client_ids || []
+    if (!currentIds.includes(clientId)) {
+      onChange({ ...formData, client_ids: [...currentIds, clientId] })
+    }
+  }
+
+  // Handle removing a client
+  const handleRemoveClient = (clientId) => {
+    const currentIds = formData.client_ids || []
+    onChange({ ...formData, client_ids: currentIds.filter(id => id !== clientId) })
+  }
 
   return (
     <div className="space-y-6">
@@ -178,19 +199,44 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
           {errors.statut && <p className="mt-1 text-sm text-red-600">{errors.statut}</p>}
         </div>
 
-        {/* Client */}
+        {/* Clients */}
         <div>
-          <label htmlFor="client_id" className="block text-sm font-medium text-gray-700 mb-1">
-            Client *
+          <label htmlFor="client_ids" className="block text-sm font-medium text-gray-700 mb-1">
+            Clients * {selectedClients.length > 0 && `(${selectedClients.length} sélectionné${selectedClients.length > 1 ? 's' : ''})`}
           </label>
-          <Select
-            value={formData.client_id}
-            onChange={(value) => onChange({ ...formData, client_id: value })}
+
+          {/* Selected clients tags */}
+          {selectedClients.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {selectedClients.map(client => (
+                <div
+                  key={client.id}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-primary-100 text-primary-800 rounded-lg text-sm"
+                >
+                  <span className="font-medium">{getClientDisplayName(client)}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveClient(client.id)}
+                    className="hover:bg-primary-200 rounded p-0.5 transition-colors"
+                    title="Retirer ce client"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add client select */}
+          <SearchableSelect
+            value=""
+            onChange={handleAddClient}
             options={clientOptions}
             disabled={loadingClients}
-            placeholder={loadingClients ? 'Chargement des clients...' : 'Sélectionner un client'}
+            placeholder={loadingClients ? 'Chargement des clients...' : 'Ajouter un client...'}
+            searchPlaceholder="Rechercher un client..."
           />
-          {errors.client_id && <p className="mt-1 text-sm text-red-600">{errors.client_id}</p>}
+          {errors.client_ids && <p className="mt-1 text-sm text-red-600">{errors.client_ids}</p>}
         </div>
       </div>
 

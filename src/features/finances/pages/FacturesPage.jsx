@@ -137,7 +137,7 @@ export default function FacturesPage() {
   const contactsWithChantiersCount = useMemo(() => {
     return contacts.map(contact => {
       const chantiersEnCoursCount = chantiers.filter(
-        ch => ch.client_id === contact.id && ch.statut === 'en_cours'
+        ch => ch.clients?.some(client => client.id === contact.id) && ch.statut === 'en_cours'
       ).length
 
       return {
@@ -1562,7 +1562,9 @@ export default function FacturesPage() {
                   const currentType = editingFacture?.type || activeType
                   const filteredChantiers = chantiers
                     .filter(ch => {
-                      const matchesClient = currentType === 'client' ? ch.client_id === selectedContactId : true
+                      const matchesClient = currentType === 'client'
+                        ? ch.clients?.some(client => client.id === selectedContactId)
+                        : true
                       return matchesClient && ch.statut === 'en_cours'
                     })
                     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))

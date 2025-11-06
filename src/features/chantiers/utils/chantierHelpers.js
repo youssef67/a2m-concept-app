@@ -218,8 +218,8 @@ export function validateChantierData(data) {
     errors.statut = 'Le statut est obligatoire'
   }
 
-  if (!data.client_id) {
-    errors.client_id = 'Le client est obligatoire'
+  if (!data.client_ids || !Array.isArray(data.client_ids) || data.client_ids.length === 0) {
+    errors.client_ids = 'Au moins un client est obligatoire'
   }
 
   // Adresse complètement optionnelle - Pas de validation requise
