@@ -903,6 +903,29 @@ export default function FacturesPage() {
     }
   }
 
+  /**
+   * Get empty state message based on active tab and search query
+   */
+  const getEmptyStateMessage = (tab, searchQuery) => {
+    if (searchQuery) {
+      return tab === 'fin_chantier' ? 'Aucun chantier trouvé' : 'Aucune facture trouvée'
+    }
+
+    if (tab === 'fin_chantier') {
+      return 'Aucun chantier en fin de chantier'
+    }
+
+    // Messages pour les factures selon le statut
+    const statutMessages = {
+      'en_attente': 'Aucune facture en attente',
+      'partiellement_payee': 'Aucune facture partiellement payée',
+      'payee': 'Aucune facture payée',
+      'annulee': 'Aucune facture annulée'
+    }
+
+    return statutMessages[tab] || 'Aucune facture'
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -1094,9 +1117,7 @@ export default function FacturesPage() {
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-700 mb-2">
-              {searchQuery
-                ? 'Aucune facture trouvée'
-                : `Aucune facture ${activeType === 'client' ? 'client' : 'fournisseur'}`}
+              {getEmptyStateMessage(activeTab, searchQuery)}
             </h3>
             <p className="text-gray-600">
               {searchQuery
@@ -1111,14 +1132,12 @@ export default function FacturesPage() {
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-700 mb-2">
-              {searchQuery
-                ? 'Aucun chantier trouvé'
-                : 'Aucun chantier clôturé avec finalisation à 95%'}
+              {getEmptyStateMessage(activeTab, searchQuery)}
             </h3>
             <p className="text-gray-600">
               {searchQuery
                 ? 'Essayez de modifier votre recherche'
-                : 'Les chantiers clôturés avec finalisation à 95% apparaîtront ici'}
+                : 'Les chantiers en fin de chantier apparaîtront ici'}
             </p>
           </div>
         )}
