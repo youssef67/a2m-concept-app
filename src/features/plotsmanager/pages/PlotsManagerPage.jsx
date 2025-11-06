@@ -19,9 +19,14 @@ export default function PlotsManagerPage() {
   // Fetch only chantiers with status "en_cours"
   const { chantiers, loading, error } = useChantiers('en_cours')
 
-  // Filter chantiers by search query
+  // Filter chantiers by plot_manager_access and search query
   const filteredChantiers = useMemo(() => {
-    return searchChantiers(chantiers, searchQuery)
+    // First filter by plot_manager_access
+    const accessibleChantiers = chantiers.filter(
+      (chantier) => chantier.plot_manager_access === true
+    )
+    // Then apply search filter
+    return searchChantiers(accessibleChantiers, searchQuery)
   }, [chantiers, searchQuery])
 
   // Handle card click - navigate to detail page

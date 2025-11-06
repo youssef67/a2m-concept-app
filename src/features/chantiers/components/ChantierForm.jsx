@@ -31,6 +31,7 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
     montant_ht: '',
     montant_ttc: '',
     finalisation_95: false,
+    plot_manager_access: false,
     adresse_ligne1: '',
     ville: '',
     code_postal: '',
@@ -318,6 +319,21 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
           />
           <label htmlFor="finalisation_95" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
             Ce chantier a une finalisation à 95% (calculée sur montant HT)
+          </label>
+        </div>
+
+        {/* Checkbox Accès Plot Manager */}
+        <div className="flex items-center">
+          <input
+            id="plot_manager_access"
+            name="plot_manager_access"
+            type="checkbox"
+            checked={formData.plot_manager_access || false}
+            onChange={(e) => onChange({ ...formData, plot_manager_access: e.target.checked })}
+            className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+          />
+          <label htmlFor="plot_manager_access" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
+            Accès au module Plot Manager
           </label>
         </div>
       </div>
