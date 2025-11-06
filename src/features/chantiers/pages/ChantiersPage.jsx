@@ -92,6 +92,14 @@ export default function ChantiersPage() {
    */
   const handleCreate = async (chantierData) => {
     const result = await createChantier(chantierData)
+
+    if (result && result.success) {
+      showToast('Chantier créé avec succès', 'success')
+    } else {
+      const errorMessage = result?.error?.message || 'Erreur lors de la création du chantier'
+      showToast(errorMessage, 'error')
+    }
+
     return result
   }
 
@@ -100,6 +108,14 @@ export default function ChantiersPage() {
    */
   const handleUpdate = async (chantierData) => {
     const result = await updateChantier(selectedChantier.id, chantierData)
+
+    if (result && result.success) {
+      showToast('Chantier modifié avec succès', 'success')
+    } else {
+      const errorMessage = result?.error?.message || 'Erreur lors de la modification du chantier'
+      showToast(errorMessage, 'error')
+    }
+
     return result
   }
 
