@@ -83,6 +83,7 @@ export default function FacturesPage() {
   const [openMenuId, setOpenMenuId] = useState(null)
   const [formKey, setFormKey] = useState(0)
   const fileInputRef = useRef(null)
+  const initialDateEmissionRef = useRef(null) // Track initial date emission in edit mode
 
   // Bulk actions states
   const [selectionMode, setSelectionMode] = useState(false)
@@ -196,13 +197,36 @@ export default function FacturesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Empty dependency array = run only on mount
 
+  // Track initial date emission when opening edit modal
+  React.useEffect(() => {
+    if (editingFacture && isModalOpen) {
+      initialDateEmissionRef.current = editingFacture.date_emission
+    } else if (!isModalOpen) {
+      initialDateEmissionRef.current = null
+    }
+  }, [editingFacture, isModalOpen])
+
   // Auto-calculate date échéance when contact or date émission changes
   React.useEffect(() => {
+    // Mode création : calcul automatique
     if (selectedContactId && dateEmission && isModalOpen && !editingFacture) {
       const contact = contacts.find(c => c.id === selectedContactId)
       if (contact?.delai_paiement) {
         const calculatedDate = calculateDateEcheance(dateEmission, contact.delai_paiement)
         setDateEcheance(calculatedDate)
+      }
+    }
+
+    // Mode édition : recalculer UNIQUEMENT si dateEmission a changé manuellement
+    if (editingFacture && isModalOpen && selectedContactId && dateEmission) {
+      const hasDateEmissionChanged = initialDateEmissionRef.current !== dateEmission
+
+      if (hasDateEmissionChanged) {
+        const contact = contacts.find(c => c.id === selectedContactId)
+        if (contact?.delai_paiement) {
+          const calculatedDate = calculateDateEcheance(dateEmission, contact.delai_paiement)
+          setDateEcheance(calculatedDate)
+        }
       }
     }
   }, [selectedContactId, dateEmission, contacts, isModalOpen, editingFacture])
