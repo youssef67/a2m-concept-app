@@ -825,7 +825,8 @@ export default function FacturesPage() {
       setIsModalOpen(false)
       setEditingFacture(null)
     } else {
-      showToast('Erreur lors de l\'enregistrement', 'error')
+      // Display specific error message from service
+      showToast(result.error || 'Erreur lors de l\'enregistrement', 'error')
     }
   }
 

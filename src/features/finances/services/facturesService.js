@@ -9,6 +9,50 @@ import { getMontantAPayer } from '../utils/factureHelpers'
 import { createPaiement } from './paiementsService'
 
 /**
+ * Parse Supabase error and return user-friendly message in French
+ * @param {Object} error - Supabase error object
+ * @returns {string} User-friendly error message
+ */
+function parseSupabaseError(error) {
+  // Duplicate numero_facture (unique violation)
+  if (error.code === '23505' && error.message?.includes('factures_numero_facture_unique')) {
+    return 'Ce numéro de facture existe déjà. Veuillez en choisir un autre ou laisser vide pour génération automatique.'
+  }
+
+  // Generic duplicate key violation
+  if (error.code === '23505') {
+    return 'Cette valeur existe déjà dans la base de données.'
+  }
+
+  // Foreign key violation (contact doesn't exist)
+  if (error.code === '23503') {
+    if (error.message?.includes('contact_id')) {
+      return 'Le client/fournisseur sélectionné n\'existe pas ou a été supprimé.'
+    }
+    return 'Une des relations référencées n\'existe pas ou a été supprimée.'
+  }
+
+  // Check constraint violation (invalid data)
+  if (error.code === '23514') {
+    if (error.message?.includes('valid_dates')) {
+      return 'La date d\'échéance doit être >= à la date d\'émission.'
+    }
+    if (error.message?.includes('montant')) {
+      return 'Le montant doit être supérieur à 0.'
+    }
+    return 'Les données saisies ne respectent pas les contraintes de validation.'
+  }
+
+  // Not null violation
+  if (error.code === '23502') {
+    return 'Tous les champs obligatoires doivent être renseignés.'
+  }
+
+  // Generic error
+  return 'Erreur lors de l\'enregistrement de la facture.'
+}
+
+/**
  * Get all factures with contact information and payment totals
  * @param {string|null} type - Optional filter by type (client, fournisseur)
  * @returns {Promise<{data: Array|null, error: any}>}
@@ -218,7 +262,8 @@ export async function createFacture(factureData, deductions = []) {
     return { data: factureWithPaiements, error: null, success: true }
   } catch (error) {
     console.error('Error creating facture:', error)
-    return { data: null, error, success: false }
+    const errorMessage = parseSupabaseError(error)
+    return { data: null, error: errorMessage, success: false }
   }
 }
 
@@ -306,7 +351,8 @@ export async function updateFacture(factureId, factureData, deductions = null) {
     return { data: factureWithPaiements, error: null, success: true }
   } catch (error) {
     console.error('Error updating facture:', error)
-    return { data: null, error, success: false }
+    const errorMessage = parseSupabaseError(error)
+    return { data: null, error: errorMessage, success: false }
   }
 }
 
