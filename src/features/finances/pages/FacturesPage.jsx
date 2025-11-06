@@ -115,6 +115,7 @@ export default function FacturesPage() {
   const [tvaApplicable, setTvaApplicable] = useState(false)
   const [montantHT, setMontantHT] = useState('')
   const [montantTTC, setMontantTTC] = useState('')
+  const [montantApresDeductions, setMontantApresDeductions] = useState('')
 
   // Retenue de garantie states (legacy - kept for compatibility)
   const [retenueGarantie, setRetenueGarantie] = useState(false)
@@ -230,6 +231,22 @@ export default function FacturesPage() {
       setMontantTTC('')
     }
   }, [montantHT, tvaApplicable, factureType, retenueGarantie, montantRetenue, prorataApplicable, montantProrata, deductions])
+
+  // Auto-calculate montant après déductions for factures sans TVA (clients only)
+  React.useEffect(() => {
+    if (factureType === 'client' && !tvaApplicable && montantHT && deductions.length > 0) {
+      const ht = parseFloat(montantHT)
+      if (!isNaN(ht) && ht > 0) {
+        const totalDeductions = calculateTotalDeductions(deductions)
+        const montantNet = ht - totalDeductions
+        setMontantApresDeductions(montantNet.toFixed(2))
+      } else {
+        setMontantApresDeductions('')
+      }
+    } else {
+      setMontantApresDeductions('')
+    }
+  }, [montantHT, tvaApplicable, factureType, deductions])
 
   // Auto-calculate retenue when montantHT or retenueGarantie changes (clients only)
   React.useEffect(() => {
@@ -871,6 +888,7 @@ export default function FacturesPage() {
     setTvaApplicable(false)
     setMontantHT('')
     setMontantTTC('')
+    setMontantApresDeductions('')
     // Reset retenue states
     setRetenueGarantie(false)
     setMontantRetenue('')
@@ -1829,6 +1847,30 @@ export default function FacturesPage() {
                         €
                       </span>
                     </div>
+                  </div>
+                )}
+
+                {/* Montant après déductions (factures sans TVA avec déductions) */}
+                {!tvaApplicable && montantApresDeductions && deductions.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Montant après déductions (€)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={montantApresDeductions}
+                        readOnly
+                        disabled
+                        className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed font-medium"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                        €
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Calculé automatiquement : HT - déductions
+                    </p>
                   </div>
                 )}
 

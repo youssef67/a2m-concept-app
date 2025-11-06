@@ -185,7 +185,7 @@ export function calculateProrata(montantHT) {
 }
 
 /**
- * Get montant à afficher (TTC si TVA applicable, sinon HT)
+ * Get montant à afficher (TTC si TVA applicable, sinon HT - déductions)
  * @param {Object} facture - Facture object
  * @returns {number} Montant à afficher
  */
@@ -197,11 +197,14 @@ export function getMontantAPayer(facture) {
     return facture.montant_ttc || facture.montant || 0
   }
 
-  // Client : TTC si TVA applicable, sinon HT
+  // Client : TTC si TVA applicable, sinon HT - déductions
   if (facture.tva_applicable) {
     return facture.montant_ttc || facture.montant || 0
   } else {
-    return facture.montant_ht || facture.montant || 0
+    // Pour factures sans TVA: HT - déductions
+    const ht = facture.montant_ht || facture.montant || 0
+    const totalDeductions = calculateTotalDeductions(facture.deductions || [])
+    return ht - totalDeductions
   }
 }
 
