@@ -39,8 +39,8 @@ export function useFactures() {
   /**
    * Create a new facture
    */
-  const createFacture = async (factureData) => {
-    const result = await createFactureService(factureData)
+  const createFacture = async (factureData, deductions = []) => {
+    const result = await createFactureService(factureData, deductions)
 
     if (result.success) {
       // Add to local state
@@ -53,8 +53,8 @@ export function useFactures() {
   /**
    * Update an existing facture
    */
-  const updateFacture = async (factureId, factureData) => {
-    const result = await updateFactureService(factureId, factureData)
+  const updateFacture = async (factureId, factureData, deductions = null) => {
+    const result = await updateFactureService(factureId, factureData, deductions)
 
     if (result.success) {
       // Update in local state

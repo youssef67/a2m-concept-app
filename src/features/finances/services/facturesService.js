@@ -300,6 +300,7 @@ export async function updateFacture(factureId, factureData, deductions = null) {
 
         if (deductionsError) {
           console.error('Error inserting deductions:', deductionsError)
+          throw deductionsError
         }
       }
     }
@@ -319,6 +320,11 @@ export async function updateFacture(factureId, factureData, deductions = null) {
           last_name,
           phone,
           email
+        ),
+        chantier:chantiers(
+          id,
+          titre,
+          statut
         ),
         deductions:facture_deductions(
           id,
