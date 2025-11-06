@@ -55,8 +55,8 @@ export default function ContactModal({
         })
       } else {
         // Creating new contact
-        // Si fournisseur → forcer professionnel, sinon particulier par défaut
-        const initialContactType = defaultType === 'fournisseur' ? 'professionnel' : 'particulier'
+        // Professionnel par défaut pour tous les contacts
+        const initialContactType = 'professionnel'
 
         setFormData({
           type: defaultType,
