@@ -10,6 +10,7 @@ import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
 import SubTabs from '../../../shared/components/ui/SubTabs'
 import Select from '../../../shared/components/ui/Select'
+import SearchableSelect from '../../../shared/components/ui/SearchableSelect'
 import Pagination from '../../../shared/components/ui/Pagination'
 import Spinner from '../../../shared/components/ui/Spinner'
 import Alert from '../../../shared/components/ui/Alert'
@@ -131,6 +132,32 @@ export default function FacturesPage() {
   const { chantiers, refetch: refetchChantiers } = useChantiers()
   const { documents, loading: docsLoading, uploading, upload, download, remove } = useDocuments(selectedFacture?.id)
   const { showToast } = useToast()
+
+  // Calculate chantiers count per contact (EN COURS only)
+  const contactsWithChantiersCount = useMemo(() => {
+    return contacts.map(contact => {
+      const chantiersEnCoursCount = chantiers.filter(
+        ch => ch.client_id === contact.id && ch.statut === 'en_cours'
+      ).length
+
+      return {
+        ...contact,
+        chantiersCount: chantiersEnCoursCount
+      }
+    })
+  }, [contacts, chantiers])
+
+  // Sort contacts: with chantiers first (DESC), then without chantiers
+  const sortedContacts = useMemo(() => {
+    return [...contactsWithChantiersCount].sort((a, b) => {
+      // Contacts with chantiers come first
+      if (a.chantiersCount > 0 && b.chantiersCount === 0) return -1
+      if (a.chantiersCount === 0 && b.chantiersCount > 0) return 1
+
+      // Sort by count DESC for contacts with chantiers
+      return b.chantiersCount - a.chantiersCount
+    })
+  }, [contactsWithChantiersCount])
 
   // Auto-calculate date échéance when contact or date émission changes
   React.useEffect(() => {
@@ -1500,19 +1527,20 @@ export default function FacturesPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {activeType === 'client' ? 'Client' : 'Fournisseur'} *
               </label>
-              <Select
+              <SearchableSelect
                 value={selectedContactId}
                 onChange={setSelectedContactId}
-                options={[
-                  { value: '', label: 'Sélectionner...' },
-                  ...contacts
-                    .filter(c => c.type === (editingFacture?.type || activeType))
-                    .map(contact => ({
-                      value: contact.id,
-                      label: getContactDisplayName(contact)
-                    }))
-                ]}
+                options={sortedContacts
+                  .filter(c => c.type === (editingFacture?.type || activeType))
+                  .map(contact => ({
+                    value: contact.id,
+                    label: getContactDisplayName(contact),
+                    subtitle: contact.type === 'client'
+                      ? `${contact.chantiersCount} chantier${contact.chantiersCount > 1 ? 's' : ''} en cours`
+                      : undefined
+                  }))}
                 placeholder="Sélectionner..."
+                searchPlaceholder="Rechercher..."
               />
               <input type="hidden" name="contact_id" value={selectedContactId} />
             </div>
