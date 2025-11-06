@@ -46,11 +46,18 @@ export default function ContactCard({ contact, onView, onEdit, onDelete }) {
             <h3 className="text-lg font-semibold text-gray-900 break-words">
               {displayName}
             </h3>
-            <span
-              className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${entityTypeBadgeColor}`}
-            >
-              {entityTypeLabel}
-            </span>
+            <div className="flex flex-wrap gap-2">
+              <span
+                className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${entityTypeBadgeColor}`}
+              >
+                {entityTypeLabel}
+              </span>
+              {contact.type === 'fournisseur' && contact.is_sous_traitant && (
+                <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Sous-traitant
+                </span>
+              )}
+            </div>
           </div>
           {/* Badge indicateur de notes */}
           {contact.notes && contact.notes.trim() !== '' && (

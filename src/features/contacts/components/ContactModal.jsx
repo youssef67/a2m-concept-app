@@ -38,6 +38,7 @@ export default function ContactModal({
           email: contact.email || '',
           notes: contact.notes || '',
           delai_paiement: contact.delai_paiement || 'immediat',
+          is_sous_traitant: contact.is_sous_traitant || false,
           address: contact.address ? {
             address_line1: contact.address.address_line1 || '',
             address_line2: contact.address.address_line2 || '',
@@ -68,6 +69,7 @@ export default function ContactModal({
           email: '',
           notes: '',
           delai_paiement: 'immediat',
+          is_sous_traitant: false,
           address: {
             address_line1: '',
             address_line2: '',

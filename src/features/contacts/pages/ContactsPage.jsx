@@ -19,6 +19,7 @@ export default function ContactsPage() {
   // State
   const [activeTab, setActiveTab] = useState('client')
   const [searchQuery, setSearchQuery] = useState('')
+  const [showSousTraitantsOnly, setShowSousTraitantsOnly] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
@@ -40,11 +41,16 @@ export default function ContactsPage() {
   // Filter and search contacts
   const filteredContacts = useMemo(() => {
     // Filter by active tab (type)
-    const typeFiltered = contacts.filter(contact => contact.type === activeTab)
+    let typeFiltered = contacts.filter(contact => contact.type === activeTab)
+
+    // Filter by sous-traitant if checkbox is enabled (only for fournisseurs)
+    if (activeTab === 'fournisseur' && showSousTraitantsOnly) {
+      typeFiltered = typeFiltered.filter(contact => contact.is_sous_traitant === true)
+    }
 
     // Apply search
     return searchContacts(typeFiltered, searchQuery)
-  }, [contacts, activeTab, searchQuery])
+  }, [contacts, activeTab, searchQuery, showSousTraitantsOnly])
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredContacts.length / ITEMS_PER_PAGE)
@@ -56,10 +62,15 @@ export default function ContactsPage() {
     return filteredContacts.slice(startIndex, endIndex)
   }, [filteredContacts, currentPage])
 
-  // Reset to page 1 when tab or search changes
+  // Reset to page 1 when tab, search, or filter changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [activeTab, searchQuery])
+  }, [activeTab, searchQuery, showSousTraitantsOnly])
+
+  // Reset sous-traitant filter when switching tabs
+  useEffect(() => {
+    setShowSousTraitantsOnly(false)
+  }, [activeTab])
 
   // Count contacts by type
   const clientsCount = contacts.filter(c => c.type === 'client').length
@@ -199,16 +210,38 @@ export default function ContactsPage() {
       {/* Tabs */}
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-      {/* Search bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Rechercher un contact..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-        />
+      {/* Search bar and filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        {/* Search bar */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Rechercher un contact..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* Sous-traitant filter (only visible for fournisseurs) */}
+        {activeTab === 'fournisseur' && (
+          <div className="flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-lg bg-white">
+            <input
+              type="checkbox"
+              id="filter-sous-traitants"
+              checked={showSousTraitantsOnly}
+              onChange={(e) => setShowSousTraitantsOnly(e.target.checked)}
+              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 focus:ring-2"
+            />
+            <label
+              htmlFor="filter-sous-traitants"
+              className="text-sm font-medium text-gray-700 whitespace-nowrap cursor-pointer"
+            >
+              Sous-traitants uniquement
+            </label>
+          </div>
+        )}
       </div>
 
       {/* Error state */}

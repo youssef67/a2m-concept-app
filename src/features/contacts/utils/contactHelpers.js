@@ -246,7 +246,8 @@ export function prepareContactData(formData) {
     phone: normalizePhoneNumber(formData.phone),
     email: formData.email || null,
     notes: formData.notes || null,
-    delai_paiement: formData.delai_paiement || 'immediat'
+    delai_paiement: formData.delai_paiement || 'immediat',
+    is_sous_traitant: formData.is_sous_traitant || false
   }
 
   if (formData.contact_type === 'professionnel') {

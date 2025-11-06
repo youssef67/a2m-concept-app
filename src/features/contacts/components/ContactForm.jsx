@@ -389,6 +389,30 @@ export default function ContactForm({
         />
       </div>
 
+      {/* Sous-traitant checkbox (for fournisseur only) */}
+      {formData.type === 'fournisseur' && (
+        <div className="flex items-start">
+          <div className="flex items-center h-5">
+            <input
+              type="checkbox"
+              id="is_sous_traitant"
+              checked={formData.is_sous_traitant || false}
+              onChange={(e) => handleChange('is_sous_traitant', e.target.checked)}
+              disabled={isSubmitting}
+              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 focus:ring-2"
+            />
+          </div>
+          <div className="ml-3">
+            <label htmlFor="is_sous_traitant" className="text-sm font-medium text-gray-700">
+              Sous-traitant
+            </label>
+            <p className="text-xs text-gray-500">
+              Cochez cette case si ce fournisseur est un sous-traitant
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Contact persons (for professionnel) */}
       {isProfessionnel && (
         <div className="space-y-4">

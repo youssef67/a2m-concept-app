@@ -70,6 +70,11 @@ export default function ContactDetailModal({
               <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
                 {typeLabel}
               </span>
+              {contact.type === 'fournisseur' && contact.is_sous_traitant && (
+                <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                  Sous-traitant
+                </span>
+              )}
             </div>
           </div>
         </div>
