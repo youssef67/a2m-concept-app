@@ -105,13 +105,17 @@ export default function ContactsPage() {
           addressData,
           contactPersons
         )
+        if (result.success) {
+          showToast('Contact modifié avec succès', 'success')
+          handleContactModalClose()
+        }
       } else {
         // Create new contact
         result = await createContact(contactData, addressData, contactPersons)
-      }
-
-      if (result.success) {
-        handleContactModalClose()
+        if (result.success) {
+          showToast('Contact créé avec succès', 'success')
+          handleContactModalClose()
+        }
       }
     } catch (err) {
       console.error('Error submitting contact:', err)
