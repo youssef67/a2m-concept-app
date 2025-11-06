@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Users, Plus, Search } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
+import Pagination from '../../../shared/components/ui/Pagination'
 import ContactCard from '../components/ContactCard'
 import ContactModal from '../components/ContactModal'
 import ContactDetailModal from '../components/ContactDetailModal'
@@ -11,10 +12,14 @@ import { useContacts } from '../hooks/useContacts'
 import { searchContacts, getContactTypeLabel } from '../utils/contactHelpers'
 import { useToast } from '../../../shared/hooks/useToast'
 
+// Nombre de contacts par page
+const ITEMS_PER_PAGE = 9
+
 export default function ContactsPage() {
   // State
   const [activeTab, setActiveTab] = useState('client')
   const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -40,6 +45,21 @@ export default function ContactsPage() {
     // Apply search
     return searchContacts(typeFiltered, searchQuery)
   }, [contacts, activeTab, searchQuery])
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredContacts.length / ITEMS_PER_PAGE)
+
+  // Get contacts for current page
+  const paginatedContacts = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+    const endIndex = startIndex + ITEMS_PER_PAGE
+    return filteredContacts.slice(startIndex, endIndex)
+  }, [filteredContacts, currentPage])
+
+  // Reset to page 1 when tab or search changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeTab, searchQuery])
 
   // Count contacts by type
   const clientsCount = contacts.filter(c => c.type === 'client').length
@@ -227,17 +247,27 @@ export default function ContactsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
-              {filteredContacts.map((contact) => (
-                <ContactCard
-                  key={contact.id}
-                  contact={contact}
-                  onView={handleViewContact}
-                  onEdit={handleEditContact}
-                  onDelete={handleDeleteContact}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+                {paginatedContacts.map((contact) => (
+                  <ContactCard
+                    key={contact.id}
+                    contact={contact}
+                    onView={handleViewContact}
+                    onEdit={handleEditContact}
+                    onDelete={handleDeleteContact}
+                  />
+                ))}
+              </div>
+
+              {/* Pagination */}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                className="mt-6"
+              />
+            </>
           )}
         </>
       )}
