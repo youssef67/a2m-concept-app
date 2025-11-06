@@ -82,8 +82,28 @@ export async function getAppartementDocumentsWithStatus(appartementId, chantierI
 
       return {
         documentRequis: docRequis,
-        uploadedFile: uploadedFile || null
+        uploadedFile: uploadedFile || null,
+        isOrphan: false
       }
+    })
+
+    // Find orphan documents (uploaded but no longer in required list)
+    const documentsRequisIds = (documentsRequis || []).map(d => d.id)
+    const orphanDocs = (uploadedDocs || []).filter(
+      (doc) => !documentsRequisIds.includes(doc.document_requis_id)
+    )
+
+    // Add orphan documents to the list
+    orphanDocs.forEach((orphanDoc) => {
+      documentsWithStatus.push({
+        documentRequis: {
+          id: orphanDoc.document_requis_id,
+          nom_document: '[Document obsolète]',
+          ordre: 999
+        },
+        uploadedFile: orphanDoc,
+        isOrphan: true
+      })
     })
 
     return { data: documentsWithStatus, error: null }
