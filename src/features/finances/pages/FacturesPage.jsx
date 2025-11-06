@@ -40,7 +40,9 @@ import {
   calculateProrata,
   getMontantAPayer,
   getMontantLabel,
-  validateNumeroFacture
+  validateNumeroFacture,
+  calculateTotalDeductions,
+  calculateDeductionMontant
 } from '../utils/factureHelpers'
 import {
   getClientDisplayName as getChantierClientName,
@@ -56,6 +58,13 @@ import {
   isEcheancePassee
 } from '../../chantiers/utils/chantierHelpers'
 import { canFactureBePaid, canFactureBeDeleted } from '../utils/factureValidation'
+
+// Predefined deduction types
+const DEDUCTION_TYPES = [
+  { id: 'retenue', label: 'Retenue de garantie', pourcentage: 5.00 },
+  { id: 'prorata', label: 'Prorata', pourcentage: 2.00 },
+  { id: 'autre', label: 'Autre (personnalisé)', pourcentage: null }
+]
 
 export default function FacturesPage() {
   // State
@@ -107,13 +116,20 @@ export default function FacturesPage() {
   const [montantHT, setMontantHT] = useState('')
   const [montantTTC, setMontantTTC] = useState('')
 
-  // Retenue de garantie states
+  // Retenue de garantie states (legacy - kept for compatibility)
   const [retenueGarantie, setRetenueGarantie] = useState(false)
   const [montantRetenue, setMontantRetenue] = useState('')
 
-  // Prorata states
+  // Prorata states (legacy - kept for compatibility)
   const [prorataApplicable, setProrataApplicable] = useState(false)
   const [montantProrata, setMontantProrata] = useState('')
+
+  // Deductions flexibles states (new system)
+  const [deductions, setDeductions] = useState([])
+  const [selectedDeductionType, setSelectedDeductionType] = useState('')
+  const [customIntitule, setCustomIntitule] = useState('')
+  const [pourcentageDeduction, setPourcentageDeduction] = useState('')
+  const [montantDeduction, setMontantDeduction] = useState('')
 
   // Finalisation 95% states
   const [exclueFinalization, setExclueFinalization] = useState(false)
@@ -177,14 +193,18 @@ export default function FacturesPage() {
     }
   }, [selectedContactId, isModalOpen, editingFacture])
 
-  // Auto-calculate TTC when montantHT, TVA, retenue or prorata changes (clients only)
+  // Auto-calculate TTC when montantHT, TVA, or deductions change (clients only)
   React.useEffect(() => {
     if (factureType === 'client' && tvaApplicable && montantHT) {
       const ht = parseFloat(montantHT)
       if (!isNaN(ht) && ht > 0) {
         let baseCalcul = ht
 
-        // Déduire la retenue de garantie si applicable (utilise le montant saisi)
+        // Déduire le total des déductions
+        const totalDeductions = calculateTotalDeductions(deductions)
+        baseCalcul -= totalDeductions
+
+        // Legacy: Déduire la retenue de garantie si applicable (pour compatibilité)
         if (retenueGarantie && montantRetenue) {
           const retenue = parseFloat(montantRetenue)
           if (!isNaN(retenue)) {
@@ -192,7 +212,7 @@ export default function FacturesPage() {
           }
         }
 
-        // Déduire le prorata si applicable (utilise le montant saisi)
+        // Legacy: Déduire le prorata si applicable (pour compatibilité)
         if (prorataApplicable && montantProrata) {
           const prorata = parseFloat(montantProrata)
           if (!isNaN(prorata)) {
@@ -209,7 +229,7 @@ export default function FacturesPage() {
     } else {
       setMontantTTC('')
     }
-  }, [montantHT, tvaApplicable, factureType, retenueGarantie, montantRetenue, prorataApplicable, montantProrata])
+  }, [montantHT, tvaApplicable, factureType, retenueGarantie, montantRetenue, prorataApplicable, montantProrata, deductions])
 
   // Auto-calculate retenue when montantHT or retenueGarantie changes (clients only)
   React.useEffect(() => {
@@ -427,6 +447,100 @@ export default function FacturesPage() {
   const totalPages = activeTab === 'fin_chantier'
     ? Math.ceil(filteredChantiers.length / ITEMS_PER_PAGE)
     : Math.ceil(filteredFactures.length / ITEMS_PER_PAGE)
+
+  // Auto-calculate deduction amount when percentage or montantHT changes
+  React.useEffect(() => {
+    if (pourcentageDeduction && montantHT) {
+      const ht = parseFloat(montantHT)
+      const pourcent = parseFloat(pourcentageDeduction)
+      if (!isNaN(ht) && ht > 0 && !isNaN(pourcent) && pourcent > 0) {
+        const montant = calculateDeductionMontant(ht, pourcent)
+        setMontantDeduction(montant.toFixed(2))
+      } else {
+        setMontantDeduction('')
+      }
+    } else {
+      setMontantDeduction('')
+    }
+  }, [pourcentageDeduction, montantHT])
+
+  /**
+   * Handle deduction type selection
+   */
+  const handleDeductionTypeChange = (value) => {
+    setSelectedDeductionType(value)
+
+    // Find the selected type details
+    const selectedType = DEDUCTION_TYPES.find(t => t.id === value)
+
+    if (selectedType) {
+      if (selectedType.pourcentage !== null) {
+        // Predefined deduction: auto-fill percentage
+        setPourcentageDeduction(selectedType.pourcentage.toString())
+        setCustomIntitule('') // Not needed for predefined
+      } else {
+        // Custom deduction: clear percentage, user will enter
+        setPourcentageDeduction('')
+        setCustomIntitule('')
+      }
+    }
+  }
+
+  /**
+   * Handle add deduction to list
+   */
+  const handleAddDeduction = () => {
+    // Validation
+    if (!selectedDeductionType) {
+      showToast('Veuillez sélectionner un type de déduction', 'error')
+      return
+    }
+
+    let intitule = ''
+    if (selectedDeductionType === 'autre') {
+      if (!customIntitule || customIntitule.trim() === '') {
+        showToast('Veuillez saisir un intitulé pour la déduction personnalisée', 'error')
+        return
+      }
+      intitule = customIntitule.trim()
+    } else {
+      const selectedType = DEDUCTION_TYPES.find(t => t.id === selectedDeductionType)
+      intitule = selectedType?.label || ''
+    }
+
+    if (!pourcentageDeduction || parseFloat(pourcentageDeduction) <= 0) {
+      showToast('Veuillez saisir un pourcentage valide', 'error')
+      return
+    }
+
+    if (!montantDeduction || parseFloat(montantDeduction) <= 0) {
+      showToast('Le montant de la déduction doit être supérieur à zéro', 'error')
+      return
+    }
+
+    // Add deduction to list
+    const newDeduction = {
+      id: Date.now(), // Temporary ID for UI
+      intitule,
+      pourcentage: parseFloat(pourcentageDeduction),
+      montant: parseFloat(montantDeduction)
+    }
+
+    setDeductions([...deductions, newDeduction])
+
+    // Reset form
+    setSelectedDeductionType('')
+    setCustomIntitule('')
+    setPourcentageDeduction('')
+    setMontantDeduction('')
+  }
+
+  /**
+   * Handle remove deduction from list
+   */
+  const handleRemoveDeduction = (deductionId) => {
+    setDeductions(deductions.filter(d => d.id !== deductionId))
+  }
 
   // Clear all filters function
   const handleClearFilters = () => {
@@ -657,9 +771,9 @@ export default function FacturesPage() {
 
     let result
     if (editingFacture) {
-      result = await updateFacture(editingFacture.id, data)
+      result = await updateFacture(editingFacture.id, data, deductions)
     } else {
-      result = await createFacture(data)
+      result = await createFacture(data, deductions)
     }
 
     if (result.success) {
@@ -734,6 +848,8 @@ export default function FacturesPage() {
     setRaisonExclusion(facture.raison_exclusion || '')
     // Initialize numero facture (for clients only)
     setNumeroFacture(facture.numero_facture || '')
+    // Initialize deductions (new system)
+    setDeductions(facture.deductions || [])
     setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
@@ -768,6 +884,12 @@ export default function FacturesPage() {
     setRaisonExclusion('')
     // Reset numero facture
     setNumeroFacture('')
+    // Reset deductions (new system)
+    setDeductions([])
+    setSelectedDeductionType('')
+    setCustomIntitule('')
+    setPourcentageDeduction('')
+    setMontantDeduction('')
     setFormKey(prev => prev + 1)
     setIsModalOpen(true)
   }
@@ -1243,15 +1365,15 @@ export default function FacturesPage() {
                           <span className="ml-1 text-gray-400">(Auto-liquidation)</span>
                         )}
                       </span>
-                      {facture.type === 'client' && facture.retenue_garantie && (
-                        <span className="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                          Retenue 5%
-                        </span>
-                      )}
-                      {facture.type === 'client' && facture.prorata_applicable && (
-                        <span className="inline-flex items-center px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                          Prorata 2%
-                        </span>
+                      {facture.type === 'client' && facture.deductions?.length > 0 && (
+                        facture.deductions.map((deduction) => (
+                          <span
+                            key={deduction.id}
+                            className="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-medium"
+                          >
+                            {deduction.intitule} {deduction.pourcentage}%
+                          </span>
+                        ))
                       )}
                     </div>
 
@@ -1710,81 +1832,126 @@ export default function FacturesPage() {
                   </div>
                 )}
 
-                {/* Checkbox Retenue de garantie */}
-                <div className="flex items-center">
-                  <input
-                    id="retenue_garantie"
-                    name="retenue_garantie"
-                    type="checkbox"
-                    checked={retenueGarantie}
-                    onChange={(e) => setRetenueGarantie(e.target.checked)}
-                    className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
-                  />
-                  <label htmlFor="retenue_garantie" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
-                    Retenue de garantie (5%)
-                  </label>
-                </div>
+                {/* Déductions flexibles (nouveau système) */}
+                <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                  <h4 className="text-sm font-semibold text-gray-700">Déductions (optionnel)</h4>
 
-                {/* Montant Retenue (pré-rempli si checkbox cochée, modifiable manuellement) */}
-                {retenueGarantie && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Montant retenue (€)
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={montantRetenue}
-                        onChange={(e) => setMontantRetenue(e.target.value)}
-                        placeholder="50.00"
-                        className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
-                        €
-                      </span>
+                  {/* Liste des déductions ajoutées */}
+                  {deductions.length > 0 && (
+                    <div className="space-y-2">
+                      {deductions.map((deduction) => (
+                        <div key={deduction.id} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900">{deduction.intitule}</span>
+                              <span className="text-xs px-2 py-0.5 bg-primary-100 text-primary-800 rounded-full">
+                                {deduction.pourcentage}%
+                              </span>
+                            </div>
+                            <span className="text-sm text-gray-600">
+                              {formatCurrency(deduction.montant)}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDeduction(deduction.id)}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Checkbox Prorata */}
-                <div className="flex items-center">
-                  <input
-                    id="prorata_applicable"
-                    name="prorata_applicable"
-                    type="checkbox"
-                    checked={prorataApplicable}
-                    onChange={(e) => setProrataApplicable(e.target.checked)}
-                    className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
-                  />
-                  <label htmlFor="prorata_applicable" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
-                    Prorata (2%)
-                  </label>
-                </div>
-
-                {/* Montant Prorata (pré-rempli si checkbox cochée, modifiable manuellement) */}
-                {prorataApplicable && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Montant prorata (€)
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={montantProrata}
-                        onChange={(e) => setMontantProrata(e.target.value)}
-                        placeholder="20.00"
-                        className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  {/* Formulaire d'ajout de déduction */}
+                  <div className="space-y-3">
+                    {/* Type de déduction */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Type de déduction
+                      </label>
+                      <SearchableSelect
+                        value={selectedDeductionType}
+                        onChange={handleDeductionTypeChange}
+                        options={DEDUCTION_TYPES.map(type => ({
+                          value: type.id,
+                          label: type.label
+                        }))}
+                        placeholder="Sélectionner un type..."
                       />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
-                        €
-                      </span>
                     </div>
+
+                    {/* Intitulé personnalisé (si "Autre" sélectionné) */}
+                    {selectedDeductionType === 'autre' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Intitulé personnalisé
+                        </label>
+                        <input
+                          type="text"
+                          value={customIntitule}
+                          onChange={(e) => setCustomIntitule(e.target.value)}
+                          placeholder="Ex: Pénalités de retard"
+                          className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                      </div>
+                    )}
+
+                    {/* Pourcentage et montant (sur la même ligne en desktop) */}
+                    {selectedDeductionType && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Pourcentage (%)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            value={pourcentageDeduction}
+                            onChange={(e) => setPourcentageDeduction(e.target.value)}
+                            placeholder="5.00"
+                            className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Montant (€)
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={montantDeduction}
+                              onChange={(e) => setMontantDeduction(e.target.value)}
+                              placeholder="50.00"
+                              className="w-full h-12 px-4 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            />
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                              €
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bouton Ajouter */}
+                    {selectedDeductionType && (
+                      <button
+                        type="button"
+                        onClick={handleAddDeduction}
+                        className="w-full h-10 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Plus className="w-5 h-5" />
+                        Ajouter la déduction
+                      </button>
+                    )}
                   </div>
-                )}
+                </div>
 
                 {/* Checkbox Exclure de la finalisation (si chantier avec finalisation_95) */}
                 {chantierLie?.finalisation_95 && (

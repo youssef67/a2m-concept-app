@@ -33,6 +33,13 @@ export async function getAllFactures(type = null) {
           id,
           titre,
           statut
+        ),
+        deductions:facture_deductions(
+          id,
+          intitule,
+          pourcentage,
+          montant,
+          ordre
         )
       `)
       .order('date_emission', { ascending: false })
@@ -97,6 +104,13 @@ export async function getFactureById(factureId) {
           phone,
           email
         ),
+        deductions:facture_deductions(
+          id,
+          intitule,
+          pourcentage,
+          montant,
+          ordre
+        ),
         chantier:chantiers(
           id,
           titre,
@@ -118,9 +132,10 @@ export async function getFactureById(factureId) {
 /**
  * Create a new facture
  * @param {Object} factureData - Facture data
+ * @param {Array} deductions - Optional array of deductions {intitule, pourcentage, montant}
  * @returns {Promise<{data: Object|null, error: any, success: boolean}>}
  */
-export async function createFacture(factureData) {
+export async function createFacture(factureData, deductions = []) {
   try {
     const { data, error } = await supabase
       .from('factures')
@@ -136,11 +151,38 @@ export async function createFacture(factureData) {
           last_name,
           phone,
           email
+        ),
+        deductions:facture_deductions(
+          id,
+          intitule,
+          pourcentage,
+          montant,
+          ordre
         )
       `)
       .single()
 
     if (error) throw error
+
+    // Insert deductions if provided
+    if (deductions && deductions.length > 0) {
+      const deductionsData = deductions.map((ded, index) => ({
+        facture_id: data.id,
+        intitule: ded.intitule,
+        pourcentage: ded.pourcentage || null,
+        montant: parseFloat(ded.montant),
+        ordre: index + 1
+      }))
+
+      const { error: deductionsError } = await supabase
+        .from('facture_deductions')
+        .insert(deductionsData)
+
+      if (deductionsError) {
+        console.error('Error inserting deductions:', deductionsError)
+        // Continue without failing the whole operation
+      }
+    }
 
     // Calculate montant à payer
     const montantAPayer = getMontantAPayer(data)
@@ -184,10 +226,39 @@ export async function createFacture(factureData) {
  * Update an existing facture
  * @param {string} factureId - UUID of the facture
  * @param {Object} factureData - Updated facture data
+ * @param {Array} deductions - Optional array of deductions {intitule, pourcentage, montant}
  * @returns {Promise<{data: Object|null, error: any, success: boolean}>}
  */
-export async function updateFacture(factureId, factureData) {
+export async function updateFacture(factureId, factureData, deductions = null) {
   try {
+    // If deductions are provided, delete existing ones and recreate
+    if (deductions !== null) {
+      // Delete existing deductions
+      await supabase
+        .from('facture_deductions')
+        .delete()
+        .eq('facture_id', factureId)
+
+      // Insert new deductions if any
+      if (deductions.length > 0) {
+        const deductionsData = deductions.map((ded, index) => ({
+          facture_id: factureId,
+          intitule: ded.intitule,
+          pourcentage: ded.pourcentage || null,
+          montant: parseFloat(ded.montant),
+          ordre: index + 1
+        }))
+
+        const { error: deductionsError } = await supabase
+          .from('facture_deductions')
+          .insert(deductionsData)
+
+        if (deductionsError) {
+          console.error('Error inserting deductions:', deductionsError)
+        }
+      }
+    }
+
     const { data, error } = await supabase
       .from('factures')
       .update(factureData)
@@ -203,6 +274,13 @@ export async function updateFacture(factureId, factureData) {
           last_name,
           phone,
           email
+        ),
+        deductions:facture_deductions(
+          id,
+          intitule,
+          pourcentage,
+          montant,
+          ordre
         )
       `)
       .single()

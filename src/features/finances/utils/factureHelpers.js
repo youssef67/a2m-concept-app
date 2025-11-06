@@ -310,3 +310,24 @@ export function validateNumeroFacture(numeroFacture) {
 
   return { valid: true, error: null }
 }
+
+/**
+ * Calculate total deductions from array of deductions
+ * @param {Array} deductions - Array of deduction objects with montant property
+ * @returns {number} Total montant of all deductions
+ */
+export function calculateTotalDeductions(deductions) {
+  if (!deductions || deductions.length === 0) return 0
+  return deductions.reduce((total, ded) => total + (parseFloat(ded.montant) || 0), 0)
+}
+
+/**
+ * Calculate deduction amount based on percentage and base montant HT
+ * @param {number} montantHT - Base montant HT
+ * @param {number} pourcentage - Percentage to apply
+ * @returns {number} Calculated deduction amount
+ */
+export function calculateDeductionMontant(montantHT, pourcentage) {
+  if (!montantHT || montantHT <= 0 || !pourcentage || pourcentage <= 0) return 0
+  return montantHT * (pourcentage / 100)
+}
