@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings, AlertCircle, XCircle, Building2, StickyNote, CheckCircle } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
@@ -149,6 +150,7 @@ export default function FacturesPage() {
   const { chantiers, refetch: refetchChantiers } = useChantiers()
   const { documents, loading: docsLoading, uploading, upload, download, remove } = useDocuments(selectedFacture?.id)
   const { showToast } = useToast()
+  const [searchParams] = useSearchParams()
 
   // Calculate chantiers count per contact (EN COURS only)
   const contactsWithChantiersCount = useMemo(() => {
@@ -175,6 +177,24 @@ export default function FacturesPage() {
       return b.chantiersCount - a.chantiersCount
     })
   }, [contactsWithChantiersCount])
+
+  // Apply filters from URL query params on mount
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    const type = searchParams.get('type')
+    const overdue = searchParams.get('overdue')
+
+    if (tab && ['en_attente', 'partiellement_payee', 'payee', 'annulee', 'fin_chantier'].includes(tab)) {
+      setActiveTab(tab)
+    }
+    if (type && ['client', 'fournisseur'].includes(type)) {
+      setActiveType(type)
+    }
+    if (overdue === 'true') {
+      setShowOverdueOnly(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Empty dependency array = run only on mount
 
   // Auto-calculate date échéance when contact or date émission changes
   React.useEffect(() => {

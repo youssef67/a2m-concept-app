@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Clock, CheckCircle, AlertTriangle, Calendar, CheckCircle2, TrendingUp, FileText, LogOut } from 'lucide-react'
+import { Clock, CheckCircle, AlertTriangle, Calendar, CheckCircle2, TrendingUp, FileText, LogOut, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { useFactures } from '../../finances/hooks/useFactures'
 import { useChantiers } from '../../chantiers/hooks/useChantiers'
@@ -384,40 +384,56 @@ export default function AdminDashboard() {
             )}
 
             {/* List of Factures clients en retard */}
-            {!loading && !error && facturesClientsEnRetard.length > 0 && (
-              <div className="space-y-3">
-                {facturesClientsEnRetard.map(facture => (
-                  <div
-                    key={facture.id}
-                    className="p-4 border border-red-200 bg-red-50 rounded-lg"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-base font-bold text-gray-900">
-                        {facture.numero_facture}
-                      </h3>
-                      <span className="px-3 py-1 bg-red-600 text-white rounded-full text-sm font-medium">
-                        {facture.joursRetard} jour{facture.joursRetard > 1 ? 's' : ''} de retard
-                      </span>
-                    </div>
+            {!loading && !error && facturesClientsEnRetard.length > 0 && (() => {
+              const top3 = facturesClientsEnRetard.slice(0, 3)
+              const remaining = Math.max(0, facturesClientsEnRetard.length - 3)
 
-                    <div className="space-y-1 text-sm text-gray-700">
-                      <p>
-                        <span className="font-medium">Client :</span>{' '}
-                        {getContactDisplayName(facture.contact)}
-                      </p>
-                      <p>
-                        <span className="font-medium">Chantier :</span>{' '}
-                        {facture.chantier?.titre || 'Aucun chantier'}
-                      </p>
-                      <p>
-                        <span className="font-medium">Montant :</span>{' '}
-                        <span className="text-red-700 font-semibold">{formatCurrency(facture.montant)}</span>
-                      </p>
+              return (
+                <div className="space-y-3">
+                  {top3.map(facture => (
+                    <div
+                      key={facture.id}
+                      className="p-4 border border-red-200 bg-red-50 rounded-lg"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-base font-bold text-gray-900">
+                          {facture.numero_facture}
+                        </h3>
+                        <span className="px-3 py-1 bg-red-600 text-white rounded-full text-sm font-medium">
+                          {facture.joursRetard} jour{facture.joursRetard > 1 ? 's' : ''} de retard
+                        </span>
+                      </div>
+
+                      <div className="space-y-1 text-sm text-gray-700">
+                        <p>
+                          <span className="font-medium">Client :</span>{' '}
+                          {getContactDisplayName(facture.contact)}
+                        </p>
+                        <p>
+                          <span className="font-medium">Chantier :</span>{' '}
+                          {facture.chantier?.titre || 'Aucun chantier'}
+                        </p>
+                        <p>
+                          <span className="font-medium">Montant :</span>{' '}
+                          <span className="text-red-700 font-semibold">{formatCurrency(facture.montant)}</span>
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+
+                  {/* Bouton "Afficher tout" si plus de 3 factures */}
+                  {remaining > 0 && (
+                    <button
+                      onClick={() => navigate('/dashboard/finances?tab=en_attente&type=client&overdue=true')}
+                      className="w-full mt-4 h-12 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <span>Afficher tout ({remaining})</span>
+                      <ArrowRight className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+              )
+            })()}
           </Card>
         </div>
 
