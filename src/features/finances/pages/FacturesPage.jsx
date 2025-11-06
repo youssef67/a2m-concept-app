@@ -447,8 +447,8 @@ export default function FacturesPage() {
 
     // 6. Trier par numéro de facture (du plus élevé au plus bas)
     return searched.sort((a, b) => {
-      const numA = parseInt(a.numero_facture.split('-').pop(), 10) || 0
-      const numB = parseInt(b.numero_facture.split('-').pop(), 10) || 0
+      const numA = a.numero_facture ? parseInt(a.numero_facture.split('-').pop(), 10) || 0 : 0
+      const numB = b.numero_facture ? parseInt(b.numero_facture.split('-').pop(), 10) || 0 : 0
       return numB - numA // Tri décroissant
     })
   }, [factures, activeTab, activeType, showOverdueOnly, selectedContactFilter, searchQuery])
