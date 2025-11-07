@@ -24,21 +24,20 @@ export default function PaiementModal({ isOpen, onClose, facture, onPaiementChan
   const [editingPaiement, setEditingPaiement] = useState(null)
   const [formKey, setFormKey] = useState(0)
   const [datePaiement, setDatePaiement] = useState(new Date().toISOString().split('T')[0])
+  const [montantPartiel, setMontantPartiel] = useState('')
+  const [reference, setReference] = useState('')
+  const [notes, setNotes] = useState('')
 
   /**
    * Handle form submit (create or update paiement)
    */
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const formData = new FormData(e.target)
 
     // Si paiement total, utiliser montantRestant automatiquement
     const montant = typePaiement === 'total' && !editingPaiement
       ? montantRestant
-      : parseFloat(formData.get('montant'))
-    const datePaiement = formData.get('date_paiement')
-    const reference = formData.get('reference')
-    const notes = formData.get('notes')
+      : parseFloat(montantPartiel)
 
     // Validation
     if (!montant || montant <= 0) {
@@ -64,8 +63,8 @@ export default function PaiementModal({ isOpen, onClose, facture, onPaiementChan
     const paiementData = {
       montant,
       date_paiement: datePaiement,
-      reference: reference || null,
-      notes: notes || null
+      reference: reference.trim() || null,
+      notes: notes.trim() || null
     }
 
     let result
@@ -84,6 +83,9 @@ export default function PaiementModal({ isOpen, onClose, facture, onPaiementChan
       setEditingPaiement(null)
       setTypePaiement('total')
       setDatePaiement(new Date().toISOString().split('T')[0])
+      setMontantPartiel('')
+      setReference('')
+      setNotes('')
 
       // Notify parent to refresh factures list
       if (onPaiementChange) {
@@ -121,6 +123,9 @@ export default function PaiementModal({ isOpen, onClose, facture, onPaiementChan
     setEditingPaiement(paiement)
     setTypePaiement('partiel') // Always use partiel for editing
     setDatePaiement(paiement.date_paiement)
+    setMontantPartiel(paiement.montant.toString())
+    setReference(paiement.reference || '')
+    setNotes(paiement.notes || '')
     setFormKey(prev => prev + 1)
     setShowForm(true)
   }
@@ -133,6 +138,9 @@ export default function PaiementModal({ isOpen, onClose, facture, onPaiementChan
     setEditingPaiement(null)
     setTypePaiement('total')
     setDatePaiement(new Date().toISOString().split('T')[0])
+    setMontantPartiel('')
+    setReference('')
+    setNotes('')
   }
 
   /**
@@ -270,7 +278,8 @@ export default function PaiementModal({ isOpen, onClose, facture, onPaiementChan
                 min="0.01"
                 max={typePaiement === 'partiel' ? montantRestant : undefined}
                 required
-                defaultValue={editingPaiement?.montant || ''}
+                value={montantPartiel}
+                onChange={(e) => setMontantPartiel(e.target.value)}
                 placeholder="0.00"
               />
             ) : (
@@ -312,7 +321,8 @@ export default function PaiementModal({ isOpen, onClose, facture, onPaiementChan
               name="reference"
               type="text"
               placeholder="Ex: Référence virement"
-              defaultValue={editingPaiement?.reference || ''}
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
             />
 
             {/* Notes */}
@@ -323,7 +333,8 @@ export default function PaiementModal({ isOpen, onClose, facture, onPaiementChan
               <textarea
                 name="notes"
                 rows="3"
-                defaultValue={editingPaiement?.notes || ''}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
                 placeholder="Notes additionnelles..."
               />
