@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle, MessageCircle, X, XCircle, FileCheck, FileText, ListOrdered } from 'lucide-react'
+import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle, MessageCircle, X, XCircle, FileCheck, FileText, ListOrdered, BadgeCheck } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
@@ -56,6 +56,7 @@ export default function PlotDetailPage() {
   const [sortByTaskCompletion, setSortByTaskCompletion] = useState(false)
   const [selectedTacheFilter, setSelectedTacheFilter] = useState('') // '' = toutes, sinon tacheId
   const [selectedEtageFilter, setSelectedEtageFilter] = useState('') // '' = tous, null = non spécifié, 0-10 = étage
+  const [showOnlyTMA, setShowOnlyTMA] = useState(false) // Filtre pour afficher uniquement les appartements avec TMA
   const [chantierTaches, setChantierTaches] = useState([]) // Liste des tâches du chantier
   const [creationResult, setCreationResult] = useState(null)
   const [showResultModal, setShowResultModal] = useState(false)
@@ -158,9 +159,14 @@ export default function PlotDetailPage() {
     })
   }, [filteredBySearch, showOnlyWithAllDocuments])
 
+  const filteredByTMA = useMemo(() => {
+    if (!showOnlyTMA) return filteredByDocuments
+    return filteredByDocuments.filter(appt => appt.has_tma)
+  }, [filteredByDocuments, showOnlyTMA])
+
   const filteredByEtage = useMemo(() => {
-    return filterAppartementsByEtage(filteredByDocuments, selectedEtageFilter)
-  }, [filteredByDocuments, selectedEtageFilter])
+    return filterAppartementsByEtage(filteredByTMA, selectedEtageFilter)
+  }, [filteredByTMA, selectedEtageFilter])
 
   const filteredByTache = useMemo(() => {
     if (!selectedTacheFilter) return filteredByEtage // Pas de filtre
@@ -522,8 +528,14 @@ export default function PlotDetailPage() {
     setSortByTaskCompletion(prev => !prev)
   }
 
+  // TMA filter handlers
+  const handleToggleTMAFilter = () => {
+    setShowOnlyTMA(prev => !prev)
+  }
+
   const handleClearAllFilters = () => {
     setSearchQuery('')
+    setShowOnlyTMA(false) // TMA filter is visible on all tabs
     // Only clear documents filter if in "en_attente" tab
     if (activeTab === 'en_attente') {
       setShowOnlyWithAllDocuments(false)
@@ -579,6 +591,8 @@ export default function PlotDetailPage() {
     if (activeTab !== 'en_cours') {
       setSortByTaskCompletion(false)
     }
+    // Reset TMA filter on tab change (filter is visible on all tabs)
+    setShowOnlyTMA(false)
   }, [activeTab])
 
   // Type labels
@@ -792,6 +806,20 @@ export default function PlotDetailPage() {
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[44px] text-base"
                     />
                   </div>
+
+                  {/* TMA filter button - visible on all tabs */}
+                  <button
+                    onClick={handleToggleTMAFilter}
+                    className={`flex items-center gap-2 px-4 py-3 border rounded-lg transition-colors min-h-[44px] whitespace-nowrap ${
+                      showOnlyTMA
+                        ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
+                    title="Afficher uniquement les appartements avec TMA"
+                  >
+                    <BadgeCheck className="w-5 h-5" />
+                    <span className="text-sm">Avec TMA</span>
+                  </button>
 
                   {/* Documents filter button - only in "En attente" tab and if at least one appt has all documents */}
                   {activeTab === 'en_attente' && stats.en_attente > 0 && hasAppartementsWithAllDocuments && !isValidationMode && (
