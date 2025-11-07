@@ -26,7 +26,8 @@ export default function CreateAppartementModal({
 
   const [formData, setFormData] = useState({
     nom: '',
-    etage: null
+    etage: null,
+    has_tma: false
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -37,13 +38,15 @@ export default function CreateAppartementModal({
         // Edit mode: pre-fill with existing data
         setFormData({
           nom: appartementToEdit.nom,
-          etage: appartementToEdit.etage !== undefined ? appartementToEdit.etage : null
+          etage: appartementToEdit.etage !== undefined ? appartementToEdit.etage : null,
+          has_tma: appartementToEdit.has_tma || false
         })
       } else {
         // Create mode: reset form
         setFormData({
           nom: '',
-          etage: null
+          etage: null,
+          has_tma: false
         })
       }
     }
@@ -110,7 +113,8 @@ export default function CreateAppartementModal({
     if (!isSubmitting) {
       setFormData({
         nom: '',
-        etage: null
+        etage: null,
+        has_tma: false
       })
       onClose()
     }
@@ -171,6 +175,28 @@ export default function CreateAppartementModal({
               placeholder="Sélectionner un étage..."
               disabled={isSubmitting}
             />
+          </div>
+
+          {/* TMA (Travaux Modificatifs Acquéreur) */}
+          <div className="flex items-start">
+            <div className="flex items-center h-5">
+              <input
+                type="checkbox"
+                id="has_tma"
+                checked={formData.has_tma || false}
+                onChange={(e) => setFormData({ ...formData, has_tma: e.target.checked })}
+                disabled={isSubmitting}
+                className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 focus:ring-2"
+              />
+            </div>
+            <div className="ml-3">
+              <label htmlFor="has_tma" className="text-sm font-medium text-gray-700">
+                TMA (Travaux Modificatifs Acquéreur)
+              </label>
+              <p className="text-xs text-gray-500">
+                Cochez si cet appartement a une TMA
+              </p>
+            </div>
           </div>
 
           {/* Actions */}

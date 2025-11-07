@@ -227,7 +227,8 @@ export async function createAppartementWithTaches(plotId, chantierId, appartemen
         plot_id: plotId,
         nom: appartementData.nom.trim(),
         ordre: nextOrdre,
-        etage: appartementData.etage !== undefined ? appartementData.etage : null
+        etage: appartementData.etage !== undefined ? appartementData.etage : null,
+        has_tma: appartementData.has_tma || false
       })
       .select()
       .single()
@@ -301,6 +302,10 @@ export async function updateAppartement(appartementId, appartementData) {
 
     if (appartementData.etage !== undefined) {
       updateData.etage = appartementData.etage
+    }
+
+    if (appartementData.has_tma !== undefined) {
+      updateData.has_tma = appartementData.has_tma
     }
 
     const { data, error: updateError } = await supabase

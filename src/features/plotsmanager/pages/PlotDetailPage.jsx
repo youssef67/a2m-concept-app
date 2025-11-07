@@ -985,6 +985,11 @@ export default function PlotDetailPage() {
                                     {appartement.etage !== null && appartement.etage !== undefined && (
                                       <span className="text-gray-500 font-normal"> • {formatEtage(appartement.etage)}</span>
                                     )}
+                                    {appartement.has_tma && (
+                                      <span className="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
+                                        TMA
+                                      </span>
+                                    )}
                                   </span>
                                   <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statutConfig.color} flex-shrink-0`}>
                                     {statutConfig.label}
