@@ -32,7 +32,7 @@ export default function ConfirmModal({
             <AlertTriangle className="w-6 h-6" />
           </div>
           <div className="flex-1">
-            <p className="text-sm text-gray-700">{message}</p>
+            <p className="text-sm text-gray-700 break-words">{message}</p>
           </div>
         </div>
 
