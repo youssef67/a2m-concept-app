@@ -26,12 +26,18 @@ export default function AppartementDocumentUploadModal({
 
   /**
    * Initialize selected document if provided
+   * OR auto-select if only one document available
    */
   useEffect(() => {
-    if (isOpen && selectedDocumentRequisId) {
-      setDocumentRequisId(selectedDocumentRequisId)
+    if (isOpen) {
+      if (selectedDocumentRequisId) {
+        setDocumentRequisId(selectedDocumentRequisId)
+      } else if (documentsRequis && documentsRequis.length === 1) {
+        // Auto-select if only one document
+        setDocumentRequisId(documentsRequis[0].id)
+      }
     }
-  }, [isOpen, selectedDocumentRequisId])
+  }, [isOpen, selectedDocumentRequisId, documentsRequis])
 
   /**
    * Cleanup preview URL on unmount
@@ -88,12 +94,12 @@ export default function AppartementDocumentUploadModal({
    */
   const handleUpload = async () => {
     if (!documentRequisId) {
-      setError('Veuillez sélectionner un document')
+      setError('Veuillez d\'abord sélectionner le type de document dans la liste ci-dessus')
       return
     }
 
     if (!selectedFile) {
-      setError('Veuillez sélectionner un fichier')
+      setError('Veuillez sélectionner un fichier ou prendre une photo')
       return
     }
 
@@ -150,16 +156,16 @@ export default function AppartementDocumentUploadModal({
 
         {/* Select required document */}
         {!selectedDocumentRequisId && (
-          <div>
-            <label htmlFor="document-requis" className="block text-sm font-medium text-gray-700 mb-2">
-              Document à ajouter <span className="text-red-500">*</span>
+          <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
+            <label htmlFor="document-requis" className="block text-base font-semibold text-yellow-900 mb-2">
+              1. Sélectionnez le type de document <span className="text-red-600">*</span>
             </label>
             <Select
               id="document-requis"
               value={documentRequisId}
               onChange={setDocumentRequisId}
               options={selectOptions}
-              placeholder="Sélectionnez un document"
+              placeholder="Choisir un document..."
               disabled={uploading}
             />
           </div>
@@ -177,6 +183,9 @@ export default function AppartementDocumentUploadModal({
         {/* File Input */}
         {!selectedFile && (
           <div>
+            <label className="block text-base font-semibold text-gray-900 mb-3">
+              2. Ajoutez le fichier
+            </label>
             <label
               htmlFor="document-upload"
               className="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
@@ -207,7 +216,7 @@ export default function AppartementDocumentUploadModal({
             <div className="mt-3 sm:hidden">
               <label
                 htmlFor="camera-upload"
-                className="flex items-center justify-center gap-2 w-full py-3 px-4 border-2 border-primary-300 rounded-lg cursor-pointer bg-primary-50 hover:bg-primary-100 transition-colors"
+                className="flex items-center justify-center gap-2 w-full py-3 px-4 border-2 border-primary-300 rounded-lg cursor-pointer bg-primary-50 hover:bg-primary-100 transition-colors min-h-[44px]"
               >
                 <Camera className="w-5 h-5 text-primary-600" />
                 <span className="text-sm font-medium text-primary-700">Prendre une photo</span>
