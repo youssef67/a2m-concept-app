@@ -3,9 +3,9 @@
  * Page de détail d'un plot avec liste des appartements
  */
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle, MessageCircle, X, XCircle, FileCheck, FileText, ListOrdered, BadgeCheck, MoreVertical } from 'lucide-react'
+import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle, MessageCircle, X, XCircle, FileCheck, FileText, ListOrdered, BadgeCheck, MoreVertical, Check } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
@@ -22,6 +22,7 @@ import { getPlotById } from '../services/plotsService'
 import { validateAppartements, invalidateAppartements } from '../services/appartementsService'
 import { getTachesByChantier } from '../services/tachesService'
 import { useAppartements } from '../hooks/useAppartements'
+import { usePlots } from '../hooks/usePlots'
 import { useToast } from '../../../shared/hooks/useToast'
 import {
   searchAppartements,
@@ -87,6 +88,13 @@ export default function PlotDetailPage() {
   // Appartements hook
   const { appartements, loading: appartementsLoading, loadAppartements, deleteAppartement } = useAppartements(plotId, chantierId)
 
+  // Plots hook (pour la navigation entre plots)
+  const { plots, loadPlots: loadAllPlots } = usePlots(chantierId)
+
+  // État pour le dropdown du titre
+  const [isTitleDropdownOpen, setIsTitleDropdownOpen] = useState(false)
+  const titleDropdownRef = useRef(null)
+
   // Load plot data
   useEffect(() => {
     async function loadPlot() {
@@ -134,6 +142,32 @@ export default function PlotDetailPage() {
 
     loadChantierTaches()
   }, [chantierId])
+
+  // Load all plots for navigation
+  useEffect(() => {
+    if (chantierId) {
+      loadAllPlots()
+    }
+  }, [chantierId, loadAllPlots])
+
+  // Close title dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (titleDropdownRef.current && !titleDropdownRef.current.contains(event.target)) {
+        setIsTitleDropdownOpen(false)
+      }
+    }
+
+    if (isTitleDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('touchstart', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
+    }
+  }, [isTitleDropdownOpen])
 
   // Clean up activeTab URL parameter after reading it
   useEffect(() => {
@@ -275,9 +309,24 @@ export default function PlotDetailPage() {
     return appartements.map(appt => appt.nom)
   }, [appartements])
 
+  // Options pour le dropdown de navigation entre plots (format simplifié)
+  const plotsOptions = useMemo(() => {
+    return plots.map(p => ({
+      value: p.id,
+      label: `${p.nom} • ${p.appartements_count} lot${p.appartements_count > 1 ? 's' : ''}`
+    }))
+  }, [plots])
+
   // Handle back button
   const handleBack = () => {
     navigate(`/admin/plotsmanager/${chantierId}`)
+  }
+
+  // Handle plot change (navigation entre plots)
+  const handlePlotChange = (newPlotId) => {
+    if (newPlotId && newPlotId !== plotId) {
+      navigate(`/admin/plotsmanager/${chantierId}/plot/${newPlotId}`)
+    }
   }
 
   // Handle appartement click
@@ -630,9 +679,9 @@ export default function PlotDetailPage() {
         {!loading && !error && plot && (
           <>
             {/* Header with title and action buttons */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              {/* Left: Back button + Title */}
-              <div className="flex items-center gap-3">
+            <div className="mb-6">
+              {/* Title row with dropdown navigation */}
+              <div className="flex items-center gap-3 mb-4">
                 <button
                   onClick={handleBack}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -640,91 +689,93 @@ export default function PlotDetailPage() {
                 >
                   <ArrowLeft className="w-5 h-5 text-gray-600" />
                 </button>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">{plot.nom}</h1>
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-                    <Building2 className="w-4 h-4" />
-                    <span>{TYPE_LABELS[plot.type] || plot.type}</span>
-                  </div>
+
+                {/* Title-Dropdown Hybrid */}
+                <div className="flex-1 relative" ref={titleDropdownRef}>
+                  {plots.length > 1 ? (
+                    <>
+                      {/* Clickable title button */}
+                      <button
+                        onClick={() => setIsTitleDropdownOpen(!isTitleDropdownOpen)}
+                        className="text-left w-full group"
+                      >
+                        <div className="flex items-center gap-2">
+                          <h1 className="text-2xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors">
+                            {plot.nom}
+                          </h1>
+                          <ChevronDown
+                            className={`w-5 h-5 text-gray-500 transition-all group-hover:text-primary-600 ${
+                              isTitleDropdownOpen ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                          <Building2 className="w-4 h-4" />
+                          <span>{TYPE_LABELS[plot.type] || plot.type}</span>
+                        </div>
+                      </button>
+
+                      {/* Dropdown menu */}
+                      {isTitleDropdownOpen && (
+                        <>
+                          {/* Backdrop sombre */}
+                          <div
+                            className="fixed inset-0 bg-black/40 z-40 md:bg-transparent md:z-auto"
+                            onClick={() => setIsTitleDropdownOpen(false)}
+                          />
+
+                          {/* Options list with animation */}
+                          <div className="absolute z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl min-w-[280px] max-w-md animate-in slide-in-from-top-2 duration-200">
+                            {plotsOptions.map((option) => {
+                              const isSelected = option.value === plotId
+
+                              return (
+                                <button
+                                  key={option.value}
+                                  onClick={() => {
+                                    handlePlotChange(option.value)
+                                    setIsTitleDropdownOpen(false)
+                                  }}
+                                  className={`
+                                    w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center justify-between first:rounded-t-lg last:rounded-b-lg
+                                    ${isSelected ? 'bg-primary-50 text-primary-700' : 'text-gray-900'}
+                                  `}
+                                >
+                                  <span className="text-base font-medium">{option.label}</span>
+                                  {isSelected && <Check className="w-5 h-5 text-primary-600 flex-shrink-0" />}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    /* Si un seul plot, affichage normal sans dropdown */
+                    <div>
+                      <h1 className="text-2xl font-bold text-gray-900">{plot.nom}</h1>
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                        <Building2 className="w-4 h-4" />
+                        <span>{TYPE_LABELS[plot.type] || plot.type}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Right: Action buttons */}
-              <div className="flex items-center gap-2">
-                {/* Validation button - only in "En attente" tab */}
-                {!appartementsLoading && activeTab === 'en_attente' && stats.en_attente > 0 && !isValidationMode && (
-                  <Button
-                    onClick={handleStartValidation}
-                    variant="secondary"
-                    className="flex items-center gap-2 min-h-[44px]"
-                    title="Valider lot(s)"
-                  >
-                    <CheckCircle className="w-5 h-5" />
-                    <span className="hidden sm:inline">Valider lot(s)</span>
-                  </Button>
-                )}
 
-                {/* Invalidation button - only in "Prêt" tab */}
-                {!appartementsLoading && activeTab === 'pret' && stats.pret > 0 && !isInvalidationMode && !isSelectionMode && (
-                  <Button
-                    onClick={handleStartInvalidation}
-                    variant="secondary"
-                    className="flex items-center gap-2 min-h-[44px]"
-                    title="Invalider lot(s)"
-                  >
-                    <XCircle className="w-5 h-5" />
-                    <span className="hidden sm:inline">Invalider lot(s)</span>
-                  </Button>
-                )}
-
-                {/* WhatsApp button - only in "Prêt" tab */}
-                {!appartementsLoading && activeTab === 'pret' && stats.pret > 0 && !isSelectionMode && !isInvalidationMode && (
-                  <Button
-                    onClick={handleStartWhatsAppSelection}
-                    variant="secondary"
-                    className="flex items-center gap-2 min-h-[44px]"
-                    title="Envoyer par WhatsApp"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    <span className="hidden sm:inline">Envoyer par WhatsApp</span>
-                  </Button>
-                )}
-
-                {/* WhatsApp button - only in "En cours" tab */}
-                {!appartementsLoading && activeTab === 'en_cours' && stats.en_cours > 0 && !isWhatsAppSelectionEnCours && (
-                  <Button
-                    onClick={handleStartWhatsAppSelectionEnCours}
-                    variant="secondary"
-                    className="flex items-center gap-2 min-h-[44px]"
-                    title="Envoyer par WhatsApp"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    <span className="hidden sm:inline">Envoyer par WhatsApp</span>
-                  </Button>
-                )}
-
-                {/* Exceptional WhatsApp button - only in "En cours" tab */}
-                {!appartementsLoading && activeTab === 'en_cours' && stats.en_cours > 0 && !isWhatsAppSelectionEnCours && (
-                  <Button
-                    onClick={() => setIsExceptionalWhatsAppModalOpen(true)}
-                    variant="secondary"
-                    className="flex items-center gap-2 min-h-[44px]"
-                    title="Envoi exceptionnel"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    <span className="hidden sm:inline">Envoi exceptionnel</span>
-                  </Button>
-                )}
-
+              {/* Action buttons row */}
+              <div className="flex items-center gap-2 flex-wrap">
                 {/* Create button with dropdown */}
                 <div className="relative">
                   <Button
                     onClick={() => setShowCreateMenu(!showCreateMenu)}
-                    className="flex items-center justify-center gap-2 min-h-[44px]"
+                    className="flex items-center justify-center gap-2 min-h-[44px] min-w-[44px]"
+                    title="Créer lot(s)"
                   >
                     <Home className="w-5 h-5" />
-                    <span>Créer lot(s)</span>
-                    <ChevronDown className="w-4 h-4 ml-1" />
+                    <span className="hidden sm:inline">Créer lot(s)</span>
+                    <ChevronDown className="w-4 h-4 ml-1 hidden sm:inline" />
                   </Button>
 
                   {showCreateMenu && (
@@ -761,6 +812,107 @@ export default function PlotDetailPage() {
                     </>
                   )}
                 </div>
+
+                {/* Validation button - only in "En attente" tab */}
+                {!appartementsLoading && activeTab === 'en_attente' && stats.en_attente > 0 && (
+                  isValidationMode ? (
+                    <Button
+                      onClick={handleCancelValidation}
+                      variant="secondary"
+                      className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
+                      title="Annuler la sélection"
+                    >
+                      <X className="w-5 h-5" />
+                      <span className="hidden sm:inline">Annuler</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleStartValidation}
+                      variant="secondary"
+                      className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
+                      title="Valider lot(s)"
+                    >
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="hidden sm:inline">Valider lot(s)</span>
+                    </Button>
+                  )
+                )}
+
+                {/* Invalidation button - only in "Prêt" tab */}
+                {!appartementsLoading && activeTab === 'pret' && stats.pret > 0 && !isSelectionMode && (
+                  isInvalidationMode ? (
+                    <Button
+                      onClick={handleCancelInvalidation}
+                      variant="secondary"
+                      className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
+                      title="Annuler la sélection"
+                    >
+                      <X className="w-5 h-5" />
+                      <span className="hidden sm:inline">Annuler</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleStartInvalidation}
+                      variant="secondary"
+                      className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
+                      title="Invalider lot(s)"
+                    >
+                      <XCircle className="w-5 h-5" />
+                      <span className="hidden sm:inline">Invalider lot(s)</span>
+                    </Button>
+                  )
+                )}
+
+                {/* WhatsApp button - only in "Prêt" tab */}
+                {!appartementsLoading && activeTab === 'pret' && stats.pret > 0 && !isInvalidationMode && (
+                  isSelectionMode ? (
+                    <Button
+                      onClick={handleCancelSelection}
+                      variant="secondary"
+                      className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
+                      title="Annuler la sélection"
+                    >
+                      <X className="w-5 h-5" />
+                      <span className="hidden sm:inline">Annuler</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleStartWhatsAppSelection}
+                      variant="secondary"
+                      className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
+                      title="Envoyer par WhatsApp"
+                    >
+                      <MessageCircle className="w-5 h-5" />
+                      <span className="hidden sm:inline">Envoyer par WhatsApp</span>
+                    </Button>
+                  )
+                )}
+
+                {/* WhatsApp button - only in "En cours" tab */}
+                {!appartementsLoading && activeTab === 'en_cours' && stats.en_cours > 0 && !isWhatsAppSelectionEnCours && (
+                  <Button
+                    onClick={handleStartWhatsAppSelectionEnCours}
+                    variant="secondary"
+                    className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
+                    title="Envoyer par WhatsApp"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    <span className="hidden sm:inline">Envoyer par WhatsApp</span>
+                  </Button>
+                )}
+
+                {/* Exceptional WhatsApp button - only in "En cours" tab */}
+                {!appartementsLoading && activeTab === 'en_cours' && stats.en_cours > 0 && !isWhatsAppSelectionEnCours && (
+                  <Button
+                    onClick={() => setIsExceptionalWhatsAppModalOpen(true)}
+                    variant="secondary"
+                    className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
+                    title="Envoi exceptionnel"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    <span className="hidden sm:inline">Envoi exceptionnel</span>
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -773,10 +925,6 @@ export default function PlotDetailPage() {
 
             {/* Appartements list */}
             <div className="mt-6">
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Lots</h2>
-              </div>
-
               {/* Tabs */}
               {!appartementsLoading && appartements.length > 0 && (
                 <div className="mb-4">

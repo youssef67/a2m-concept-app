@@ -98,11 +98,11 @@ export default function CreateAppartementModal({
           onSuccess()
         }
       } else {
-        alert(result.error?.message || `Erreur lors de ${isEditMode ? 'la modification' : 'la création'} de l'appartement`)
+        alert(result.error?.message || `Erreur lors de ${isEditMode ? 'la modification' : 'la création'} du lot`)
       }
     } catch (error) {
       console.error(`Erreur ${isEditMode ? 'modification' : 'création'} appartement:`, error)
-      alert(`Erreur lors de ${isEditMode ? 'la modification' : 'la création'} de l'appartement`)
+      alert(`Erreur lors de ${isEditMode ? 'la modification' : 'la création'} du lot`)
     } finally {
       setIsSubmitting(false)
     }
@@ -125,7 +125,7 @@ export default function CreateAppartementModal({
       isOpen={isOpen}
       onClose={handleClose}
       size="md"
-      title={isEditMode ? "Modifier l'appartement" : "Créer un appartement"}
+      title={isEditMode ? "Modifier le lot" : "Créer un lot"}
     >
       <div>
         {/* Plot info */}
@@ -139,14 +139,14 @@ export default function CreateAppartementModal({
         {!isEditMode && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
             <p className="text-sm text-green-800">
-              Les tâches du chantier seront automatiquement ajoutées à cet appartement.
+              Les tâches du chantier seront automatiquement ajoutées à ce lot.
             </p>
           </div>
         )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Nom de l'appartement */}
+          {/* Nom du lot */}
           <div>
             <label htmlFor="nom" className="block text-sm font-medium text-gray-700 mb-1">
               Nom de l&apos;appartement <span className="text-red-500">*</span>
@@ -157,13 +157,13 @@ export default function CreateAppartementModal({
               type="text"
               value={formData.nom}
               onChange={handleChange}
-              placeholder="Ex: Appartement 101, Studio A..."
+              placeholder="Ex: Lot 101, Studio A..."
               required
               disabled={isSubmitting}
             />
           </div>
 
-          {/* Étage de l'appartement */}
+          {/* Étage du lot */}
           <div>
             <label htmlFor="etage" className="block text-sm font-medium text-gray-700 mb-1">
               Étage (facultatif)
@@ -194,7 +194,7 @@ export default function CreateAppartementModal({
                 TMA (Travaux Modificatifs Acquéreur)
               </label>
               <p className="text-xs text-gray-500">
-                Cochez si cet appartement a une TMA
+                Cochez si ce lot a une TMA
               </p>
             </div>
           </div>
@@ -216,7 +216,7 @@ export default function CreateAppartementModal({
               loading={isSubmitting}
               className="w-full sm:w-auto"
             >
-              {isEditMode ? 'Enregistrer' : "Créer l'appartement"}
+              {isEditMode ? 'Enregistrer' : "Créer le lot"}
             </Button>
           </div>
         </form>

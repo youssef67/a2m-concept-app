@@ -1,7 +1,7 @@
 /**
  * CreateMultipleAppartementsModal
- * Modal pour créer plusieurs appartements en même temps
- * Les tâches sont automatiquement héritées du chantier pour chaque appartement
+ * Modal pour créer plusieurs lots en même temps
+ * Les tâches sont automatiquement héritées du chantier pour chaque lot
  */
 
 import React, { useState, useEffect } from 'react'
@@ -39,9 +39,9 @@ export default function CreateMultipleAppartementsModal({
   }, [isOpen])
 
   // Add new appartement field
-  const handleAddAppartement = () => {
+  const handleAddLot = () => {
     if (appartements.length >= MAX_APPARTEMENTS) {
-      setError(`Vous ne pouvez pas créer plus de ${MAX_APPARTEMENTS} appartements à la fois`)
+      setError(`Vous ne pouvez pas créer plus de ${MAX_APPARTEMENTS} lots à la fois`)
       return
     }
     setAppartements([...appartements, { nom: '', etage: null }])
@@ -49,7 +49,7 @@ export default function CreateMultipleAppartementsModal({
   }
 
   // Remove appartement field
-  const handleRemoveAppartement = (index) => {
+  const handleRemoveLot = (index) => {
     if (appartements.length === 1) return // Don't remove last field
     const newAppartements = appartements.filter((_, i) => i !== index)
     setAppartements(newAppartements)
@@ -132,11 +132,11 @@ export default function CreateMultipleAppartementsModal({
           })
         }
       } else {
-        setError(result.error?.message || 'Erreur lors de la création des appartements')
+        setError(result.error?.message || 'Erreur lors de la création des lots')
       }
     } catch (err) {
       console.error('Erreur création multiple appartements:', err)
-      setError('Erreur lors de la création des appartements')
+      setError('Erreur lors de la création des lots')
     } finally {
       setIsSubmitting(false)
     }
@@ -156,7 +156,7 @@ export default function CreateMultipleAppartementsModal({
       isOpen={isOpen}
       onClose={handleClose}
       size="md"
-      title="Créer plusieurs appartements"
+      title="Créer plusieurs lots"
     >
       <div>
         {/* Plot info */}
@@ -169,7 +169,7 @@ export default function CreateMultipleAppartementsModal({
         {/* Info about task inheritance */}
         <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm text-green-800">
-            Les tâches du chantier seront automatiquement ajoutées à chaque appartement.
+            Les tâches du chantier seront automatiquement ajoutées à chaque lot.
           </p>
         </div>
 
@@ -189,12 +189,12 @@ export default function CreateMultipleAppartementsModal({
                 {/* Header with appartement number and delete button */}
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-medium text-gray-700">
-                    Appartement {index + 1}
+                    Lot {index + 1}
                   </h4>
                   {appartements.length > 1 && (
                     <button
                       type="button"
-                      onClick={() => handleRemoveAppartement(index)}
+                      onClick={() => handleRemoveLot(index)}
                       disabled={isSubmitting}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                       title="Supprimer"
@@ -213,7 +213,7 @@ export default function CreateMultipleAppartementsModal({
                     type="text"
                     value={appt.nom}
                     onChange={(e) => handleNomChange(index, e.target.value)}
-                    placeholder={`Ex: Appartement ${index + 1}, Studio ${String.fromCharCode(65 + index)}...`}
+                    placeholder={`Ex: Lot ${index + 1}, Studio ${String.fromCharCode(65 + index)}...`}
                     disabled={isSubmitting}
                   />
                 </div>
@@ -240,18 +240,18 @@ export default function CreateMultipleAppartementsModal({
             <Button
               type="button"
               variant="outline"
-              onClick={handleAddAppartement}
+              onClick={handleAddLot}
               disabled={isSubmitting}
               className="w-full flex items-center justify-center gap-2 min-h-[44px]"
             >
               <Plus className="w-5 h-5" />
-              <span>Ajouter un appartement</span>
+              <span>Ajouter un lot</span>
             </Button>
           )}
 
           {appartements.length >= MAX_APPARTEMENTS && (
             <p className="text-xs text-orange-600 text-center">
-              Limite de {MAX_APPARTEMENTS} appartements atteinte
+              Limite de {MAX_APPARTEMENTS} lots atteinte
             </p>
           )}
 
@@ -274,7 +274,7 @@ export default function CreateMultipleAppartementsModal({
             >
               {isSubmitting
                 ? 'Création en cours...'
-                : `Créer ${appartements.filter(a => a.nom.trim()).length} appartement${appartements.filter(a => a.nom.trim()).length > 1 ? 's' : ''}`
+                : `Créer ${appartements.filter(a => a.nom.trim()).length} lots.filter(a => a.nom.trim()).length > 1 ? 's' : ''}`
               }
             </Button>
           </div>

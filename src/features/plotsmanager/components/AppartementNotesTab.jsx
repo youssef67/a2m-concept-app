@@ -111,7 +111,7 @@ export default function AppartementNotesTab({ appartement }) {
       {notes.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
           <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 mb-4">Aucune note pour cet appartement</p>
+          <p className="text-gray-600 mb-4">Aucune note pour ce lot</p>
           <Button
             variant="outline"
             size="sm"

@@ -270,7 +270,7 @@ export default function ExceptionalWhatsAppModal({
             {/* Section 2: Search and Select Appartement */}
             <div>
               <h3 className="text-base font-semibold text-gray-900 mb-3">
-                2️⃣ Rechercher un appartement
+                2️⃣ Rechercher un lot
               </h3>
 
               {/* Search Input */}
@@ -278,7 +278,7 @@ export default function ExceptionalWhatsAppModal({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Rechercher un appartement..."
+                  placeholder="Rechercher un lot..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[44px] text-base"

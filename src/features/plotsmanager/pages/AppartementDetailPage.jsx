@@ -100,7 +100,7 @@ export default function AppartementDetailPage() {
       const { data, error: fetchError } = await getAppartementById(appartementId)
 
       if (fetchError || !data) {
-        setError('Appartement introuvable')
+        setError('Lot introuvable')
         setAppartement(null)
       } else {
         setAppartement(data)
@@ -355,7 +355,7 @@ export default function AppartementDetailPage() {
 
               {!tachesLoading && taches.length === 0 && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-                  <p className="text-gray-600">Aucune tâche pour cet appartement</p>
+                  <p className="text-gray-600">Aucune tâche pour ce lot</p>
                 </div>
               )}
 
