@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle, MessageCircle, X, XCircle, FileCheck, FileText, ListOrdered, BadgeCheck } from 'lucide-react'
+import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle, MessageCircle, X, XCircle, FileCheck, FileText, ListOrdered, BadgeCheck, MoreVertical } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
@@ -13,6 +13,7 @@ import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import Modal from '../../../shared/components/ui/Modal'
 import Tabs from '../../../shared/components/ui/Tabs'
 import Select from '../../../shared/components/ui/Select'
+import Dropdown, { DropdownItem } from '../../../shared/components/ui/Dropdown'
 import CreateAppartementModal from '../components/CreateAppartementModal'
 import CreateMultipleAppartementsModal from '../components/CreateMultipleAppartementsModal'
 import SendWhatsAppModal from '../components/SendWhatsAppModal'
@@ -362,7 +363,7 @@ export default function PlotDetailPage() {
 
   const handleContinueToWhatsApp = () => {
     if (selectedAppartements.size === 0) {
-      alert('Veuillez sélectionner au moins un appartement')
+      alert('Veuillez sélectionner au moins un lot')
       return
     }
     setIsSendWhatsAppModalOpen(true)
@@ -399,7 +400,7 @@ export default function PlotDetailPage() {
 
   const handleContinueToWhatsAppEnCours = () => {
     if (selectedForWhatsAppEnCours.size === 0) {
-      showToast('Veuillez sélectionner au moins un appartement', 'error')
+      showToast('Veuillez sélectionner au moins un lot', 'error')
       return
     }
 
@@ -409,7 +410,7 @@ export default function PlotDetailPage() {
       .filter(appt => !hasTasksEnCours(appt.taches))
 
     if (validAppartements.length === 0) {
-      showToast('Aucun appartement sélectionné ne peut être envoyé (tous ont des tâches en cours)', 'error')
+      showToast('Aucun lot sélectionné ne peut être envoyé (tous ont des tâches en cours)', 'error')
       return
     }
 
@@ -447,7 +448,7 @@ export default function PlotDetailPage() {
 
   const handleContinueToValidation = () => {
     if (selectedForValidation.size === 0) {
-      showToast('Veuillez sélectionner au moins un appartement', 'error')
+      showToast('Veuillez sélectionner au moins un lot', 'error')
       return
     }
     setShowValidationConfirm(true)
@@ -458,7 +459,7 @@ export default function PlotDetailPage() {
     const result = await validateAppartements(ids)
 
     if (result.success) {
-      showToast(`${result.updated} appartement(s) validé(s) avec succès`, 'success')
+      showToast(`${result.updated} lot(s) validé(s) avec succès`, 'success')
       setIsValidationMode(false)
       setSelectedForValidation(new Set())
       setShowValidationConfirm(false)
@@ -495,7 +496,7 @@ export default function PlotDetailPage() {
 
   const handleContinueToInvalidation = () => {
     if (selectedForInvalidation.size === 0) {
-      showToast('Veuillez sélectionner au moins un appartement', 'error')
+      showToast('Veuillez sélectionner au moins un lot', 'error')
       return
     }
     setShowInvalidationConfirm(true)
@@ -506,7 +507,7 @@ export default function PlotDetailPage() {
     const result = await invalidateAppartements(ids)
 
     if (result.success) {
-      showToast(`${result.updated} appartement(s) invalidé(s) avec succès`, 'success')
+      showToast(`${result.updated} lot(s) invalidé(s) avec succès`, 'success')
       setIsInvalidationMode(false)
       setSelectedForInvalidation(new Set())
       setShowInvalidationConfirm(false)
@@ -656,10 +657,10 @@ export default function PlotDetailPage() {
                     onClick={handleStartValidation}
                     variant="secondary"
                     className="flex items-center gap-2 min-h-[44px]"
-                    title="Valider appartement(s)"
+                    title="Valider lot(s)"
                   >
                     <CheckCircle className="w-5 h-5" />
-                    <span className="hidden sm:inline">Valider appartement(s)</span>
+                    <span className="hidden sm:inline">Valider lot(s)</span>
                   </Button>
                 )}
 
@@ -669,10 +670,10 @@ export default function PlotDetailPage() {
                     onClick={handleStartInvalidation}
                     variant="secondary"
                     className="flex items-center gap-2 min-h-[44px]"
-                    title="Invalider appartement(s)"
+                    title="Invalider lot(s)"
                   >
                     <XCircle className="w-5 h-5" />
-                    <span className="hidden sm:inline">Invalider appartement(s)</span>
+                    <span className="hidden sm:inline">Invalider lot(s)</span>
                   </Button>
                 )}
 
@@ -722,7 +723,7 @@ export default function PlotDetailPage() {
                     className="flex items-center justify-center gap-2 min-h-[44px]"
                   >
                     <Home className="w-5 h-5" />
-                    <span>Créer appartement(s)</span>
+                    <span>Créer lot(s)</span>
                     <ChevronDown className="w-4 h-4 ml-1" />
                   </Button>
 
@@ -744,7 +745,7 @@ export default function PlotDetailPage() {
                           className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
                         >
                           <Home className="w-5 h-5 text-primary-600" />
-                          <span className="text-gray-700 font-medium">Créer un appartement</span>
+                          <span className="text-gray-700 font-medium">Créer un lot</span>
                         </button>
                         <button
                           onClick={() => {
@@ -754,7 +755,7 @@ export default function PlotDetailPage() {
                           className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 transition-colors"
                         >
                           <Building2 className="w-5 h-5 text-primary-600" />
-                          <span className="text-gray-700 font-medium">Créer plusieurs appartements</span>
+                          <span className="text-gray-700 font-medium">Créer plusieurs lots</span>
                         </button>
                       </div>
                     </>
@@ -773,7 +774,7 @@ export default function PlotDetailPage() {
             {/* Appartements list */}
             <div className="mt-6">
               <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Appartements</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Lots</h2>
               </div>
 
               {/* Tabs */}
@@ -800,7 +801,7 @@ export default function PlotDetailPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
-                      placeholder="Rechercher un appartement..."
+                      placeholder="Rechercher un lot..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[44px] text-base"
@@ -815,7 +816,7 @@ export default function PlotDetailPage() {
                         ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                     }`}
-                    title="Afficher uniquement les appartements avec TMA"
+                    title="Afficher uniquement les lots avec TMA"
                   >
                     <BadgeCheck className="w-5 h-5" />
                     <span className="text-sm">Avec TMA</span>
@@ -830,7 +831,7 @@ export default function PlotDetailPage() {
                           ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
                           : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                       }`}
-                      title="Afficher uniquement les appartements avec tous les documents"
+                      title="Afficher uniquement les lots avec tous les documents"
                     >
                       <FileCheck className="w-5 h-5" />
                       <span className="text-sm">Documents complets</span>
@@ -908,9 +909,9 @@ export default function PlotDetailPage() {
               {!appartementsLoading && appartements.length === 0 && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
                   <Home className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-600">Aucun appartement créé pour ce plot</p>
+                  <p className="text-gray-600">Aucun lot créé pour ce plot</p>
                   <p className="text-sm text-gray-500 mt-1">
-                    Cliquez sur « Créer un appartement » pour commencer
+                    Cliquez sur « Créer un lot » pour commencer
                   </p>
                 </div>
               )}
@@ -921,15 +922,15 @@ export default function PlotDetailPage() {
                   <Home className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                   {searchQuery ? (
                     <p className="text-gray-600">
-                      Aucun appartement {activeTab === 'tous' ? '' : activeTab === 'en_attente' ? 'en attente' : activeTab === 'en_cours' ? 'en cours' : activeTab === 'pret' ? 'prêt' : 'finalisé'} trouvé pour &quot;{searchQuery}&quot;
+                      Aucun lot {activeTab === 'tous' ? '' : activeTab === 'en_attente' ? 'en attente' : activeTab === 'en_cours' ? 'en cours' : activeTab === 'pret' ? 'prêt' : 'finalisé'} trouvé pour &quot;{searchQuery}&quot;
                     </p>
                   ) : (
                     <p className="text-gray-600">
-                      {activeTab === 'tous' && 'Aucun appartement'}
-                      {activeTab === 'en_attente' && 'Aucun appartement en attente'}
-                      {activeTab === 'en_cours' && 'Aucun appartement en cours'}
-                      {activeTab === 'pret' && 'Aucun appartement prêt'}
-                      {activeTab === 'finalise' && 'Aucun appartement finalisé'}
+                      {activeTab === 'tous' && 'Aucun lot'}
+                      {activeTab === 'en_attente' && 'Aucun lot en attente'}
+                      {activeTab === 'en_cours' && 'Aucun lot en cours'}
+                      {activeTab === 'pret' && 'Aucun lot prêt'}
+                      {activeTab === 'finalise' && 'Aucun lot finalisé'}
                     </p>
                   )}
                 </div>
@@ -990,101 +991,144 @@ export default function PlotDetailPage() {
                             : 'border-gray-200 hover:border-primary-500 hover:shadow-md cursor-pointer'
                         }`}
                       >
-                        <div className="flex flex-col gap-2">
-                          {/* Main row */}
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              {/* Checkbox in any selection mode */}
-                              {inAnySelectionMode && toggleHandler && (
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  disabled={isBlockedForWhatsApp}
-                                  onChange={() => toggleHandler(appartement.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                                />
-                              )}
-                              <Home className="w-5 h-5 text-gray-600 flex-shrink-0" />
-                              <div className="flex flex-col gap-1 flex-1 min-w-0">
-                                {/* Nom et étage */}
-                                <span className="font-medium text-gray-900">
-                                  {appartement.nom}
-                                  {appartement.etage !== null && appartement.etage !== undefined && (
-                                    <span className="text-gray-500 font-normal"> • {formatEtage(appartement.etage)}</span>
-                                  )}
-                                </span>
-                                {/* Badges */}
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  {appartement.has_tma && (
-                                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
-                                      TMA
-                                    </span>
-                                  )}
-                                  <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statutConfig.color} flex-shrink-0`}>
-                                    {statutConfig.label}
-                                  </span>
-                                </div>
-                                {/* Warning message for blocked appartements */}
-                                {isBlockedForWhatsApp && (
-                                  <p className="text-xs text-red-600 font-medium">
-                                    ⚠️ Impossible de sélectionner : une tâche est en cours
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            {!inAnySelectionMode && (
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                {/* Desktop: show full text */}
-                                <span className="text-sm text-gray-600 hidden sm:inline">
-                                  {activeTab === 'en_attente'
-                                    ? `${appartement.documents_uploaded_count || 0}/${appartement.documents_required_count || 0} documents`
-                                    : `${tachesTerminees}/${totalTaches} ${totalTaches <= 1 ? 'tâche' : 'tâches'}`
-                                  }
-                                </span>
-                                {/* Mobile: show compact version */}
-                                <span className="text-sm text-gray-600 sm:hidden">
-                                  {activeTab === 'en_attente'
-                                    ? `${appartement.documents_uploaded_count || 0}/${appartement.documents_required_count || 0}`
-                                    : `${tachesTerminees}/${totalTaches}`
-                                  }
-                                </span>
-                                {/* Notes indicator */}
-                                {appartement.notes_count > 0 && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?tab=notes&fromTab=${activeTab}`)
-                                    }}
-                                    className="flex items-center gap-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs text-blue-700 transition-colors"
-                                    title={`${appartement.notes_count} note${appartement.notes_count > 1 ? 's' : ''}`}
-                                  >
-                                    <FileText className="w-4 h-4" />
-                                    <span className="font-medium">{appartement.notes_count}</span>
-                                  </button>
-                                )}
-                                <button
-                                  onClick={(e) => handleEditAppartement(e, appartement)}
-                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                  title="Modifier"
-                                >
-                                  <Edit className="w-5 h-5" />
-                                </button>
-                                <button
-                                  onClick={(e) => handleDeleteAppartement(e, appartement)}
-                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                  title="Supprimer"
-                                >
-                                  <Trash2 className="w-5 h-5" />
-                                </button>
-                              </div>
+                        <div className="flex flex-col gap-3">
+                          {/* Ligne 1 : Nom + Étage */}
+                          <div className="flex items-center gap-3">
+                            {/* Checkbox in any selection mode */}
+                            {inAnySelectionMode && toggleHandler && (
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={isBlockedForWhatsApp}
+                                onChange={() => toggleHandler(appartement.id)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                              />
                             )}
+                            <span className="font-medium text-gray-900 text-base">
+                              {appartement.nom}
+                              {appartement.etage !== null && appartement.etage !== undefined && (
+                                <span className="text-gray-500 font-normal"> • {formatEtage(appartement.etage)}</span>
+                              )}
+                            </span>
                           </div>
 
-                          {/* Task intitule row (only for en_cours) */}
+                          {/* Ligne 2 : Badges */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {appartement.has_tma && (
+                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
+                                TMA
+                              </span>
+                            )}
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${statutConfig.color}`}>
+                              {statutConfig.label}
+                            </span>
+                          </div>
+
+                          {/* Task intitule (only for en_cours) */}
                           {statut === 'en_cours' && tacheEnCours && (
-                            <div className="ml-8 text-xs sm:text-sm text-yellow-700 font-medium truncate" title={tacheEnCours.intitule}>
+                            <div className="text-xs sm:text-sm text-yellow-700 font-medium truncate" title={tacheEnCours.intitule}>
                               📋 {tacheEnCours.intitule}
+                            </div>
+                          )}
+
+                          {/* Warning message for blocked appartements */}
+                          {isBlockedForWhatsApp && (
+                            <p className="text-xs text-red-600 font-medium">
+                              ⚠️ Impossible de sélectionner : une tâche est en cours
+                            </p>
+                          )}
+
+                          {/* Ligne 3 : Compteur + Badge notes + Actions */}
+                          {!inAnySelectionMode && (
+                            <div className="flex items-center justify-between">
+                              {/* Compteur */}
+                              <span className="text-sm text-gray-600">
+                                {activeTab === 'en_attente'
+                                  ? `${appartement.documents_uploaded_count || 0}/${appartement.documents_required_count || 0} documents`
+                                  : `${tachesTerminees}/${totalTaches} ${totalTaches <= 1 ? 'tâche' : 'tâches'}`
+                                }
+                              </span>
+
+                              <div className="flex items-center gap-2">
+                                {/* Badge notes (si > 0) */}
+                                {appartement.notes_count > 0 && (
+                                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 flex items-center gap-1">
+                                    <FileText className="w-3 h-3" />
+                                    {appartement.notes_count}
+                                  </span>
+                                )}
+
+                                {/* Mobile: Menu kebab */}
+                                <div className="sm:hidden">
+                                  <Dropdown
+                                    trigger={
+                                      <button
+                                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                                        title="Actions"
+                                      >
+                                        <MoreVertical className="w-5 h-5 text-gray-600" />
+                                      </button>
+                                    }
+                                    align="right"
+                                  >
+                                    <DropdownItem
+                                      onClick={(e) => handleEditAppartement(e, appartement)}
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                      <span>Modifier</span>
+                                    </DropdownItem>
+                                    {appartement.notes_count > 0 && (
+                                      <DropdownItem
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?tab=notes&fromTab=${activeTab}`)
+                                        }}
+                                      >
+                                        <FileText className="w-4 h-4" />
+                                        <span>Voir les notes ({appartement.notes_count})</span>
+                                      </DropdownItem>
+                                    )}
+                                    <DropdownItem
+                                      onClick={(e) => handleDeleteAppartement(e, appartement)}
+                                      danger
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      <span>Supprimer</span>
+                                    </DropdownItem>
+                                  </Dropdown>
+                                </div>
+
+                                {/* Desktop: Boutons visibles */}
+                                <div className="hidden sm:flex items-center gap-2">
+                                  <button
+                                    onClick={(e) => handleEditAppartement(e, appartement)}
+                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                                    title="Modifier"
+                                  >
+                                    <Edit className="w-5 h-5" />
+                                  </button>
+                                  {appartement.notes_count > 0 && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?tab=notes&fromTab=${activeTab}`)
+                                      }}
+                                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                                      title={`Voir les notes (${appartement.notes_count})`}
+                                    >
+                                      <FileText className="w-5 h-5" />
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={(e) => handleDeleteAppartement(e, appartement)}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                                    title="Supprimer"
+                                  >
+                                    <Trash2 className="w-5 h-5" />
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1122,8 +1166,8 @@ export default function PlotDetailPage() {
               isOpen={!!appartementToDelete}
               onClose={() => setAppartementToDelete(null)}
               onConfirm={confirmDeleteAppartement}
-              title="Supprimer l'appartement"
-              message={`Êtes-vous sûr de vouloir supprimer l'appartement « ${appartementToDelete?.nom} » ? Cette action est irréversible.`}
+              title="Supprimer le lot"
+              message={`Êtes-vous sûr de vouloir supprimer le lot « ${appartementToDelete?.nom} » ? Cette action est irréversible.`}
               confirmLabel="Supprimer"
               cancelLabel="Annuler"
               variant="danger"
@@ -1174,7 +1218,7 @@ export default function PlotDetailPage() {
                   {/* Details */}
                   <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Appartements créés :</span>
+                      <span className="text-sm text-gray-600">Lots créés :</span>
                       <span className="text-sm font-semibold text-green-600">{creationResult.created}</span>
                     </div>
                     {creationResult.failed > 0 && (
@@ -1263,7 +1307,7 @@ export default function PlotDetailPage() {
                     {/* Left: Selection count */}
                     <div className="text-center sm:text-left">
                       <p className="text-sm text-gray-600">
-                        {selectedAppartements.size} appartement{selectedAppartements.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedAppartements.size > 1 ? 's' : ''}
+                        {selectedAppartements.size} lot{selectedAppartements.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedAppartements.size > 1 ? 's' : ''}
                       </p>
                     </div>
 
@@ -1299,7 +1343,7 @@ export default function PlotDetailPage() {
                     {/* Left: Selection count */}
                     <div className="text-center sm:text-left">
                       <p className="text-sm text-gray-600">
-                        {selectedForWhatsAppEnCours.size} appartement{selectedForWhatsAppEnCours.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedForWhatsAppEnCours.size > 1 ? 's' : ''}
+                        {selectedForWhatsAppEnCours.size} lot{selectedForWhatsAppEnCours.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedForWhatsAppEnCours.size > 1 ? 's' : ''}
                       </p>
                     </div>
 
@@ -1335,7 +1379,7 @@ export default function PlotDetailPage() {
                     {/* Left: Selection count */}
                     <div className="text-center sm:text-left">
                       <p className="text-sm text-gray-600">
-                        {selectedForValidation.size} appartement{selectedForValidation.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedForValidation.size > 1 ? 's' : ''}
+                        {selectedForValidation.size} lot{selectedForValidation.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedForValidation.size > 1 ? 's' : ''}
                       </p>
                     </div>
 
@@ -1371,7 +1415,7 @@ export default function PlotDetailPage() {
                     {/* Left: Selection count */}
                     <div className="text-center sm:text-left">
                       <p className="text-sm text-gray-600">
-                        {selectedForInvalidation.size} appartement{selectedForInvalidation.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedForInvalidation.size > 1 ? 's' : ''}
+                        {selectedForInvalidation.size} lot{selectedForInvalidation.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedForInvalidation.size > 1 ? 's' : ''}
                       </p>
                     </div>
 
@@ -1404,7 +1448,7 @@ export default function PlotDetailPage() {
               isOpen={showValidationConfirm}
               onClose={() => setShowValidationConfirm(false)}
               onConfirm={confirmValidation}
-              title="Valider les appartements"
+              title="Valider les lots"
               message={`Êtes-vous sûr de vouloir valider ${selectedForValidation.size} appartement(s) ? Ils passeront dans l'onglet 'Prêt'.`}
               confirmLabel="Valider"
               cancelLabel="Annuler"
@@ -1415,7 +1459,7 @@ export default function PlotDetailPage() {
               isOpen={showInvalidationConfirm}
               onClose={() => setShowInvalidationConfirm(false)}
               onConfirm={confirmInvalidation}
-              title="Invalider les appartements"
+              title="Invalider les lots"
               message={`Êtes-vous sûr de vouloir invalider ${selectedForInvalidation.size} appartement(s) ? Ils reviendront dans l'onglet 'En attente'.`}
               confirmLabel="Invalider"
               cancelLabel="Annuler"
