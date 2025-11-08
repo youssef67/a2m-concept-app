@@ -274,7 +274,7 @@ export default function CreateMultipleAppartementsModal({
             >
               {isSubmitting
                 ? 'Création en cours...'
-                : `Créer ${appartements.filter(a => a.nom.trim()).length} lots.filter(a => a.nom.trim()).length > 1 ? 's' : ''}`
+                : `Créer ${appartements.filter(a => a.nom.trim()).length} lot${appartements.filter(a => a.nom.trim()).length > 1 ? 's' : ''}`
               }
             </Button>
           </div>
