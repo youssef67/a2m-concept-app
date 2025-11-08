@@ -9,6 +9,7 @@ import { useAppartementNotes } from '../hooks/useAppartementNotes'
 import { formatNoteDate } from '../services/appartementNotesService'
 import { getPhotoUrl } from '../services/appartementPhotosService'
 import Button from '../../../shared/components/ui/Button'
+import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import NoteFormModal from './NoteFormModal'
 
 export default function AppartementNotesTab({ appartement }) {
@@ -18,6 +19,7 @@ export default function AppartementNotesTab({ appartement }) {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [editingNote, setEditingNote] = useState(null)
   const [deletingNoteId, setDeletingNoteId] = useState(null)
+  const [noteToDelete, setNoteToDelete] = useState(null)
 
   // Load notes on mount
   useEffect(() => {
@@ -49,15 +51,19 @@ export default function AppartementNotesTab({ appartement }) {
     }
   }
 
-  // Handle delete note
-  const handleDeleteNote = async (noteId) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) {
-      return
-    }
+  // Handle delete note (open confirmation modal)
+  const handleDeleteNote = (note) => {
+    setNoteToDelete(note)
+  }
 
-    setDeletingNoteId(noteId)
-    await deleteNote(noteId)
+  // Confirm delete note
+  const confirmDeleteNote = async () => {
+    if (!noteToDelete) return
+
+    setDeletingNoteId(noteToDelete.id)
+    await deleteNote(noteToDelete.id)
     setDeletingNoteId(null)
+    setNoteToDelete(null)
   }
 
   // Handle view photo
@@ -147,7 +153,7 @@ export default function AppartementNotesTab({ appartement }) {
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleDeleteNote(note.id)}
+                    onClick={() => handleDeleteNote(note)}
                     className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
                     title="Supprimer"
                     disabled={deletingNoteId === note.id}
@@ -205,6 +211,18 @@ export default function AppartementNotesTab({ appartement }) {
         onSave={handleSaveNote}
         initialNote={editingNote}
         appartementNom={appartement.nom}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!noteToDelete}
+        onClose={() => setNoteToDelete(null)}
+        onConfirm={confirmDeleteNote}
+        title="Supprimer la note"
+        message="Êtes-vous sûr de vouloir supprimer cette note ? Cette action est irréversible."
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        variant="danger"
       />
     </div>
   )

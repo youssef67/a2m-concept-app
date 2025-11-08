@@ -9,6 +9,7 @@ import { useAppartementPhotos } from '../hooks/useAppartementPhotos'
 import { useAppartementNotes } from '../hooks/useAppartementNotes'
 import { formatPhotoDate } from '../services/appartementPhotosService'
 import Button from '../../../shared/components/ui/Button'
+import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import PhotoUploadModal from './PhotoUploadModal'
 import PhotoLinkNoteModal from './PhotoLinkNoteModal'
 
@@ -29,6 +30,7 @@ export default function AppartementPhotosTab({ appartement }) {
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false)
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [deletingPhotoId, setDeletingPhotoId] = useState(null)
+  const [photoToDelete, setPhotoToDelete] = useState(null)
 
   // Load photos and notes on mount
   useEffect(() => {
@@ -51,15 +53,19 @@ export default function AppartementPhotosTab({ appartement }) {
     }
   }
 
-  // Handle delete photo
-  const handleDeletePhoto = async (photoId) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette photo ?')) {
-      return
-    }
+  // Handle delete photo (open confirmation modal)
+  const handleDeletePhoto = (photo) => {
+    setPhotoToDelete(photo)
+  }
 
-    setDeletingPhotoId(photoId)
-    await deletePhoto(photoId)
+  // Confirm delete photo
+  const confirmDeletePhoto = async () => {
+    if (!photoToDelete) return
+
+    setDeletingPhotoId(photoToDelete.id)
+    await deletePhoto(photoToDelete.id)
     setDeletingPhotoId(null)
+    setPhotoToDelete(null)
   }
 
   // Handle link/unlink photo to note
@@ -178,7 +184,7 @@ export default function AppartementPhotosTab({ appartement }) {
                   </button>
 
                   <button
-                    onClick={() => handleDeletePhoto(photo.id)}
+                    onClick={() => handleDeletePhoto(photo)}
                     className="px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded transition-colors"
                     title="Supprimer"
                     disabled={deletingPhotoId === photo.id}
@@ -216,6 +222,18 @@ export default function AppartementPhotosTab({ appartement }) {
         notes={notes}
         onLinkChange={loadPhotos}
         appartementId={appartement.id}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!photoToDelete}
+        onClose={() => setPhotoToDelete(null)}
+        onConfirm={confirmDeletePhoto}
+        title="Supprimer la photo"
+        message={`Êtes-vous sûr de vouloir supprimer la photo "${photoToDelete?.nom_fichier}" ? Cette action est irréversible.`}
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        variant="danger"
       />
     </div>
   )
