@@ -10,13 +10,26 @@ const BUCKET_NAME = 'appartements-documents'
 const MAX_FILE_SIZE = 10485760 // 10 MB
 
 /**
+ * Generate a simple UUID-like string (fallback for non-secure contexts)
+ * @returns {string} Random string of 8 characters
+ */
+function generateSimpleUUID() {
+  return Math.random().toString(36).substring(2, 10).padEnd(8, '0')
+}
+
+/**
  * Generate unique filename for storage
  * @param {string} originalName - Original filename
  * @returns {string} Unique filename (UUID_timestamp_sanitized)
  */
 export function generateUniqueFileName(originalName) {
   const timestamp = Date.now()
-  const uuid = crypto.randomUUID().slice(0, 8)
+
+  // Use crypto.randomUUID if available (HTTPS context), fallback to Math.random (HTTP context)
+  const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID().slice(0, 8)
+    : generateSimpleUUID()
+
   const sanitized = originalName
     .replace(/[^a-zA-Z0-9.-]/g, '_')
     .replace(/_{2,}/g, '_')
