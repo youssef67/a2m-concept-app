@@ -4,19 +4,32 @@
  */
 
 import React, { useState } from 'react'
-import { FileText, Download, Trash2, Image as ImageIcon } from 'lucide-react'
+import { FileText, Download, Trash2, Image as ImageIcon, Eye } from 'lucide-react'
 import { getDocumentUrl, deleteDocument, formatFileSize, isImage, isPDF } from '../services/appartementDocumentsService'
 import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
+import DocumentPreviewModal from './DocumentPreviewModal'
 
 export default function DocumentFilesList({ files, onFileDeleted }) {
   const [deletingFileId, setDeletingFileId] = useState(null)
   const [fileToDelete, setFileToDelete] = useState(null)
+  const [fileToPreview, setFileToPreview] = useState(null)
 
-  // Handle download file
+  // Handle view file (open preview modal)
+  const handleView = (file) => {
+    setFileToPreview(file)
+  }
+
+  // Handle download file (force download)
   const handleDownload = async (file) => {
     const { data: url, error } = await getDocumentUrl(file.storage_path)
     if (url) {
-      window.open(url, '_blank')
+      // Force download instead of opening in new tab
+      const link = document.createElement('a')
+      link.href = url
+      link.download = file.nom_fichier
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
     } else {
       alert('Erreur lors du téléchargement du fichier')
     }
@@ -99,6 +112,14 @@ export default function DocumentFilesList({ files, onFileDeleted }) {
               {/* Actions */}
               <div className="flex items-center gap-1">
                 <button
+                  onClick={() => handleView(file)}
+                  className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                  title="Voir"
+                  disabled={deletingFileId === file.id}
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+                <button
                   onClick={() => handleDownload(file)}
                   className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                   title="Télécharger"
@@ -134,6 +155,14 @@ export default function DocumentFilesList({ files, onFileDeleted }) {
         confirmLabel="Supprimer"
         cancelLabel="Annuler"
         variant="danger"
+      />
+
+      {/* Document Preview Modal */}
+      <DocumentPreviewModal
+        isOpen={!!fileToPreview}
+        onClose={() => setFileToPreview(null)}
+        file={fileToPreview}
+        onDownload={handleDownload}
       />
     </>
   )
