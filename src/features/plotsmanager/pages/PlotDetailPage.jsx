@@ -505,17 +505,26 @@ export default function PlotDetailPage() {
 
   const confirmValidation = async () => {
     const ids = Array.from(selectedForValidation)
-    const result = await validateAppartements(ids)
+    const result = await validateAppartements(ids, chantierId)
 
     if (result.success) {
-      showToast(`${result.updated} lot(s) validé(s) avec succès`, 'success')
+      // Check if some were blocked
+      if (result.failed > 0) {
+        showToast(`${result.updated} lot(s) validé(s). ${result.failed} lot(s) bloqué(s) car documents obligatoires manquants.`, 'warning')
+      } else {
+        showToast(`${result.updated} lot(s) validé(s) avec succès`, 'success')
+      }
       setIsValidationMode(false)
       setSelectedForValidation(new Set())
       setShowValidationConfirm(false)
       loadAppartements()
       setActiveTab('pret') // Switch to "Prêt" tab
     } else {
-      showToast('Erreur lors de la validation', 'error')
+      // Show detailed error about missing documents
+      const errorMsg = result.errors && result.errors.length > 0
+        ? result.errors[0]
+        : 'Erreur lors de la validation'
+      showToast(errorMsg, 'error')
       setShowValidationConfirm(false)
     }
   }
