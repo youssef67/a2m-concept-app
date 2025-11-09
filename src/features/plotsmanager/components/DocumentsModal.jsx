@@ -27,12 +27,13 @@ export default function DocumentsModal({
         // Edit mode: load existing documents
         setDocuments(
           initialDocuments.map((doc) => ({
-            nom_document: doc.nom_document
+            nom_document: doc.nom_document,
+            obligatoire: doc.obligatoire || false
           }))
         )
       } else {
         // Create mode: start with 1 empty document
-        setDocuments([{ nom_document: '' }])
+        setDocuments([{ nom_document: '', obligatoire: false }])
       }
       setErrorMessage('')
     }
@@ -48,7 +49,14 @@ export default function DocumentsModal({
 
   // Add a new document
   const handleAddDocument = () => {
-    setDocuments([...documents, { nom_document: '' }])
+    setDocuments([...documents, { nom_document: '', obligatoire: false }])
+  }
+
+  // Handle obligatoire change for a specific document
+  const handleObligatoireChange = (index, checked) => {
+    const newDocuments = [...documents]
+    newDocuments[index].obligatoire = checked
+    setDocuments(newDocuments)
   }
 
   // Remove a document
@@ -116,12 +124,13 @@ export default function DocumentsModal({
         {/* Documents list */}
         <div className="space-y-3">
           {documents.map((doc, index) => (
-            <div key={index} className="flex items-center gap-2">
+            <div key={index} className="flex items-start gap-2">
               {/* Icon */}
-              <FileText className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              <FileText className="w-5 h-5 text-gray-400 flex-shrink-0 mt-3" />
 
-              {/* Document name input */}
-              <div className="flex-1">
+              {/* Document fields */}
+              <div className="flex-1 space-y-2">
+                {/* Document name input */}
                 <Input
                   type="text"
                   placeholder="Nom du document (ex: Plan de masse)"
@@ -130,13 +139,26 @@ export default function DocumentsModal({
                   required={false}
                   className="w-full"
                 />
+
+                {/* Obligatoire checkbox */}
+                <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+                  <input
+                    type="checkbox"
+                    checked={doc.obligatoire}
+                    onChange={(e) => handleObligatoireChange(index, e.target.checked)}
+                    className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500 cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-700">
+                    Document obligatoire (requis pour valider un lot)
+                  </span>
+                </label>
               </div>
 
               {/* Remove button */}
               <button
                 type="button"
                 onClick={() => handleRemoveDocument(index)}
-                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 min-w-[44px] min-h-[44px]"
                 title="Supprimer ce document"
               >
                 <Trash2 className="w-5 h-5" />

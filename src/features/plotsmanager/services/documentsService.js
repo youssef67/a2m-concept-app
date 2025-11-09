@@ -67,18 +67,20 @@ export async function saveDocuments(chantierId, documents) {
       const existingDoc = existingDocs?.find(d => d.nom_document === nomDocument)
 
       if (existingDoc) {
-        // Document exists, update ordre
+        // Document exists, update ordre and obligatoire
         toUpdate.push({
           id: existingDoc.id,
           nom_document: nomDocument,
-          ordre: index + 1
+          ordre: index + 1,
+          obligatoire: doc.obligatoire || false
         })
       } else {
         // New document, insert
         toInsert.push({
           chantier_id: chantierId,
           nom_document: nomDocument,
-          ordre: index + 1
+          ordre: index + 1,
+          obligatoire: doc.obligatoire || false
         })
       }
     })
@@ -87,7 +89,7 @@ export async function saveDocuments(chantierId, documents) {
     for (const doc of toUpdate) {
       const { error: updateError } = await supabase
         .from('chantier_documents_requis')
-        .update({ nom_document: doc.nom_document, ordre: doc.ordre })
+        .update({ nom_document: doc.nom_document, ordre: doc.ordre, obligatoire: doc.obligatoire })
         .eq('id', doc.id)
 
       if (updateError) {

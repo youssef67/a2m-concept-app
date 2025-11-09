@@ -189,8 +189,8 @@ export default function AppartementDetailPage() {
     return calculateAppartementStatut({
       ...appartement,
       taches: taches || []
-    })
-  }, [appartement, taches])
+    }, documentsWithStatus)
+  }, [appartement, taches, documentsWithStatus])
 
   // Determine available tabs - hide "Tâches" ONLY for "en_attente" appartements (except when coming from "tous" tab)
   const availableTabs = useMemo(() => {
@@ -413,7 +413,14 @@ export default function AppartementDetailPage() {
                             <div className="flex items-start gap-3 flex-1">
                               <FileText className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-medium text-gray-900">{documentRequis.nom_document}</h3>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h3 className="font-medium text-gray-900">{documentRequis.nom_document}</h3>
+                                  {documentRequis.obligatoire && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                                      OBLIGATOIRE
+                                    </span>
+                                  )}
+                                </div>
                                 {uploadedFiles.length > 0 && (
                                   <p className="text-xs text-gray-500 mt-0.5">
                                     {uploadedFiles.length} fichier{uploadedFiles.length > 1 ? 's' : ''}

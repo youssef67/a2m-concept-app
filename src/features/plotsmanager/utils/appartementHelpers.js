@@ -23,11 +23,12 @@ export function searchAppartements(appartements, query) {
 }
 
 /**
- * Calcule le statut d'un appartement basé sur sa validation et ses tâches
+ * Calcule le statut d'un appartement basé sur sa validation, ses tâches et ses documents
  * @param {Object} appartement - Appartement avec taches, valide
+ * @param {Array} documentsWithStatus - Optional: Array of {documentRequis, uploadedFiles} pour vérifier documents obligatoires
  * @returns {'en_attente' | 'en_cours' | 'pret' | 'finalise'} Statut de l'appartement
  */
-export function calculateAppartementStatut(appartement) {
+export function calculateAppartementStatut(appartement, documentsWithStatus = null) {
   const { taches = [], valide = false } = appartement
 
   // Vérifier si toutes les tâches sont terminées
@@ -39,15 +40,32 @@ export function calculateAppartementStatut(appartement) {
     t.statut === 'en_cours' || t.statut === 'terminee'
   )
 
+  // Vérifier si tous les documents obligatoires sont uploadés
+  let allObligatoireDocumentsUploaded = true
+  if (documentsWithStatus && documentsWithStatus.length > 0) {
+    // Filter only obligatoire documents
+    const obligatoireDocs = documentsWithStatus.filter(
+      ({ documentRequis }) => documentRequis.obligatoire === true
+    )
+
+    // Check if all obligatoire documents have at least 1 uploaded file
+    if (obligatoireDocs.length > 0) {
+      allObligatoireDocumentsUploaded = obligatoireDocs.every(
+        ({ uploadedFiles }) => uploadedFiles && uploadedFiles.length > 0
+      )
+    }
+  }
+
   // Déterminer le statut (ordre de priorité)
-  if (allTasksCompleted && valide) {
-    return 'finalise' // Priorité 1 : Toutes les tâches terminées ET validé
+  // Bloquer 'pret' et 'finalise' si documents obligatoires manquants
+  if (allTasksCompleted && valide && allObligatoireDocumentsUploaded) {
+    return 'finalise' // Priorité 1 : Toutes les tâches terminées ET validé ET documents obligatoires OK
   } else if (hasWorkStarted) {
     return 'en_cours' // Priorité 2 : Au moins une tâche commencée (en_cours ou terminee)
-  } else if (valide === true) {
-    return 'pret' // Priorité 3 : Validé manuellement, prêt à démarrer (aucune tâche commencée)
+  } else if (valide === true && allObligatoireDocumentsUploaded) {
+    return 'pret' // Priorité 3 : Validé manuellement ET documents obligatoires OK, prêt à démarrer (aucune tâche commencée)
   } else {
-    return 'en_attente' // Priorité 4 : En attente de validation manuelle
+    return 'en_attente' // Priorité 4 : En attente de validation manuelle OU documents obligatoires manquants
   }
 }
 
