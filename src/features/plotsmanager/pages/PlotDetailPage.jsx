@@ -188,9 +188,9 @@ export default function PlotDetailPage() {
   const filteredByDocuments = useMemo(() => {
     if (!showOnlyWithAllDocuments) return filteredBySearch
 
+    // Filter appartements that have all obligatoire documents
     return filteredBySearch.filter(appt => {
-      return appt.documents_uploaded_count === appt.documents_required_count &&
-             appt.documents_required_count > 0
+      return !appt.missing_obligatoire_documents
     })
   }, [filteredBySearch, showOnlyWithAllDocuments])
 
@@ -293,15 +293,6 @@ export default function PlotDetailPage() {
       value: etage,
       label: formatEtage(etage)
     }))
-  }, [appartements])
-
-  // Check if at least one "en_attente" appartement has all documents
-  const hasAppartementsWithAllDocuments = useMemo(() => {
-    const appartementsEnAttente = filterAppartementsByStatut(appartements, 'en_attente')
-    return appartementsEnAttente.some(appt =>
-      appt.documents_uploaded_count === appt.documents_required_count &&
-      appt.documents_required_count > 0
-    )
   }, [appartements])
 
   // Get existing appartement names for duplicate validation
@@ -979,8 +970,8 @@ export default function PlotDetailPage() {
                     <span className="text-sm">Avec TMA</span>
                   </button>
 
-                  {/* Documents filter button - only in "En attente" tab and if at least one appt has all documents */}
-                  {activeTab === 'en_attente' && stats.en_attente > 0 && hasAppartementsWithAllDocuments && !isValidationMode && (
+                  {/* Documents filter button - only in "En attente" tab */}
+                  {activeTab === 'en_attente' && stats.en_attente > 0 && !isValidationMode && (
                     <button
                       onClick={handleToggleDocumentsFilter}
                       className={`flex items-center gap-2 px-4 py-3 border rounded-lg transition-colors min-h-[44px] whitespace-nowrap ${
@@ -988,10 +979,10 @@ export default function PlotDetailPage() {
                           ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
                           : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                       }`}
-                      title="Afficher uniquement les lots avec tous les documents"
+                      title="Afficher uniquement les lots avec tous les documents obligatoires"
                     >
                       <FileCheck className="w-5 h-5" />
-                      <span className="text-sm">Documents complets</span>
+                      <span className="text-sm">Documents obligatoires</span>
                     </button>
                   )}
 
