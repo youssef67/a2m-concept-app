@@ -1094,7 +1094,11 @@ export default function PlotDetailPage() {
               )}
 
               {!appartementsLoading && filteredAppartements.length > 0 && (
-                <div className="space-y-3">
+                <div className={`space-y-3 ${
+                  (isSelectionMode || isValidationMode || isInvalidationMode || isWhatsAppSelectionEnCours)
+                    ? 'pb-40 md:pb-24'
+                    : ''
+                }`}>
                   {filteredAppartements.map((appartement) => {
                     const statut = calculateAppartementStatut(appartement)
                     const statutConfig = getStatutConfig(statut)
