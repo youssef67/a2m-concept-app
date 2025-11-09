@@ -277,6 +277,7 @@ export default function ChantierDetailPage() {
                       key={plot.id}
                       plot={plot}
                       appartementCount={plot.appartements_count || 0}
+                      stats={plot.appartements_stats}
                       onClick={handlePlotClick}
                       onEdit={handleEditPlot}
                       onDelete={handleDeletePlot}

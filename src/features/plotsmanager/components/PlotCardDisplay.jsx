@@ -16,7 +16,7 @@ const TYPE_LABELS = {
   autre: 'Autre'
 }
 
-export default function PlotCardDisplay({ plot, appartementCount = 0, onClick, onEdit, onDelete }) {
+export default function PlotCardDisplay({ plot, appartementCount = 0, stats, onClick, onEdit, onDelete }) {
   if (!plot) return null
 
   const handleEdit = (e) => {
@@ -66,12 +66,41 @@ export default function PlotCardDisplay({ plot, appartementCount = 0, onClick, o
           </div>
         </div>
 
-        {/* Appartement count */}
-        <div className="flex items-center gap-2 text-sm text-primary-600 font-medium">
-          <Home className="w-4 h-4 flex-shrink-0" />
-          <span>
-            {appartementCount} {appartementCount <= 1 ? 'appartement' : 'appartements'}
-          </span>
+        {/* Lot count and statistics */}
+        <div className="space-y-2">
+          {/* Total lots */}
+          <div className="flex items-center gap-2 text-sm text-primary-600 font-medium">
+            <Home className="w-4 h-4 flex-shrink-0" />
+            <span>
+              {appartementCount} {appartementCount <= 1 ? 'lot' : 'lots'}
+            </span>
+          </div>
+
+          {/* Status breakdown */}
+          {stats && appartementCount > 0 && (
+            <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs">
+              {stats.en_attente > 0 && (
+                <span className="text-orange-700">
+                  {stats.en_attente} en attente
+                </span>
+              )}
+              {stats.pret > 0 && (
+                <span className="text-blue-700">
+                  {stats.pret} prêt{stats.pret > 1 ? 's' : ''}
+                </span>
+              )}
+              {stats.en_cours > 0 && (
+                <span className="text-yellow-700">
+                  {stats.en_cours} en cours
+                </span>
+              )}
+              {stats.finalise > 0 && (
+                <span className="text-green-700">
+                  {stats.finalise} finalisé{stats.finalise > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </Card>

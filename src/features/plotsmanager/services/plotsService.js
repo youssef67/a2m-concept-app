@@ -4,19 +4,28 @@
  */
 
 import { supabase } from '../../../lib/supabaseClient'
+import { calculateAppartementStatut } from '../utils/appartementHelpers'
 
 /**
- * Get all plots for a specific chantier with appartement count
+ * Get all plots for a specific chantier with appartement count and status statistics
  * @param {string} chantierId - Chantier ID
  * @returns {Promise<{data: Array, error: Error|null}>}
  */
 export async function getPlotsByChantier(chantierId) {
   try {
+    // Fetch plots with full appartement data including tasks and validation status
     const { data, error } = await supabase
       .from('plots')
       .select(`
         *,
-        appartements (count)
+        appartements (
+          id,
+          valide,
+          appartement_taches (
+            id,
+            statut
+          )
+        )
       `)
       .eq('chantier_id', chantierId)
       .order('ordre', { ascending: true })
@@ -26,11 +35,36 @@ export async function getPlotsByChantier(chantierId) {
       return { data: null, error }
     }
 
-    // Transform data to include appartement count
-    const transformedData = (data || []).map(plot => ({
-      ...plot,
-      appartements_count: plot.appartements?.[0]?.count || 0
-    }))
+    // For each plot, calculate status statistics for its appartements
+    const transformedData = (data || []).map(plot => {
+      const appartements = plot.appartements || []
+
+      // Initialize statistics
+      const stats = {
+        total: appartements.length,
+        en_attente: 0,
+        pret: 0,
+        en_cours: 0,
+        finalise: 0
+      }
+
+      // Calculate status for each appartement
+      appartements.forEach(appt => {
+        const taches = appt.appartement_taches || []
+        const statut = calculateAppartementStatut({
+          taches,
+          valide: appt.valide
+        })
+
+        stats[statut] = (stats[statut] || 0) + 1
+      })
+
+      return {
+        ...plot,
+        appartements_count: appartements.length,
+        appartements_stats: stats
+      }
+    })
 
     return { data: transformedData, error: null }
   } catch (err) {
