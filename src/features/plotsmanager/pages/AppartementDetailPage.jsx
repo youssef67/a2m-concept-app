@@ -427,9 +427,9 @@ export default function AppartementDetailPage() {
                               size="sm"
                               onClick={() => handleOpenUploadModal(documentRequis.id)}
                               className="flex-shrink-0"
+                              title="Ajouter un fichier"
                             >
-                              <Plus className="w-4 h-4 mr-1" />
-                              Ajouter
+                              <Plus className="w-5 h-5" />
                             </Button>
                           </div>
 
