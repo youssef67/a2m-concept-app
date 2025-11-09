@@ -74,15 +74,15 @@ export async function getAppartementDocumentsWithStatus(appartementId, chantierI
 
     if (uploadError) throw uploadError
 
-    // Merge data: for each required document, check if it's uploaded
+    // Merge data: for each required document, get all uploaded files
     const documentsWithStatus = (documentsRequis || []).map((docRequis) => {
-      const uploadedFile = (uploadedDocs || []).find(
+      const uploadedFiles = (uploadedDocs || []).filter(
         (doc) => doc.document_requis_id === docRequis.id
-      )
+      ).sort((a, b) => a.ordre - b.ordre) // Sort by ordre
 
       return {
         documentRequis: docRequis,
-        uploadedFile: uploadedFile || null,
+        uploadedFiles: uploadedFiles,
         isOrphan: false
       }
     })
@@ -101,7 +101,7 @@ export async function getAppartementDocumentsWithStatus(appartementId, chantierI
           nom_document: '[Document obsolète]',
           ordre: 999
         },
-        uploadedFile: orphanDoc,
+        uploadedFiles: [orphanDoc],
         isOrphan: true
       })
     })

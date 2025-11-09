@@ -5,20 +5,19 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, Circle, Clock, FileText, Image as ImageIcon, Eye, Trash2, Plus } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Circle, Clock, FileText, Plus } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
 import Select from '../../../shared/components/ui/Select'
 import Tabs from '../../../shared/components/ui/Tabs'
-import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import { getAppartementById } from '../services/appartementsService'
 import { useAppartementTaches } from '../hooks/useAppartements'
 import { useAppartementDocuments } from '../hooks/useAppartementDocuments'
 import AppartementDocumentUploadModal from '../components/AppartementDocumentUploadModal'
 import AppartementNotesTab from '../components/AppartementNotesTab'
 import AppartementPhotosTab from '../components/AppartementPhotosTab'
-import { formatFileSize, isPDF } from '../services/appartementDocumentsService'
+import DocumentFilesList from '../components/DocumentFilesList'
 import { calculateAppartementStatut } from '../utils/appartementHelpers'
 
 // Status options
@@ -68,9 +67,6 @@ export default function AppartementDetailPage() {
   const [selectedDocumentRequisId, setSelectedDocumentRequisId] = useState(null)
   const [uploading, setUploading] = useState(false)
 
-  // Delete confirmation state
-  const [documentToDelete, setDocumentToDelete] = useState(null)
-
   // Taches hook
   const { taches, loading: tachesLoading, loadTaches, updateTacheStatut } = useAppartementTaches(appartementId)
 
@@ -80,9 +76,7 @@ export default function AppartementDetailPage() {
     stats: documentsStats,
     loading: documentsLoading,
     loadDocuments,
-    uploadDocument,
-    deleteDocument,
-    viewDocument
+    uploadDocument
   } = useAppartementDocuments(appartementId, chantierId)
 
   // Load appartement data
@@ -176,31 +170,6 @@ export default function AppartementDetailPage() {
     return result
   }
 
-  // Handle view document
-  const handleViewDocument = async (storagePath) => {
-    const { url, error: viewError } = await viewDocument(storagePath)
-    if (viewError) {
-      alert('Erreur lors de l\'ouverture du document')
-      return
-    }
-    window.open(url, '_blank')
-  }
-
-  // Handle delete document - open confirm modal
-  const handleDeleteDocument = (document) => {
-    setDocumentToDelete(document)
-  }
-
-  // Confirm document deletion
-  const confirmDeleteDocument = async () => {
-    if (!documentToDelete) return
-
-    const result = await deleteDocument(documentToDelete.id)
-    if (!result.success) {
-      alert('Erreur lors de la suppression du document')
-    }
-    setDocumentToDelete(null)
-  }
 
   // Calculate stats
   const tachesStats = {
@@ -434,72 +403,48 @@ export default function AppartementDetailPage() {
 
                   {!documentsLoading && documentsWithStatus.length > 0 && (
                     <div className="space-y-3">
-                      {documentsWithStatus.map(({ documentRequis, uploadedFile }) => (
+                      {documentsWithStatus.map(({ documentRequis, uploadedFiles }) => (
                         <div
                           key={documentRequis.id}
                           className="border border-gray-200 rounded-lg p-4 bg-white"
                         >
                           {/* Document name */}
-                          <div className="flex items-start gap-3 mb-3">
-                            <FileText className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-medium text-gray-900">{documentRequis.nom_document}</h3>
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div className="flex items-start gap-3 flex-1">
+                              <FileText className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-medium text-gray-900">{documentRequis.nom_document}</h3>
+                                {uploadedFiles.length > 0 && (
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    {uploadedFiles.length} fichier{uploadedFiles.length > 1 ? 's' : ''}
+                                  </p>
+                                )}
+                              </div>
                             </div>
+
+                            {/* Add button - always visible */}
+                            <Button
+                              size="sm"
+                              onClick={() => handleOpenUploadModal(documentRequis.id)}
+                              className="flex-shrink-0"
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              Ajouter
+                            </Button>
                           </div>
 
-                          {/* Uploaded file info */}
-                          {uploadedFile ? (
+                          {/* Uploaded files list */}
+                          {uploadedFiles.length > 0 ? (
                             <div className="ml-8">
-                              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 ${
-                                  isPDF(uploadedFile.type_mime) ? 'bg-red-100' : 'bg-blue-100'
-                                }`}>
-                                  {isPDF(uploadedFile.type_mime) ? (
-                                    <FileText className="w-4 h-4 text-red-600" />
-                                  ) : (
-                                    <ImageIcon className="w-4 h-4 text-blue-600" />
-                                  )}
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-gray-900 truncate">
-                                    {uploadedFile.nom_fichier}
-                                  </p>
-                                  <p className="text-xs text-gray-500">
-                                    {formatFileSize(uploadedFile.taille_fichier)} • {new Date(uploadedFile.created_at).toLocaleDateString('fr-FR')}
-                                  </p>
-                                </div>
-
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <button
-                                    onClick={() => handleViewDocument(uploadedFile.storage_path)}
-                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                    title="Voir"
-                                  >
-                                    <Eye className="w-5 h-5" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteDocument(uploadedFile)}
-                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                    title="Supprimer"
-                                  >
-                                    <Trash2 className="w-5 h-5" />
-                                  </button>
-                                </div>
-                              </div>
+                              <DocumentFilesList
+                                files={uploadedFiles}
+                                onFileDeleted={loadDocuments}
+                              />
                             </div>
                           ) : (
                             <div className="ml-8">
-                              <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                                <p className="text-sm text-yellow-800 flex-1">⚠️ Non uploadé</p>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleOpenUploadModal(documentRequis.id)}
-                                  className="flex-shrink-0"
-                                >
-                                  <Plus className="w-4 h-4 mr-1" />
-                                  Ajouter
-                                </Button>
+                              <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                                <p className="text-sm text-yellow-800">⚠️ Aucun fichier uploadé</p>
                               </div>
                             </div>
                           )}
@@ -527,24 +472,8 @@ export default function AppartementDetailPage() {
               onClose={handleCloseUploadModal}
               onUpload={handleUploadDocument}
               uploading={uploading}
-              documentsRequis={documentsWithStatus.map(d => d.documentRequis).filter(dr => {
-                // Only show documents that are not yet uploaded (unless selected)
-                const uploaded = documentsWithStatus.find(ds => ds.documentRequis.id === dr.id)?.uploadedFile
-                return !uploaded || dr.id === selectedDocumentRequisId
-              })}
+              documentsRequis={documentsWithStatus.map(d => d.documentRequis)}
               selectedDocumentRequisId={selectedDocumentRequisId}
-            />
-
-            {/* Confirm delete modal */}
-            <ConfirmModal
-              isOpen={!!documentToDelete}
-              onClose={() => setDocumentToDelete(null)}
-              onConfirm={confirmDeleteDocument}
-              title="Supprimer le document"
-              message={`Êtes-vous sûr de vouloir supprimer le document « ${documentToDelete?.nom_fichier} » ? Cette action est irréversible.`}
-              confirmLabel="Supprimer"
-              cancelLabel="Annuler"
-              variant="danger"
             />
           </>
         )}

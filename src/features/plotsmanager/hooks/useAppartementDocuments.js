@@ -127,8 +127,8 @@ export function useAppartementDocuments(appartementId, chantierId) {
    */
   const stats = {
     total: documentsWithStatus.length,
-    uploaded: documentsWithStatus.filter((doc) => doc.uploadedFile !== null).length,
-    pending: documentsWithStatus.filter((doc) => doc.uploadedFile === null).length
+    uploaded: documentsWithStatus.filter((doc) => doc.uploadedFiles && doc.uploadedFiles.length > 0).length,
+    pending: documentsWithStatus.filter((doc) => !doc.uploadedFiles || doc.uploadedFiles.length === 0).length
   }
 
   return {
