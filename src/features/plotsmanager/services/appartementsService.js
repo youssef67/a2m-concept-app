@@ -100,10 +100,13 @@ export async function getAppartementsByPlotWithDetails(plotId, chantierId) {
           docId => !uploadedDocIds.includes(docId)
         )
 
+        // Count unique document types covered (not total files)
+        const uniqueDocTypes = new Set(uploadedDocIds)
+
         return {
           ...appt,
           taches: appt.appartement_taches || [],
-          documents_uploaded_count: docs?.length || 0,
+          documents_uploaded_count: uniqueDocTypes.size,
           documents_required_count: totalDocumentsRequis,
           taches_count: appt.appartement_taches?.length || 0,
           notes_count: notes?.length || 0,
