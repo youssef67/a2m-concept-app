@@ -68,22 +68,25 @@ export async function getAppartementsByPlotWithDetails(plotId, chantierId) {
 
     if (apptsError) throw apptsError
 
-    // 2. Récupérer les documents requis du chantier
+    // 2. Récupérer tous les documents requis du chantier
     const { data: documentsRequis, error: docsRequisError } = await supabase
       .from('chantier_documents_requis')
-      .select('id')
+      .select('id, obligatoire')
       .eq('chantier_id', chantierId)
 
     if (docsRequisError) throw docsRequisError
 
     const totalDocumentsRequis = documentsRequis?.length || 0
+    const obligatoireDocIds = (documentsRequis || [])
+      .filter(d => d.obligatoire === true)
+      .map(d => d.id)
 
     // 3. Pour chaque appartement, récupérer ses documents uploadés et notes
     const appartementsWithDetails = await Promise.all(
       (appartements || []).map(async (appt) => {
         const { data: docs } = await supabase
           .from('appartement_documents')
-          .select('id')
+          .select('id, document_requis_id')
           .eq('appartement_id', appt.id)
 
         const { data: notes } = await supabase
@@ -91,13 +94,20 @@ export async function getAppartementsByPlotWithDetails(plotId, chantierId) {
           .select('id')
           .eq('appartement_id', appt.id)
 
+        // Check if all obligatoire documents have at least 1 file
+        const uploadedDocIds = (docs || []).map(d => d.document_requis_id)
+        const missingObligatoireDocs = obligatoireDocIds.filter(
+          docId => !uploadedDocIds.includes(docId)
+        )
+
         return {
           ...appt,
           taches: appt.appartement_taches || [],
           documents_uploaded_count: docs?.length || 0,
           documents_required_count: totalDocumentsRequis,
           taches_count: appt.appartement_taches?.length || 0,
-          notes_count: notes?.length || 0
+          notes_count: notes?.length || 0,
+          missing_obligatoire_documents: missingObligatoireDocs.length > 0
         }
       })
     )

@@ -1180,6 +1180,12 @@ export default function PlotDetailPage() {
                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${statutConfig.color}`}>
                               {statutConfig.label}
                             </span>
+                            {appartement.missing_obligatoire_documents && (
+                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 border border-red-200 flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                Docs manquants
+                              </span>
+                            )}
                           </div>
 
                           {/* Task intitule (only for en_cours) */}
