@@ -35,9 +35,17 @@ export function validateFile(file) {
     return { valid: false, error: 'Aucun fichier sélectionné' }
   }
 
-  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png']
-  if (!allowedTypes.includes(file.type)) {
-    return { valid: false, error: 'Seuls les fichiers PDF, JPEG et PNG sont acceptés' }
+  // Accept PDF
+  const isPdf = file.type === 'application/pdf'
+
+  // Accept images - be more lenient for mobile camera
+  // Check if it's an image type OR if the file name has image extension
+  // This handles cases where mobile cameras return empty MIME type or non-standard types
+  const isImage = file.type.startsWith('image/') ||
+                  /\.(jpe?g|png|heic|heif|webp)$/i.test(file.name)
+
+  if (!isPdf && !isImage) {
+    return { valid: false, error: 'Seuls les fichiers PDF et images (JPEG, PNG, HEIC) sont acceptés' }
   }
 
   if (file.size > MAX_FILE_SIZE) {
