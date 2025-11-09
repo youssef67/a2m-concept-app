@@ -1108,6 +1108,12 @@ export default function PlotDetailPage() {
                     // Check if appartement is blocked for WhatsApp (has tasks in progress)
                     const isBlockedForWhatsApp = isWhatsAppSelectionEnCours && hasTasksEnCours(appartement.taches)
 
+                    // Check if appartement is blocked for validation (missing obligatoire documents)
+                    const isBlockedForValidation = isValidationMode && appartement.missing_obligatoire_documents
+
+                    // Combine both blocking conditions
+                    const isBlocked = isBlockedForWhatsApp || isBlockedForValidation
+
                     if (isSelectionMode) {
                       isSelected = selectedAppartements.has(appartement.id)
                       toggleHandler = handleToggleAppartementSelection
@@ -1126,8 +1132,8 @@ export default function PlotDetailPage() {
                       <div
                         key={appartement.id}
                         onClick={() => {
-                          // Don't allow selection if blocked for WhatsApp
-                          if (isBlockedForWhatsApp) return
+                          // Don't allow selection if blocked
+                          if (isBlocked) return
 
                           if (inAnySelectionMode && toggleHandler) {
                             toggleHandler(appartement.id)
@@ -1136,7 +1142,7 @@ export default function PlotDetailPage() {
                           }
                         }}
                         className={`border rounded-lg p-4 transition-all bg-white ${
-                          isBlockedForWhatsApp
+                          isBlocked
                             ? 'border-gray-200 opacity-60 cursor-not-allowed'
                             : inAnySelectionMode && isSelected
                             ? 'border-primary-500 bg-primary-50 cursor-pointer'
@@ -1151,7 +1157,7 @@ export default function PlotDetailPage() {
                               <input
                                 type="checkbox"
                                 checked={isSelected}
-                                disabled={isBlockedForWhatsApp}
+                                disabled={isBlocked}
                                 onChange={() => toggleHandler(appartement.id)}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1191,6 +1197,11 @@ export default function PlotDetailPage() {
                           )}
 
                           {/* Warning message for blocked appartements */}
+                          {isBlockedForValidation && (
+                            <p className="text-xs text-red-600 font-medium">
+                              ⚠️ Impossible de valider : documents obligatoires manquants
+                            </p>
+                          )}
                           {isBlockedForWhatsApp && (
                             <p className="text-xs text-red-600 font-medium">
                               ⚠️ Impossible de sélectionner : une tâche est en cours
