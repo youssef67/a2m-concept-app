@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { Upload } from 'lucide-react'
+import { Camera, ImagePlus } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Select from '../../../shared/components/ui/Select'
@@ -17,6 +17,7 @@ export default function PhotoUploadModal({
   notes = []
 }) {
   const [selectedFile, setSelectedFile] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState(null)
   const [selectedNoteId, setSelectedNoteId] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -25,6 +26,7 @@ export default function PhotoUploadModal({
   useEffect(() => {
     if (isOpen) {
       setSelectedFile(null)
+      setPreviewUrl(null)
       setSelectedNoteId('')
       setErrorMessage('')
     }
@@ -36,6 +38,13 @@ export default function PhotoUploadModal({
     if (file) {
       setSelectedFile(file)
       setErrorMessage('')
+
+      // Create preview URL
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result)
+      }
+      reader.readAsDataURL(file)
     }
   }
 
@@ -69,6 +78,7 @@ export default function PhotoUploadModal({
   // Handle close
   const handleClose = () => {
     setSelectedFile(null)
+    setPreviewUrl(null)
     setSelectedNoteId('')
     setErrorMessage('')
     onClose()
@@ -105,26 +115,42 @@ export default function PhotoUploadModal({
           </div>
         )}
 
-        {/* File input */}
+        {/* Photo selection buttons */}
         <div>
-          <label
-            htmlFor="photo-file"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
+          <label className="block text-sm font-medium text-gray-700 mb-3">
             Photo
           </label>
-          <div className="flex items-center gap-3">
+
+          {/* 2 boutons distincts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            {/* Bouton 1: Prendre une photo (Primary) */}
             <label
-              htmlFor="photo-file"
-              className="flex-1 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 cursor-pointer transition-colors flex items-center justify-center gap-2"
+              htmlFor="camera-input"
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg cursor-pointer transition-colors min-h-[56px]"
             >
-              <Upload className="w-5 h-5 text-gray-400" />
-              <span className="text-sm text-gray-600">
-                {selectedFile ? selectedFile.name : 'Choisir une photo'}
-              </span>
+              <Camera className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm font-medium">Prendre une photo</span>
             </label>
             <input
-              id="photo-file"
+              id="camera-input"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              capture="environment"
+              onChange={handleFileChange}
+              className="hidden"
+              disabled={isSubmitting}
+            />
+
+            {/* Bouton 2: Choisir depuis la galerie (Outline) */}
+            <label
+              htmlFor="gallery-input"
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-gray-300 hover:border-primary-600 hover:bg-gray-50 text-gray-700 rounded-lg cursor-pointer transition-colors min-h-[56px]"
+            >
+              <ImagePlus className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm font-medium">Choisir depuis la galerie</span>
+            </label>
+            <input
+              id="gallery-input"
               type="file"
               accept="image/jpeg,image/png,image/webp"
               onChange={handleFileChange}
@@ -132,7 +158,31 @@ export default function PhotoUploadModal({
               disabled={isSubmitting}
             />
           </div>
-          <p className="mt-1 text-xs text-gray-500">
+
+          {/* Prévisualisation et nom du fichier */}
+          {selectedFile && (
+            <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              {/* Miniature */}
+              {previewUrl && (
+                <img
+                  src={previewUrl}
+                  alt="Prévisualisation"
+                  className="w-16 h-16 object-cover rounded-lg"
+                />
+              )}
+              {/* Nom du fichier */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {selectedFile.name}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              </div>
+            </div>
+          )}
+
+          <p className="mt-2 text-xs text-gray-500">
             Formats acceptés: JPEG, PNG, WebP (max 10 MB)
           </p>
         </div>
