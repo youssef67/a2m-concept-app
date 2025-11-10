@@ -82,10 +82,10 @@ export default function AppartementDetailPage() {
   } = useAppartementDocuments(appartementId, chantierId)
 
   // Notes hook
-  const { notes } = useAppartementNotes(appartementId)
+  const { notes, loadNotes } = useAppartementNotes(appartementId)
 
   // Photos hook
-  const { photos } = useAppartementPhotos(appartementId)
+  const { photos, loadPhotos } = useAppartementPhotos(appartementId)
 
   // Load appartement data
   useEffect(() => {
@@ -127,6 +127,20 @@ export default function AppartementDetailPage() {
       loadDocuments()
     }
   }, [appartementId, chantierId, loadDocuments])
+
+  // Load notes data
+  useEffect(() => {
+    if (appartementId) {
+      loadNotes()
+    }
+  }, [appartementId, loadNotes])
+
+  // Load photos data
+  useEffect(() => {
+    if (appartementId) {
+      loadPhotos()
+    }
+  }, [appartementId, loadPhotos])
 
   // Synchronize activeTab with URL parameter when appartement changes
   useEffect(() => {
