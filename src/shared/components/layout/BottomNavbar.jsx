@@ -51,8 +51,8 @@ export default function BottomNavbar() {
   )
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30">
-      <ul className="flex items-center justify-around h-16 px-2">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 w-full max-w-full bg-white border-t border-gray-200 shadow-lg z-30 overflow-x-hidden">
+      <ul className="flex items-center justify-between h-16">
         {visibleModules.map((module) => {
           const Icon = module.icon
           return (
@@ -60,7 +60,7 @@ export default function BottomNavbar() {
               <NavLink
                 to={module.path}
                 className={({ isActive }) =>
-                  `flex flex-col items-center justify-center gap-1 py-2 px-3 rounded-lg transition-colors min-h-[56px] ${
+                  `flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg transition-colors min-h-[56px] ${
                     isActive
                       ? 'text-primary-600 bg-primary-50'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
