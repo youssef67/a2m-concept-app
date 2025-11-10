@@ -205,8 +205,8 @@ export default function AppartementDetailPage() {
     const allTabs = [
       { id: 'taches', label: 'Tâches', count: `${tachesStats.terminee}/${tachesStats.total}` },
       { id: 'documents', label: 'Documents', count: `${documentsStats.uploaded}/${documentsStats.total}` },
-      { id: 'notes', label: 'Notes', count: notes.length > 0 ? notes.length : undefined },
-      { id: 'photos', label: 'Photos', count: photos.length > 0 ? photos.length : undefined }
+      { id: 'notes', label: 'Notes', count: notes.length },
+      { id: 'photos', label: 'Photos', count: photos.length }
     ]
 
     // Get fromTab parameter from URL
