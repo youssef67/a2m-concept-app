@@ -293,9 +293,6 @@ export default function PlotDetailPage() {
     setAppartementToEdit(null)
   }
 
-  // Documents filter handlers (filter "Documents obligatoires manquants")
-  const [showDocumentsManquants, setShowDocumentsManquants] = useState(false)
-
   // TMA filter handlers
   const handleToggleTMAFilter = () => {
     setShowOnlyTMA(prev => !prev)
