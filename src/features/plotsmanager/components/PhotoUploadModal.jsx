@@ -20,6 +20,7 @@ export default function PhotoUploadModal({
   const [previewUrl, setPreviewUrl] = useState(null)
   const [selectedNoteId, setSelectedNoteId] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [uploadPhase, setUploadPhase] = useState('idle') // 'idle' | 'uploading' | 'refreshing' | 'success'
   const [errorMessage, setErrorMessage] = useState('')
 
   // Reset form when modal opens
@@ -28,6 +29,7 @@ export default function PhotoUploadModal({
       setSelectedFile(null)
       setPreviewUrl(null)
       setSelectedNoteId('')
+      setUploadPhase('idle')
       setErrorMessage('')
     }
   }, [isOpen])
@@ -58,20 +60,41 @@ export default function PhotoUploadModal({
       return
     }
 
-    setIsSubmitting(true)
+    try {
+      setIsSubmitting(true)
+      setUploadPhase('uploading')
 
-    const noteId = selectedNoteId === '' ? null : selectedNoteId
+      const noteId = selectedNoteId === '' ? null : selectedNoteId
 
-    const result = await onUpload(selectedFile, noteId)
+      // Phase 1: Upload vers Supabase Storage + DB
+      const result = await onUpload(selectedFile, noteId)
 
-    setIsSubmitting(false)
+      if (result && result.success) {
+        // Phase 2: Actualisation de la liste (loadPhotos est déjà appelé dans onUpload)
+        setUploadPhase('refreshing')
 
-    if (result && result.success) {
-      handleClose()
-    } else {
-      setErrorMessage(
-        result?.error?.message || 'Erreur lors de l\'upload de la photo'
-      )
+        // Attendre un peu pour que loadPhotos() se termine complètement
+        await new Promise(resolve => setTimeout(resolve, 1000))
+
+        // Phase 3: Succès
+        setUploadPhase('success')
+
+        // Attendre 1.5 secondes avant de fermer pour que l'utilisateur voie le message
+        await new Promise(resolve => setTimeout(resolve, 1500))
+
+        // Fermer le modal
+        handleClose()
+      } else {
+        setErrorMessage(
+          result?.error?.message || 'Erreur lors de l\'upload de la photo'
+        )
+        setUploadPhase('idle')
+      }
+    } catch (error) {
+      setErrorMessage('Erreur inattendue lors de l\'upload')
+      setUploadPhase('idle')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -223,7 +246,10 @@ export default function PhotoUploadModal({
             className="w-full sm:w-auto"
             disabled={isSubmitting || !selectedFile}
           >
-            {isSubmitting ? 'Upload en cours...' : 'Ajouter la photo'}
+            {uploadPhase === 'uploading' && 'Upload en cours...'}
+            {uploadPhase === 'refreshing' && 'Actualisation de la liste...'}
+            {uploadPhase === 'success' && '✓ Photo ajoutée !'}
+            {uploadPhase === 'idle' && 'Ajouter la photo'}
           </Button>
         </div>
       </form>
