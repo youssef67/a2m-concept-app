@@ -1004,7 +1004,7 @@ export default function PlotDetailPage() {
 
                   {/* Tache filter - only in "En cours" tab and if there are taches */}
                   {activeTab === 'en_cours' && stats.en_cours > 0 && tachesOptions.length > 0 && (
-                    <div className="min-w-[200px]">
+                    <div className="w-full sm:min-w-[200px]">
                       <Select
                         value={selectedTacheFilter}
                         onChange={setSelectedTacheFilter}
@@ -1019,7 +1019,7 @@ export default function PlotDetailPage() {
 
                   {/* Etage filter - only in "Tous" tab */}
                   {activeTab === 'tous' && appartements.length > 0 && etageOptions.length > 0 && (
-                    <div className="min-w-[200px]">
+                    <div className="w-full sm:min-w-[200px]">
                       <Select
                         value={selectedEtageFilter}
                         onChange={setSelectedEtageFilter}
