@@ -91,6 +91,7 @@ export default function PhotoUploadModal({
         setUploadPhase('idle')
       }
     } catch (error) {
+      console.error('Upload error:', error)
       setErrorMessage('Erreur inattendue lors de l\'upload')
       setUploadPhase('idle')
     } finally {

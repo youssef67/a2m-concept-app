@@ -61,13 +61,13 @@ export function useAppartementPhotos(appartementId) {
     setLoading(true)
     setError(null)
 
-    const { data, error: uploadError } = await uploadPhotoService(
+    const { success, data, error: uploadError } = await uploadPhotoService(
       appartementId,
       file,
       noteId
     )
 
-    if (uploadError) {
+    if (!success) {
       setError('Erreur lors de l\'upload de la photo')
       setLoading(false)
       return { success: false, data: null, error: uploadError }
@@ -130,9 +130,9 @@ export function useAppartementPhotos(appartementId) {
     setLoading(true)
     setError(null)
 
-    const { data, error: linkError } = await linkPhotoToNoteService(photoId, noteId)
+    const { success, data, error: linkError } = await linkPhotoToNoteService(photoId, noteId)
 
-    if (linkError) {
+    if (!success) {
       setError('Erreur lors de la liaison de la photo à la note')
       setLoading(false)
       return { success: false, data: null, error: linkError }
@@ -154,9 +154,9 @@ export function useAppartementPhotos(appartementId) {
     setLoading(true)
     setError(null)
 
-    const { data, error: unlinkError } = await unlinkPhotoFromNoteService(photoId)
+    const { success, data, error: unlinkError } = await unlinkPhotoFromNoteService(photoId)
 
-    if (unlinkError) {
+    if (!success) {
       setError('Erreur lors de la dissociation de la photo')
       setLoading(false)
       return { success: false, data: null, error: unlinkError }

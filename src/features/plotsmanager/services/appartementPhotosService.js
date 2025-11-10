@@ -52,7 +52,7 @@ export function validatePhotoFile(file) {
  * Get all photos for an appartement (sorted by date, most recent first)
  * Includes linked note information if available
  * @param {string} appartementId - UUID of the appartement
- * @returns {Promise<{data: Array|null, error: any}>}
+ * @returns {Promise<{success: boolean, data: Array|null, error: any}>}
  */
 export async function getAppartementPhotos(appartementId) {
   try {
@@ -67,10 +67,10 @@ export async function getAppartementPhotos(appartementId) {
 
     if (error) throw error
 
-    return { data, error: null }
+    return { success: true, data, error: null }
   } catch (error) {
     console.error('Error fetching appartement photos:', error)
-    return { data: null, error }
+    return { success: false, data: null, error }
   }
 }
 
@@ -79,7 +79,7 @@ export async function getAppartementPhotos(appartementId) {
  * @param {string} appartementId - UUID of the appartement
  * @param {File} file - Image file to upload
  * @param {string|null} noteId - Optional UUID of note to link to
- * @returns {Promise<{data: Object|null, error: any}>}
+ * @returns {Promise<{success: boolean, data: Object|null, error: any}>}
  */
 export async function uploadPhoto(appartementId, file, noteId = null) {
   try {
@@ -128,17 +128,17 @@ export async function uploadPhoto(appartementId, file, noteId = null) {
       throw dbError
     }
 
-    return { data, error: null }
+    return { success: true, data, error: null }
   } catch (error) {
     console.error('Error uploading photo:', error)
-    return { data: null, error }
+    return { success: false, data: null, error }
   }
 }
 
 /**
  * Get signed URL for a photo (valid for 1 hour)
  * @param {string} storagePath - Storage path of the photo
- * @returns {Promise<{data: string|null, error: any}>}
+ * @returns {Promise<{success: boolean, data: string|null, error: any}>}
  */
 export async function getPhotoUrl(storagePath) {
   try {
@@ -152,10 +152,10 @@ export async function getPhotoUrl(storagePath) {
       throw new Error('Unable to generate photo URL')
     }
 
-    return { data: data.signedUrl, error: null }
+    return { success: true, data: data.signedUrl, error: null }
   } catch (error) {
     console.error('Error getting photo URL:', error)
-    return { data: null, error }
+    return { success: false, data: null, error }
   }
 }
 
@@ -202,7 +202,7 @@ export async function deletePhoto(photoId) {
  * Link an existing photo to a note
  * @param {string} photoId - UUID of the photo
  * @param {string} noteId - UUID of the note
- * @returns {Promise<{data: Object|null, error: any}>}
+ * @returns {Promise<{success: boolean, data: Object|null, error: any}>}
  */
 export async function linkPhotoToNote(photoId, noteId) {
   try {
@@ -215,17 +215,17 @@ export async function linkPhotoToNote(photoId, noteId) {
 
     if (error) throw error
 
-    return { data, error: null }
+    return { success: true, data, error: null }
   } catch (error) {
     console.error('Error linking photo to note:', error)
-    return { data: null, error }
+    return { success: false, data: null, error }
   }
 }
 
 /**
  * Unlink a photo from its note
  * @param {string} photoId - UUID of the photo
- * @returns {Promise<{data: Object|null, error: any}>}
+ * @returns {Promise<{success: boolean, data: Object|null, error: any}>}
  */
 export async function unlinkPhotoFromNote(photoId) {
   try {
@@ -238,10 +238,10 @@ export async function unlinkPhotoFromNote(photoId) {
 
     if (error) throw error
 
-    return { data, error: null }
+    return { success: true, data, error: null }
   } catch (error) {
     console.error('Error unlinking photo from note:', error)
-    return { data: null, error }
+    return { success: false, data: null, error }
   }
 }
 
