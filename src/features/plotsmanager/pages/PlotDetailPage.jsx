@@ -157,13 +157,7 @@ export default function PlotDetailPage() {
 
   const filteredByStatut = useMemo(() => {
     if (activeTab === 'tous') return filteredByEtage
-    if (activeTab === 'en_attente') {
-      // Regrouper en_attente ET en_cours dans cet onglet
-      return filteredByEtage.filter(appt => {
-        const statut = calculateAppartementStatut(appt)
-        return statut === 'en_attente' || statut === 'en_cours'
-      })
-    }
+    // Pour "en_cours" et "finalise", utiliser le filtre standard
     return filterAppartementsByStatut(filteredByEtage, activeTab)
   }, [filteredByEtage, activeTab])
 
@@ -508,7 +502,7 @@ export default function PlotDetailPage() {
                   <Tabs
                     tabs={[
                       { id: 'tous', label: 'Tous', count: appartements.length },
-                      { id: 'en_attente', label: 'En attente', count: stats.en_attente + stats.en_cours },
+                      { id: 'en_cours', label: 'En cours', count: stats.en_cours },
                       { id: 'finalise', label: 'Finalisé', count: stats.finalise }
                     ]}
                     activeTab={activeTab}
@@ -564,8 +558,8 @@ export default function PlotDetailPage() {
                 </div>
               )}
 
-              {/* Filtre documents manquants - seulement dans l'onglet "En attente" */}
-              {!appartementsLoading && activeTab === 'en_attente' && (stats.en_attente + stats.en_cours) > 0 && (
+              {/* Filtre documents manquants - seulement dans l'onglet "Tous" */}
+              {!appartementsLoading && activeTab === 'tous' && appartements.length > 0 && (
                 <div className="mb-4">
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -580,7 +574,7 @@ export default function PlotDetailPage() {
               )}
 
               {/* Clear filters button */}
-              {!appartementsLoading && appartements.length > 0 && (searchQuery !== '' || showOnlyTMA || (activeTab === 'en_attente' && showDocumentsManquants) || (activeTab === 'tous' && selectedEtageFilter !== '')) && (
+              {!appartementsLoading && appartements.length > 0 && (searchQuery !== '' || showOnlyTMA || (activeTab === 'tous' && showDocumentsManquants) || (activeTab === 'tous' && selectedEtageFilter !== '')) && (
                 <div className="flex justify-end mb-4">
                   <button
                     onClick={handleClearAllFilters}
