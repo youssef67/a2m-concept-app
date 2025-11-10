@@ -4,7 +4,23 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, GripVertical } from 'lucide-react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Input from '../../../shared/components/ui/Input'
@@ -16,6 +32,84 @@ const STATUS_OPTIONS = [
   { value: 'en_cours', label: 'En cours' },
   { value: 'terminee', label: 'Terminée' }
 ]
+
+// SortableItem component for draggable task rows
+function SortableItem({
+  id,
+  tache,
+  index,
+  onIntituleChange,
+  onStatutChange,
+  onRemove,
+  isSubmitting,
+  canRemove
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex flex-col sm:flex-row gap-2 p-3 bg-gray-50 rounded-lg"
+    >
+      {/* Drag handle */}
+      <button
+        type="button"
+        className="p-2 hover:bg-gray-200 rounded cursor-grab active:cursor-grabbing self-start sm:self-auto"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="w-5 h-5 text-gray-400" />
+      </button>
+
+      {/* Intitule input */}
+      <div className="flex-1">
+        <Input
+          type="text"
+          value={tache.intitule}
+          onChange={(e) => onIntituleChange(index, e.target.value)}
+          placeholder={`Tâche ${index + 1}`}
+          disabled={isSubmitting}
+          required
+        />
+      </div>
+
+      {/* Status select */}
+      <div className="w-full sm:w-40">
+        <Select
+          value={tache.statut}
+          onChange={(value) => onStatutChange(index, value)}
+          options={STATUS_OPTIONS}
+          placeholder="Statut"
+        />
+      </div>
+
+      {/* Delete button */}
+      <button
+        type="button"
+        onClick={() => onRemove(index)}
+        disabled={isSubmitting || !canRemove}
+        className="p-3 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed self-start sm:self-auto"
+        title={!canRemove ? 'Au moins une tâche est requise' : 'Supprimer'}
+      >
+        <Trash2 className="w-5 h-5 text-red-600" />
+      </button>
+    </div>
+  )
+}
 
 export default function TachesModal({
   isOpen,
@@ -29,6 +123,14 @@ export default function TachesModal({
   const [taches, setTaches] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+
+  // Configure sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates
+    })
+  )
 
   // Initialize taches when modal opens
   useEffect(() => {
@@ -78,6 +180,19 @@ export default function TachesModal({
     const newTaches = taches.filter((_, i) => i !== index)
     setTaches(newTaches)
     setErrorMessage('')
+  }
+
+  // Handle drag end event
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      setTaches((items) => {
+        const oldIndex = items.findIndex((_, i) => i === active.id)
+        const newIndex = items.findIndex((_, i) => i === over.id)
+        return arrayMove(items, oldIndex, newIndex)
+      })
+    }
   }
 
   // Validate and submit
@@ -169,48 +284,33 @@ export default function TachesModal({
               </Button>
             </div>
 
-            {/* Task rows */}
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {taches.map((tache, index) => (
-                <div
-                  key={index}
-                  className="flex flex-col sm:flex-row gap-2 p-3 bg-gray-50 rounded-lg"
-                >
-                  {/* Intitule input */}
-                  <div className="flex-1">
-                    <Input
-                      type="text"
-                      value={tache.intitule}
-                      onChange={(e) => handleIntituleChange(index, e.target.value)}
-                      placeholder={`Tâche ${index + 1}`}
-                      disabled={isSubmitting}
-                      required
+            {/* Task rows with drag & drop */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={taches.map((_, index) => index)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {taches.map((tache, index) => (
+                    <SortableItem
+                      key={index}
+                      id={index}
+                      tache={tache}
+                      index={index}
+                      onIntituleChange={handleIntituleChange}
+                      onStatutChange={handleStatutChange}
+                      onRemove={handleRemoveTache}
+                      isSubmitting={isSubmitting}
+                      canRemove={taches.length > 1}
                     />
-                  </div>
-
-                  {/* Status select */}
-                  <div className="w-full sm:w-40">
-                    <Select
-                      value={tache.statut}
-                      onChange={(value) => handleStatutChange(index, value)}
-                      options={STATUS_OPTIONS}
-                      placeholder="Statut"
-                    />
-                  </div>
-
-                  {/* Delete button */}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTache(index)}
-                    disabled={isSubmitting || taches.length <= 1}
-                    className="p-3 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed self-start sm:self-auto"
-                    title={taches.length <= 1 ? 'Au moins une tâche est requise' : 'Supprimer'}
-                  >
-                    <Trash2 className="w-5 h-5 text-red-600" />
-                  </button>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
 
             {/* Helper text */}
             <p className="text-xs text-gray-600">
