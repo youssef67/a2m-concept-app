@@ -944,7 +944,7 @@ export default function PlotDetailPage() {
 
               {/* Search Bar and filters */}
               {!appartementsLoading && appartements.length > 0 && (
-                <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                <div className="flex flex-col sm:flex-row gap-2 mb-4 items-end sm:items-stretch">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
@@ -1004,7 +1004,7 @@ export default function PlotDetailPage() {
 
                   {/* Tache filter - only in "En cours" tab and if there are taches */}
                   {activeTab === 'en_cours' && stats.en_cours > 0 && tachesOptions.length > 0 && (
-                    <div className="w-full sm:min-w-[200px]">
+                    <div className="min-w-[200px] self-end">
                       <Select
                         value={selectedTacheFilter}
                         onChange={setSelectedTacheFilter}
@@ -1019,7 +1019,7 @@ export default function PlotDetailPage() {
 
                   {/* Etage filter - only in "Tous" tab */}
                   {activeTab === 'tous' && appartements.length > 0 && etageOptions.length > 0 && (
-                    <div className="w-full sm:min-w-[200px]">
+                    <div className="min-w-[200px] self-end">
                       <Select
                         value={selectedEtageFilter}
                         onChange={setSelectedEtageFilter}
