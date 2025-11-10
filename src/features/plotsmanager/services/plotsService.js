@@ -13,14 +13,13 @@ import { calculateAppartementStatut } from '../utils/appartementHelpers'
  */
 export async function getPlotsByChantier(chantierId) {
   try {
-    // Fetch plots with full appartement data including tasks and validation status
+    // Fetch plots with full appartement data including tasks
     const { data, error } = await supabase
       .from('plots')
       .select(`
         *,
         appartements (
           id,
-          valide,
           appartement_taches (
             id,
             statut
@@ -43,7 +42,6 @@ export async function getPlotsByChantier(chantierId) {
       const stats = {
         total: appartements.length,
         en_attente: 0,
-        pret: 0,
         en_cours: 0,
         finalise: 0
       }
@@ -51,10 +49,7 @@ export async function getPlotsByChantier(chantierId) {
       // Calculate status for each appartement
       appartements.forEach(appt => {
         const taches = appt.appartement_taches || []
-        const statut = calculateAppartementStatut({
-          taches,
-          valide: appt.valide
-        })
+        const statut = calculateAppartementStatut({ taches })
 
         stats[statut] = (stats[statut] || 0) + 1
       })
