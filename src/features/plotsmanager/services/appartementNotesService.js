@@ -139,8 +139,14 @@ export async function createNoteWithPhotos(appartementId, contenu, photoFiles = 
       // Check if any upload failed
       const failedUploads = uploadResults.filter(result => !result.success)
       if (failedUploads.length > 0) {
-        console.warn('Some photos failed to upload:', failedUploads)
-        // Note: We don't rollback the note creation, photos can be added later
+        console.error('Photos failed to upload, rolling back note creation:', failedUploads)
+        // Rollback: delete the note that was just created
+        await deleteNote(note.id)
+        return {
+          success: false,
+          data: null,
+          error: { message: `Erreur lors de l'upload de ${failedUploads.length} photo(s)` }
+        }
       }
     }
 
