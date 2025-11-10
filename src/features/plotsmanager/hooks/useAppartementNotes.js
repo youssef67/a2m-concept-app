@@ -8,7 +8,11 @@ import {
   getAppartementNotes,
   createNote as createNoteService,
   updateNote as updateNoteService,
-  deleteNote as deleteNoteService
+  deleteNote as deleteNoteService,
+  createNoteWithPhotos,
+  deleteNoteWithPhotos,
+  addPhotosToNote,
+  deletePhotoFromNote
 } from '../services/appartementNotesService'
 
 /**
@@ -46,11 +50,12 @@ export function useAppartementNotes(appartementId) {
   }, [appartementId])
 
   /**
-   * Create a new note
+   * Create a new note with optional photos
    * @param {string} contenu - Note content
+   * @param {File[]} photoFiles - Array of photo files (optional)
    * @returns {Promise<{success: boolean, data: Object|null, error: Error|null}>}
    */
-  const createNote = async (contenu) => {
+  const createNote = async (contenu, photoFiles = []) => {
     if (!appartementId) {
       return { success: false, data: null, error: new Error('ID de l\'appartement manquant') }
     }
@@ -58,9 +63,13 @@ export function useAppartementNotes(appartementId) {
     setLoading(true)
     setError(null)
 
-    const { data, error: createError } = await createNoteService(appartementId, contenu)
+    const { success, data, error: createError } = await createNoteWithPhotos(
+      appartementId,
+      contenu,
+      photoFiles
+    )
 
-    if (createError) {
+    if (!success) {
       setError('Erreur lors de la création de la note')
       setLoading(false)
       return { success: false, data: null, error: createError }
@@ -99,7 +108,7 @@ export function useAppartementNotes(appartementId) {
   }
 
   /**
-   * Delete a note
+   * Delete a note and all its linked photos
    * @param {string} noteId - UUID of the note to delete
    * @returns {Promise<{success: boolean, error: Error|null}>}
    */
@@ -107,10 +116,67 @@ export function useAppartementNotes(appartementId) {
     setLoading(true)
     setError(null)
 
-    const { success, error: deleteError } = await deleteNoteService(noteId)
+    const { success, error: deleteError } = await deleteNoteWithPhotos(noteId)
 
     if (!success) {
       setError('Erreur lors de la suppression de la note')
+      setLoading(false)
+      return { success: false, error: deleteError }
+    }
+
+    // Reload notes after successful deletion
+    await loadNotes()
+
+    setLoading(false)
+    return { success: true, error: null }
+  }
+
+  /**
+   * Add photos to an existing note
+   * @param {string} noteId - UUID of the note
+   * @param {File[]} photoFiles - Array of photo files
+   * @returns {Promise<{success: boolean, data: Array|null, error: Error|null}>}
+   */
+  const addPhotos = async (noteId, photoFiles) => {
+    if (!appartementId) {
+      return { success: false, data: null, error: new Error('ID de l\'appartement manquant') }
+    }
+
+    setLoading(true)
+    setError(null)
+
+    const { success, data, error: addError } = await addPhotosToNote(
+      appartementId,
+      noteId,
+      photoFiles
+    )
+
+    if (!success) {
+      setError('Erreur lors de l\'ajout des photos')
+      setLoading(false)
+      return { success: false, data: null, error: addError }
+    }
+
+    // Reload notes after successful addition
+    await loadNotes()
+
+    setLoading(false)
+    return { success: true, data, error: null }
+  }
+
+  /**
+   * Delete a specific photo from a note
+   * @param {string} photoId - UUID of the photo
+   * @returns {Promise<{success: boolean, error: Error|null}>}
+   */
+  const deletePhoto = async (photoId) => {
+    setLoading(true)
+    setError(null)
+
+    const { success, error: deleteError } = await deletePhotoFromNote(photoId)
+
+    if (!success) {
+      setError('Erreur lors de la suppression de la photo')
       setLoading(false)
       return { success: false, error: deleteError }
     }
@@ -129,6 +195,8 @@ export function useAppartementNotes(appartementId) {
     loadNotes,
     createNote,
     updateNote,
-    deleteNote
+    deleteNote,
+    addPhotos,
+    deletePhoto
   }
 }

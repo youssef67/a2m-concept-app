@@ -15,10 +15,8 @@ import { getAppartementById } from '../services/appartementsService'
 import { useAppartementTaches } from '../hooks/useAppartements'
 import { useAppartementDocuments } from '../hooks/useAppartementDocuments'
 import { useAppartementNotes } from '../hooks/useAppartementNotes'
-import { useAppartementPhotos } from '../hooks/useAppartementPhotos'
 import AppartementDocumentUploadModal from '../components/AppartementDocumentUploadModal'
 import AppartementNotesTab from '../components/AppartementNotesTab'
-import AppartementPhotosTab from '../components/AppartementPhotosTab'
 import DocumentFilesList from '../components/DocumentFilesList'
 import { calculateAppartementStatut } from '../utils/appartementHelpers'
 
@@ -84,9 +82,6 @@ export default function AppartementDetailPage() {
   // Notes hook
   const { notes, loadNotes } = useAppartementNotes(appartementId)
 
-  // Photos hook
-  const { photos, loadPhotos } = useAppartementPhotos(appartementId)
-
   // Load appartement data
   useEffect(() => {
     async function loadAppartement() {
@@ -134,13 +129,6 @@ export default function AppartementDetailPage() {
       loadNotes()
     }
   }, [appartementId, loadNotes])
-
-  // Load photos data
-  useEffect(() => {
-    if (appartementId) {
-      loadPhotos()
-    }
-  }, [appartementId, loadPhotos])
 
   // Synchronize activeTab with URL parameter when appartement changes
   useEffect(() => {
@@ -219,8 +207,7 @@ export default function AppartementDetailPage() {
     const allTabs = [
       { id: 'taches', label: 'Tâches', count: `${tachesStats.terminee}/${tachesStats.total}` },
       { id: 'documents', label: 'Documents', count: `${documentsStats.uploaded}/${documentsStats.total}` },
-      { id: 'notes', label: 'Notes', count: notes.length },
-      { id: 'photos', label: 'Photos', count: photos.length }
+      { id: 'notes', label: 'Notes', count: notes.length }
     ]
 
     // Get fromTab parameter from URL
@@ -237,7 +224,7 @@ export default function AppartementDetailPage() {
     }
 
     return allTabs
-  }, [appartementStatut, tachesStats.terminee, tachesStats.total, documentsStats.uploaded, documentsStats.total, notes.length, photos.length, searchParams])
+  }, [appartementStatut, tachesStats.terminee, tachesStats.total, documentsStats.uploaded, documentsStats.total, notes.length, searchParams])
 
   // Switch to "documents" tab if "taches" is not available and currently active
   // BUT only if we don't have an explicit tab parameter in the URL
@@ -487,11 +474,6 @@ export default function AppartementDetailPage() {
               {/* Notes Tab */}
               {activeTab === 'notes' && (
                 <AppartementNotesTab appartement={appartement} />
-              )}
-
-              {/* Photos Tab */}
-              {activeTab === 'photos' && (
-                <AppartementPhotosTab appartement={appartement} />
               )}
             </div>
 

@@ -1,6 +1,6 @@
 /**
  * AppartementNotesTab
- * Tab component for displaying and managing notes for an appartement
+ * Tab component for displaying and managing notes with photos for an appartement
  */
 
 import React, { useEffect, useState } from 'react'
@@ -13,8 +13,17 @@ import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import NoteFormModal from './NoteFormModal'
 
 export default function AppartementNotesTab({ appartement }) {
-  const { notes, loading, error, loadNotes, createNote, updateNote, deleteNote } =
-    useAppartementNotes(appartement.id)
+  const {
+    notes,
+    loading,
+    error,
+    loadNotes,
+    createNote,
+    updateNote,
+    deleteNote,
+    addPhotos,
+    deletePhoto
+  } = useAppartementNotes(appartement.id)
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [editingNote, setEditingNote] = useState(null)
@@ -39,14 +48,14 @@ export default function AppartementNotesTab({ appartement }) {
   }
 
   // Handle save note (create or update)
-  const handleSaveNote = async (contenu) => {
+  const handleSaveNote = async (contenu, photoFiles = []) => {
     if (editingNote) {
-      // Update existing note
+      // Update existing note (content only, photos handled separately)
       const result = await updateNote(editingNote.id, contenu)
       return result
     } else {
-      // Create new note
-      const result = await createNote(contenu)
+      // Create new note with photos
+      const result = await createNote(contenu, photoFiles)
       return result
     }
   }
@@ -66,12 +75,29 @@ export default function AppartementNotesTab({ appartement }) {
     setNoteToDelete(null)
   }
 
-  // Handle view photo
+  // Handle add photos to note
+  const handleAddPhotos = async (noteId, photoFiles) => {
+    const result = await addPhotos(noteId, photoFiles)
+    return result
+  }
+
+  // Handle delete photo from note
+  const handleDeletePhoto = async (photoId) => {
+    const result = await deletePhoto(photoId)
+    return result
+  }
+
+  // Handle view photo in new tab
   const handleViewPhoto = async (photo) => {
-    const { data: url } = await getPhotoUrl(photo.storage_path)
-    if (url) {
-      window.open(url, '_blank')
-    } else {
+    try {
+      const { data: url } = await getPhotoUrl(photo.storage_path)
+      if (url) {
+        window.open(url, '_blank')
+      } else {
+        alert('Erreur lors de l\'ouverture de la photo')
+      }
+    } catch (error) {
+      console.error('Error loading photo URL:', error)
       alert('Erreur lors de l\'ouverture de la photo')
     }
   }
@@ -133,69 +159,68 @@ export default function AppartementNotesTab({ appartement }) {
           {notes.map((note) => (
             <div
               key={note.id}
-              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+              className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
             >
-              {/* Note header: date and actions */}
-              <div className="flex items-start justify-between gap-4 mb-2">
-                <div className="text-xs text-gray-500">
-                  {formatNoteDate(note.created_at)}
-                  {note.updated_at !== note.created_at && (
-                    <span className="ml-2 italic">(modifié)</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleEditNote(note)}
-                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                    title="Modifier"
-                    disabled={deletingNoteId === note.id}
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteNote(note)}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                    title="Supprimer"
-                    disabled={deletingNoteId === note.id}
-                  >
-                    {deletingNoteId === note.id ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600" />
-                    ) : (
-                      <Trash2 className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Note content */}
-              <div className="text-sm text-gray-900 whitespace-pre-wrap">
-                {note.contenu}
-              </div>
-
-              {/* Linked photos */}
+              {/* Photos liste (if exist) */}
               {note.photos && note.photos.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <ImageIcon className="w-4 h-4 text-blue-600" />
-                    <span className="text-xs font-medium text-blue-600">
-                      {note.photos.length} photo{note.photos.length > 1 ? 's' : ''} liée{note.photos.length > 1 ? 's' : ''}
-                    </span>
-                  </div>
+                <div className="p-3 bg-gray-50 border-b border-gray-200">
                   <div className="flex flex-wrap gap-2">
                     {note.photos.map((photo) => (
                       <button
                         key={photo.id}
                         onClick={() => handleViewPhoto(photo)}
-                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-xs text-blue-700 transition-colors"
+                        className="flex items-center gap-2 px-3 py-2 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-colors"
                         title={`Voir ${photo.nom_fichier}`}
                       >
-                        <ImageIcon className="w-3 h-3" />
-                        <span className="truncate max-w-[150px]">{photo.nom_fichier}</span>
+                        <ImageIcon className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 truncate max-w-[150px]">
+                          {photo.nom_fichier}
+                        </span>
                       </button>
                     ))}
                   </div>
                 </div>
               )}
+
+              {/* Note content */}
+              <div className="p-4">
+                {/* Note header: date and actions */}
+                <div className="flex items-start justify-between gap-4 mb-2">
+                  <div className="text-xs text-gray-500">
+                    {formatNoteDate(note.created_at)}
+                    {note.updated_at !== note.created_at && (
+                      <span className="ml-2 italic">(modifié)</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleEditNote(note)}
+                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      title="Modifier"
+                      disabled={deletingNoteId === note.id}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteNote(note)}
+                      className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                      title="Supprimer"
+                      disabled={deletingNoteId === note.id}
+                    >
+                      {deletingNoteId === note.id ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Note text */}
+                <div className="text-sm text-gray-900 whitespace-pre-wrap">
+                  {note.contenu}
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -209,6 +234,8 @@ export default function AppartementNotesTab({ appartement }) {
           setEditingNote(null)
         }}
         onSave={handleSaveNote}
+        onDeletePhoto={handleDeletePhoto}
+        onAddPhotos={handleAddPhotos}
         initialNote={editingNote}
         appartementNom={appartement.nom}
       />
@@ -219,7 +246,7 @@ export default function AppartementNotesTab({ appartement }) {
         onClose={() => setNoteToDelete(null)}
         onConfirm={confirmDeleteNote}
         title="Supprimer la note"
-        message="Êtes-vous sûr de vouloir supprimer cette note ? Cette action est irréversible."
+        message={`Êtes-vous sûr de vouloir supprimer cette note${noteToDelete?.photos?.length > 0 ? ` et ses ${noteToDelete.photos.length} photo(s)` : ''} ? Cette action est irréversible.`}
         confirmLabel="Supprimer"
         cancelLabel="Annuler"
         variant="danger"

@@ -1,9 +1,10 @@
 /**
  * NoteFormModal
- * Modal for creating or editing a note
+ * Modal for creating or editing a note with photos
  */
 
 import React, { useState, useEffect } from 'react'
+import { Camera, ImagePlus, X } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 
@@ -12,9 +13,15 @@ export default function NoteFormModal({
   onClose,
   onSave,
   initialNote = null,
-  appartementNom
+  appartementNom,
+  onDeletePhoto,
+  onAddPhotos
 }) {
   const [contenu, setContenu] = useState('')
+  const [newPhotoFiles, setNewPhotoFiles] = useState([])
+  const [photoPreviews, setPhotoPreviews] = useState([])
+  const [existingPhotos, setExistingPhotos] = useState([])
+  const [photosToDelete, setPhotosToDelete] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -25,12 +32,57 @@ export default function NoteFormModal({
     if (isOpen) {
       if (initialNote) {
         setContenu(initialNote.contenu || '')
+        setExistingPhotos(initialNote.photos || [])
       } else {
         setContenu('')
+        setExistingPhotos([])
       }
+      setNewPhotoFiles([])
+      setPhotoPreviews([])
+      setPhotosToDelete([])
       setErrorMessage('')
     }
   }, [isOpen, initialNote])
+
+  // Handle file selection
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    setErrorMessage('')
+
+    // Add new files to the list
+    const newFiles = [...newPhotoFiles, ...files]
+    setNewPhotoFiles(newFiles)
+
+    // Create previews for new files
+    files.forEach((file) => {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setPhotoPreviews(prev => [...prev, { file, url: reader.result }])
+      }
+      reader.readAsDataURL(file)
+    })
+
+    // Reset input
+    e.target.value = ''
+  }
+
+  // Handle remove new photo (before upload)
+  const handleRemoveNewPhoto = (index) => {
+    setNewPhotoFiles(prev => prev.filter((_, i) => i !== index))
+    setPhotoPreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // Handle mark existing photo for deletion
+  const handleMarkPhotoForDeletion = (photoId) => {
+    setPhotosToDelete(prev => [...prev, photoId])
+  }
+
+  // Handle unmark existing photo for deletion
+  const handleUnmarkPhotoForDeletion = (photoId) => {
+    setPhotosToDelete(prev => prev.filter(id => id !== photoId))
+  }
 
   // Handle submit
   const handleSubmit = async (e) => {
@@ -44,32 +96,79 @@ export default function NoteFormModal({
 
     setIsSubmitting(true)
 
-    const result = await onSave(contenu)
+    try {
+      if (isEditMode) {
+        // Edit mode: update content, delete marked photos, add new photos
 
-    setIsSubmitting(false)
+        // 1. Update note content
+        const updateResult = await onSave(contenu)
+        if (!updateResult || !updateResult.success) {
+          setErrorMessage(updateResult?.error?.message || 'Erreur lors de la modification de la note')
+          setIsSubmitting(false)
+          return
+        }
 
-    if (result && result.success) {
-      handleClose()
-    } else {
-      setErrorMessage(
-        result?.error?.message || 'Erreur lors de la sauvegarde de la note'
-      )
+        // 2. Delete marked photos
+        if (photosToDelete.length > 0) {
+          for (const photoId of photosToDelete) {
+            await onDeletePhoto(photoId)
+          }
+        }
+
+        // 3. Add new photos
+        if (newPhotoFiles.length > 0) {
+          const addResult = await onAddPhotos(initialNote.id, newPhotoFiles)
+          if (!addResult || !addResult.success) {
+            setErrorMessage('Note modifiée mais erreur lors de l\'ajout des photos')
+            setIsSubmitting(false)
+            return
+          }
+        }
+
+        handleClose()
+      } else {
+        // Create mode: create note with photos
+        const result = await onSave(contenu, newPhotoFiles)
+
+        if (result && result.success) {
+          handleClose()
+        } else {
+          setErrorMessage(
+            result?.error?.message || 'Erreur lors de la création de la note'
+          )
+        }
+      }
+    } catch (error) {
+      console.error('Error in form submit:', error)
+      setErrorMessage('Erreur inattendue lors de la sauvegarde')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   // Handle close
   const handleClose = () => {
     setContenu('')
+    setNewPhotoFiles([])
+    setPhotoPreviews([])
+    setExistingPhotos([])
+    setPhotosToDelete([])
     setErrorMessage('')
     onClose()
   }
+
+  const displayedExistingPhotos = existingPhotos.filter(
+    photo => !photosToDelete.includes(photo.id)
+  )
+
+  const totalPhotos = displayedExistingPhotos.length + newPhotoFiles.length
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
       title={isEditMode ? `Modifier la note - ${appartementNom}` : `Nouvelle note - ${appartementNom}`}
-      size="md"
+      size="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Error message */}
@@ -85,7 +184,7 @@ export default function NoteFormModal({
             htmlFor="contenu"
             className="block text-sm font-medium text-gray-700 mb-2"
           >
-            Contenu de la note
+            Contenu de la note <span className="text-red-500">*</span>
           </label>
           <textarea
             id="contenu"
@@ -99,6 +198,140 @@ export default function NoteFormModal({
           />
           <p className="mt-1 text-xs text-gray-500">
             {contenu.length} caractères
+          </p>
+        </div>
+
+        {/* Photos section */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Photos (optionnel) - {totalPhotos} photo{totalPhotos > 1 ? 's' : ''}
+          </label>
+
+          {/* Photo upload buttons */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            {/* Camera button */}
+            <label
+              htmlFor="camera-input"
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg cursor-pointer transition-colors min-h-[56px]"
+            >
+              <Camera className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm font-medium">Prendre une photo</span>
+            </label>
+            <input
+              id="camera-input"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              capture="environment"
+              onChange={handleFileChange}
+              className="hidden"
+              disabled={isSubmitting}
+              multiple
+            />
+
+            {/* Gallery button */}
+            <label
+              htmlFor="gallery-input"
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-gray-300 hover:border-primary-600 hover:bg-gray-50 text-gray-700 rounded-lg cursor-pointer transition-colors min-h-[56px]"
+            >
+              <ImagePlus className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm font-medium">Choisir depuis la galerie</span>
+            </label>
+            <input
+              id="gallery-input"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleFileChange}
+              className="hidden"
+              disabled={isSubmitting}
+              multiple
+            />
+          </div>
+
+          {/* Existing photos (edit mode) */}
+          {isEditMode && existingPhotos.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs font-medium text-gray-600 mb-2">Photos existantes</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {existingPhotos.map((photo) => {
+                  const isMarkedForDeletion = photosToDelete.includes(photo.id)
+                  return (
+                    <div
+                      key={photo.id}
+                      className={`relative rounded-lg overflow-hidden border-2 ${
+                        isMarkedForDeletion ? 'border-red-500 opacity-50' : 'border-gray-200'
+                      }`}
+                    >
+                      <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                        <p className="text-xs text-gray-500 px-2 text-center truncate">
+                          {photo.nom_fichier}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          isMarkedForDeletion
+                            ? handleUnmarkPhotoForDeletion(photo.id)
+                            : handleMarkPhotoForDeletion(photo.id)
+                        }
+                        className={`absolute top-1 right-1 p-1 rounded-full ${
+                          isMarkedForDeletion
+                            ? 'bg-gray-600 hover:bg-gray-700'
+                            : 'bg-red-600 hover:bg-red-700'
+                        } text-white transition-colors`}
+                        title={isMarkedForDeletion ? 'Annuler suppression' : 'Supprimer'}
+                        disabled={isSubmitting}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      {isMarkedForDeletion && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
+                          <p className="text-white text-xs font-medium">À supprimer</p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* New photos preview */}
+          {photoPreviews.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-gray-600 mb-2">
+                {isEditMode ? 'Nouvelles photos à ajouter' : 'Photos à ajouter'}
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {photoPreviews.map((preview, index) => (
+                  <div
+                    key={index}
+                    className="relative rounded-lg overflow-hidden border-2 border-green-500"
+                  >
+                    <img
+                      src={preview.url}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full aspect-square object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveNewPhoto(index)}
+                      className="absolute top-1 right-1 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors"
+                      title="Supprimer"
+                      disabled={isSubmitting}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 px-2 py-1">
+                      <p className="text-white text-xs truncate">{preview.file.name}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p className="mt-2 text-xs text-gray-500">
+            Formats acceptés: JPEG, PNG, WebP (max 10 MB par photo)
           </p>
         </div>
 
