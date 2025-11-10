@@ -50,6 +50,7 @@ export default function PlotDetailPage() {
   const [activeTab, setActiveTab] = useState(initialTab)
   const [selectedEtageFilter, setSelectedEtageFilter] = useState('') // '' = tous, null = non spécifié, 0-10 = étage
   const [showOnlyTMA, setShowOnlyTMA] = useState(false) // Filtre pour afficher uniquement les appartements avec TMA
+  const [showDocumentsManquants, setShowDocumentsManquants] = useState(false) // Filtre pour documents obligatoires manquants
   const [creationResult, setCreationResult] = useState(null)
   const [showResultModal, setShowResultModal] = useState(false)
 
