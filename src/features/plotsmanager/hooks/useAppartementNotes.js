@@ -6,9 +6,7 @@
 import { useState, useCallback } from 'react'
 import {
   getAppartementNotes,
-  createNote as createNoteService,
   updateNote as updateNoteService,
-  deleteNote as deleteNoteService,
   createNoteWithPhotos,
   deleteNoteWithPhotos,
   addPhotosToNote,

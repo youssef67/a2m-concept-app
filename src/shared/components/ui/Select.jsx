@@ -85,7 +85,7 @@ export default function Select({ value, onChange, options, placeholder, classNam
           />
 
           {/* Options list */}
-          <div className="absolute right-0 z-20 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          <div className="absolute left-0 z-20 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
             {options.map((option) => {
               const isSelected = option.value === value
 

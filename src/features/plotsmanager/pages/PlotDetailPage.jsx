@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, CheckCircle, AlertTriangle, MessageCircle, X, XCircle, FileCheck, FileText, ListOrdered, BadgeCheck, MoreVertical, Check } from 'lucide-react'
+import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, AlertTriangle, X, FileText, BadgeCheck, MoreVertical, Check, CheckCircle } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
@@ -16,14 +16,9 @@ import Select from '../../../shared/components/ui/Select'
 import Dropdown, { DropdownItem } from '../../../shared/components/ui/Dropdown'
 import CreateAppartementModal from '../components/CreateAppartementModal'
 import CreateMultipleAppartementsModal from '../components/CreateMultipleAppartementsModal'
-import SendWhatsAppModal from '../components/SendWhatsAppModal'
-import ExceptionalWhatsAppModal from '../components/ExceptionalWhatsAppModal'
 import { getPlotById } from '../services/plotsService'
-import { validateAppartements, invalidateAppartements } from '../services/appartementsService'
-import { getTachesByChantier } from '../services/tachesService'
 import { useAppartements } from '../hooks/useAppartements'
 import { usePlots } from '../hooks/usePlots'
-import { useToast } from '../../../shared/hooks/useToast'
 import {
   searchAppartements,
   filterAppartementsByStatut,
@@ -33,7 +28,6 @@ import {
   getStatutConfig,
   getTasksEnCours
 } from '../utils/appartementHelpers'
-import { hasTasksEnCours } from '../utils/whatsappHelpers'
 import { formatEtage } from '../utils/etageConstants'
 
 export default function PlotDetailPage() {
@@ -54,36 +48,10 @@ export default function PlotDetailPage() {
   const [appartementToDelete, setAppartementToDelete] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState(initialTab)
-  const [showOnlyWithAllDocuments, setShowOnlyWithAllDocuments] = useState(false)
-  const [sortByTaskCompletion, setSortByTaskCompletion] = useState(false)
-  const [selectedTacheFilter, setSelectedTacheFilter] = useState('') // '' = toutes, sinon tacheId
   const [selectedEtageFilter, setSelectedEtageFilter] = useState('') // '' = tous, null = non spécifié, 0-10 = étage
   const [showOnlyTMA, setShowOnlyTMA] = useState(false) // Filtre pour afficher uniquement les appartements avec TMA
-  const [chantierTaches, setChantierTaches] = useState([]) // Liste des tâches du chantier
   const [creationResult, setCreationResult] = useState(null)
   const [showResultModal, setShowResultModal] = useState(false)
-
-  // WhatsApp selection states (for "Prêt" tab)
-  const [isSelectionMode, setIsSelectionMode] = useState(false)
-  const [selectedAppartements, setSelectedAppartements] = useState(new Set())
-  const [isSendWhatsAppModalOpen, setIsSendWhatsAppModalOpen] = useState(false)
-
-  // WhatsApp selection states (for "En cours" tab)
-  const [isWhatsAppSelectionEnCours, setIsWhatsAppSelectionEnCours] = useState(false)
-  const [selectedForWhatsAppEnCours, setSelectedForWhatsAppEnCours] = useState(new Set())
-  const [isSendWhatsAppEnCoursModalOpen, setIsSendWhatsAppEnCoursModalOpen] = useState(false)
-  const [isExceptionalWhatsAppModalOpen, setIsExceptionalWhatsAppModalOpen] = useState(false)
-
-  // Validation/Invalidation selection states
-  const [isValidationMode, setIsValidationMode] = useState(false)
-  const [isInvalidationMode, setIsInvalidationMode] = useState(false)
-  const [selectedForValidation, setSelectedForValidation] = useState(new Set())
-  const [selectedForInvalidation, setSelectedForInvalidation] = useState(new Set())
-  const [showValidationConfirm, setShowValidationConfirm] = useState(false)
-  const [showInvalidationConfirm, setShowInvalidationConfirm] = useState(false)
-
-  // Toast hook
-  const { showToast } = useToast()
 
   // Appartements hook
   const { appartements, loading: appartementsLoading, loadAppartements, deleteAppartement } = useAppartements(plotId, chantierId)
@@ -129,20 +97,6 @@ export default function PlotDetailPage() {
     }
   }, [plotId, loadAppartements])
 
-  // Load chantier taches
-  useEffect(() => {
-    async function loadChantierTaches() {
-      if (!chantierId) return
-
-      const { data, error } = await getTachesByChantier(chantierId)
-      if (!error && data) {
-        setChantierTaches(data)
-      }
-    }
-
-    loadChantierTaches()
-  }, [chantierId])
-
   // Load all plots for navigation
   useEffect(() => {
     if (chantierId) {
@@ -185,90 +139,52 @@ export default function PlotDetailPage() {
     return searchAppartements(appartements, searchQuery)
   }, [appartements, searchQuery])
 
-  const filteredByDocuments = useMemo(() => {
-    if (!showOnlyWithAllDocuments) return filteredBySearch
-
-    // Filter appartements that have all obligatoire documents
-    return filteredBySearch.filter(appt => {
-      return !appt.missing_obligatoire_documents
-    })
-  }, [filteredBySearch, showOnlyWithAllDocuments])
-
   const filteredByTMA = useMemo(() => {
-    if (!showOnlyTMA) return filteredByDocuments
-    return filteredByDocuments.filter(appt => appt.has_tma)
-  }, [filteredByDocuments, showOnlyTMA])
+    if (!showOnlyTMA) return filteredBySearch
+    return filteredBySearch.filter(appt => appt.has_tma)
+  }, [filteredBySearch, showOnlyTMA])
+
+  const filteredByDocuments = useMemo(() => {
+    if (!showDocumentsManquants || activeTab !== 'en_attente') return filteredByTMA
+    // Filter appartements with missing obligatoire documents (only in "en_attente" tab)
+    return filteredByTMA.filter(appt => appt.missing_obligatoire_documents)
+  }, [filteredByTMA, showDocumentsManquants, activeTab])
 
   const filteredByEtage = useMemo(() => {
-    return filterAppartementsByEtage(filteredByTMA, selectedEtageFilter)
-  }, [filteredByTMA, selectedEtageFilter])
-
-  const filteredByTache = useMemo(() => {
-    if (!selectedTacheFilter) return filteredByEtage // Pas de filtre
-
-    // Filtrer les appartements qui ont la tâche sélectionnée avec statut "terminee"
-    return filteredByEtage.filter(appt => {
-      return appt.taches?.some(t =>
-        t.chantier_tache_id === selectedTacheFilter && t.statut === 'terminee'
-      )
-    })
-  }, [filteredByEtage, selectedTacheFilter])
+    return filterAppartementsByEtage(filteredByDocuments, selectedEtageFilter)
+  }, [filteredByDocuments, selectedEtageFilter])
 
   const filteredByStatut = useMemo(() => {
-    // Si onglet "Tous", ne pas filtrer par statut
-    if (activeTab === 'tous') return filteredByTache
-    return filterAppartementsByStatut(filteredByTache, activeTab)
-  }, [filteredByTache, activeTab])
+    if (activeTab === 'tous') return filteredByEtage
+    if (activeTab === 'en_attente') {
+      // Regrouper en_attente ET en_cours dans cet onglet
+      return filteredByEtage.filter(appt => {
+        const statut = calculateAppartementStatut(appt)
+        return statut === 'en_attente' || statut === 'en_cours'
+      })
+    }
+    return filterAppartementsByStatut(filteredByEtage, activeTab)
+  }, [filteredByEtage, activeTab])
 
   const sortedAppartements = useMemo(() => {
-    // Si onglet "Tous", tri alphabétique par défaut
-    if (activeTab === 'tous') {
-      return sortAppartementsAlphabetically(filteredByStatut)
-    }
-
-    // Pour les autres onglets, tri par completion si activé
-    if (!sortByTaskCompletion) return filteredByStatut
-
-    // Sort by task completion percentage (descending)
-    return [...filteredByStatut].sort((a, b) => {
-      const aCompleted = (a.taches || []).filter(t => t.statut === 'terminee').length
-      const aTotal = a.taches_count || 0
-      const aPercentage = aTotal > 0 ? (aCompleted / aTotal) : 0
-
-      const bCompleted = (b.taches || []).filter(t => t.statut === 'terminee').length
-      const bTotal = b.taches_count || 0
-      const bPercentage = bTotal > 0 ? (bCompleted / bTotal) : 0
-
-      return bPercentage - aPercentage // Descending order
-    })
-  }, [filteredByStatut, sortByTaskCompletion, activeTab])
+    // Tri alphabétique par défaut pour tous les onglets
+    return sortAppartementsAlphabetically(filteredByStatut)
+  }, [filteredByStatut])
 
   const filteredAppartements = sortedAppartements
 
   // Calculate stats for tabs
-  const stats = useMemo(() => ({
-    en_attente: filterAppartementsByStatut(appartements, 'en_attente').length,
-    en_cours: filterAppartementsByStatut(appartements, 'en_cours').length,
-    pret: filterAppartementsByStatut(appartements, 'pret').length,
-    finalise: filterAppartementsByStatut(appartements, 'finalise').length
-  }), [appartements])
+  const stats = useMemo(() => {
+    const en_attente = filterAppartementsByStatut(appartements, 'en_attente').length
+    const en_cours = filterAppartementsByStatut(appartements, 'en_cours').length
+    return {
+      en_attente,
+      en_cours,
+      pret: filterAppartementsByStatut(appartements, 'pret').length,
+      finalise: filterAppartementsByStatut(appartements, 'finalise').length
+    }
+  }, [appartements])
 
-  // Prepare taches options with count of appartements that completed each tache
-  const tachesOptions = useMemo(() => {
-    if (!chantierTaches || chantierTaches.length === 0) return []
-
-    return chantierTaches.map(tache => {
-      // Count appartements that have this tache with statut "terminee"
-      const count = appartements.filter(appt =>
-        appt.taches?.some(t => t.chantier_tache_id === tache.id && t.statut === 'terminee')
-      ).length
-
-      return {
-        value: tache.id,
-        label: `${tache.intitule} (${count})`
-      }
-    })
-  }, [chantierTaches, appartements])
 
   // Generate etage options based on existing appartements
   const etageOptions = useMemo(() => {
@@ -322,15 +238,13 @@ export default function PlotDetailPage() {
 
   // Handle appartement click
   const handleAppartementClick = (appartement) => {
-    // Pass current tab in URL to remember it on back navigation
-    // If in "en_attente" tab, open directly in Documents tab
-    // If in "en_cours" tab, open directly in Taches tab
+    const appartementId = appartement.id
     if (activeTab === 'en_attente') {
-      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?tab=documents&fromTab=${activeTab}`)
-    } else if (activeTab === 'en_cours') {
-      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?tab=taches&fromTab=${activeTab}`)
+      // Ouvrir sur l'onglet Tâches (là où il y a du travail)
+      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartementId}?tab=taches&fromTab=${activeTab}`)
     } else {
-      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?fromTab=${activeTab}`)
+      // Finalisé ou Tous : onglet par défaut
+      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartementId}?fromTab=${activeTab}`)
     }
   }
 
@@ -378,205 +292,8 @@ export default function PlotDetailPage() {
     setAppartementToEdit(null)
   }
 
-  // WhatsApp handlers
-  const handleStartWhatsAppSelection = () => {
-    setIsSelectionMode(true)
-    setSelectedAppartements(new Set())
-  }
-
-  const handleCancelSelection = () => {
-    setIsSelectionMode(false)
-    setSelectedAppartements(new Set())
-  }
-
-  const handleToggleAppartementSelection = (appartementId) => {
-    setSelectedAppartements(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(appartementId)) {
-        newSet.delete(appartementId)
-      } else {
-        newSet.add(appartementId)
-      }
-      return newSet
-    })
-  }
-
-  const handleContinueToWhatsApp = () => {
-    if (selectedAppartements.size === 0) {
-      alert('Veuillez sélectionner au moins un lot')
-      return
-    }
-    setIsSendWhatsAppModalOpen(true)
-  }
-
-  const handleCloseWhatsAppModal = () => {
-    setIsSendWhatsAppModalOpen(false)
-    setIsSelectionMode(false)
-    setSelectedAppartements(new Set())
-  }
-
-  // WhatsApp handlers for "En cours" tab
-  const handleStartWhatsAppSelectionEnCours = () => {
-    setIsWhatsAppSelectionEnCours(true)
-    setSelectedForWhatsAppEnCours(new Set())
-  }
-
-  const handleCancelWhatsAppSelectionEnCours = () => {
-    setIsWhatsAppSelectionEnCours(false)
-    setSelectedForWhatsAppEnCours(new Set())
-  }
-
-  const handleToggleWhatsAppEnCoursSelection = (appartementId) => {
-    setSelectedForWhatsAppEnCours(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(appartementId)) {
-        newSet.delete(appartementId)
-      } else {
-        newSet.add(appartementId)
-      }
-      return newSet
-    })
-  }
-
-  const handleContinueToWhatsAppEnCours = () => {
-    if (selectedForWhatsAppEnCours.size === 0) {
-      showToast('Veuillez sélectionner au moins un lot', 'error')
-      return
-    }
-
-    // Vérifier qu'au moins un appartement OK existe (sans tâches en cours)
-    const validAppartements = appartements
-      .filter(appt => selectedForWhatsAppEnCours.has(appt.id))
-      .filter(appt => !hasTasksEnCours(appt.taches))
-
-    if (validAppartements.length === 0) {
-      showToast('Aucun lot sélectionné ne peut être envoyé (tous ont des tâches en cours)', 'error')
-      return
-    }
-
-    setIsSendWhatsAppEnCoursModalOpen(true)
-  }
-
-  const handleCloseWhatsAppEnCoursModal = () => {
-    setIsSendWhatsAppEnCoursModalOpen(false)
-    setIsWhatsAppSelectionEnCours(false)
-    setSelectedForWhatsAppEnCours(new Set())
-  }
-
-  // Validation handlers
-  const handleStartValidation = () => {
-    setIsValidationMode(true)
-    setSelectedForValidation(new Set())
-  }
-
-  const handleCancelValidation = () => {
-    setIsValidationMode(false)
-    setSelectedForValidation(new Set())
-  }
-
-  const handleToggleValidationSelection = (appartementId) => {
-    setSelectedForValidation(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(appartementId)) {
-        newSet.delete(appartementId)
-      } else {
-        newSet.add(appartementId)
-      }
-      return newSet
-    })
-  }
-
-  const handleContinueToValidation = () => {
-    if (selectedForValidation.size === 0) {
-      showToast('Veuillez sélectionner au moins un lot', 'error')
-      return
-    }
-    setShowValidationConfirm(true)
-  }
-
-  const confirmValidation = async () => {
-    const ids = Array.from(selectedForValidation)
-    const result = await validateAppartements(ids, chantierId)
-
-    if (result.success) {
-      // Check if some were blocked
-      if (result.failed > 0) {
-        showToast(`${result.updated} lot(s) validé(s). ${result.failed} lot(s) bloqué(s) car documents obligatoires manquants.`, 'warning')
-      } else {
-        showToast(`${result.updated} lot(s) validé(s) avec succès`, 'success')
-      }
-      setIsValidationMode(false)
-      setSelectedForValidation(new Set())
-      setShowValidationConfirm(false)
-      loadAppartements()
-      setActiveTab('pret') // Switch to "Prêt" tab
-    } else {
-      // Show detailed error about missing documents
-      const errorMsg = result.errors && result.errors.length > 0
-        ? result.errors[0]
-        : 'Erreur lors de la validation'
-      showToast(errorMsg, 'error')
-      setShowValidationConfirm(false)
-    }
-  }
-
-  // Invalidation handlers
-  const handleStartInvalidation = () => {
-    setIsInvalidationMode(true)
-    setSelectedForInvalidation(new Set())
-  }
-
-  const handleCancelInvalidation = () => {
-    setIsInvalidationMode(false)
-    setSelectedForInvalidation(new Set())
-  }
-
-  const handleToggleInvalidationSelection = (appartementId) => {
-    setSelectedForInvalidation(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(appartementId)) {
-        newSet.delete(appartementId)
-      } else {
-        newSet.add(appartementId)
-      }
-      return newSet
-    })
-  }
-
-  const handleContinueToInvalidation = () => {
-    if (selectedForInvalidation.size === 0) {
-      showToast('Veuillez sélectionner au moins un lot', 'error')
-      return
-    }
-    setShowInvalidationConfirm(true)
-  }
-
-  const confirmInvalidation = async () => {
-    const ids = Array.from(selectedForInvalidation)
-    const result = await invalidateAppartements(ids)
-
-    if (result.success) {
-      showToast(`${result.updated} lot(s) invalidé(s) avec succès`, 'success')
-      setIsInvalidationMode(false)
-      setSelectedForInvalidation(new Set())
-      setShowInvalidationConfirm(false)
-      loadAppartements()
-      setActiveTab('en_attente') // Switch to "En attente" tab
-    } else {
-      showToast('Erreur lors de l\'invalidation', 'error')
-      setShowInvalidationConfirm(false)
-    }
-  }
-
-  // Documents filter handlers
-  const handleToggleDocumentsFilter = () => {
-    setShowOnlyWithAllDocuments(prev => !prev)
-  }
-
-  // Task sort handlers
-  const handleToggleTaskSort = () => {
-    setSortByTaskCompletion(prev => !prev)
-  }
+  // Documents filter handlers (filter "Documents obligatoires manquants")
+  const [showDocumentsManquants, setShowDocumentsManquants] = useState(false)
 
   // TMA filter handlers
   const handleToggleTMAFilter = () => {
@@ -588,12 +305,7 @@ export default function PlotDetailPage() {
     setShowOnlyTMA(false) // TMA filter is visible on all tabs
     // Only clear documents filter if in "en_attente" tab
     if (activeTab === 'en_attente') {
-      setShowOnlyWithAllDocuments(false)
-    }
-    // Only clear task sort and tache filter if in "en_cours" tab
-    if (activeTab === 'en_cours') {
-      setSortByTaskCompletion(false)
-      setSelectedTacheFilter('')
+      setShowDocumentsManquants(false)
     }
     // Only clear etage filter if in "tous" tab
     if (activeTab === 'tous') {
@@ -601,45 +313,12 @@ export default function PlotDetailPage() {
     }
   }
 
-  // Get selected appartements data
-  const selectedAppartementsData = useMemo(() => {
-    return appartements.filter(appt => selectedAppartements.has(appt.id))
-  }, [appartements, selectedAppartements])
-
-  // Get selected appartements data for "En cours" WhatsApp
-  const selectedAppartementsEnCoursData = useMemo(() => {
-    return appartements
-      .filter(appt => selectedForWhatsAppEnCours.has(appt.id))
-      .filter(appt => !hasTasksEnCours(appt.taches)) // Exclure les appartements avec tâches en cours
-  }, [appartements, selectedForWhatsAppEnCours])
 
   // Reset selection modes when changing tabs
   useEffect(() => {
-    // Reset WhatsApp selection mode (for "Prêt" tab)
-    if (activeTab !== 'pret') {
-      setIsSelectionMode(false)
-      setSelectedAppartements(new Set())
-    }
-    // Reset WhatsApp selection mode (for "En cours" tab)
-    if (activeTab !== 'en_cours') {
-      setIsWhatsAppSelectionEnCours(false)
-      setSelectedForWhatsAppEnCours(new Set())
-    }
-    // Reset validation mode
+    // Reset documents filter when leaving "en_attente" tab
     if (activeTab !== 'en_attente') {
-      setIsValidationMode(false)
-      setSelectedForValidation(new Set())
-      // Reset documents filter when leaving "en_attente" tab
-      setShowOnlyWithAllDocuments(false)
-    }
-    // Reset invalidation mode
-    if (activeTab !== 'pret') {
-      setIsInvalidationMode(false)
-      setSelectedForInvalidation(new Set())
-    }
-    // Reset task sort when leaving "en_cours" tab
-    if (activeTab !== 'en_cours') {
-      setSortByTaskCompletion(false)
+      setShowDocumentsManquants(false)
     }
     // Reset TMA filter on tab change (filter is visible on all tabs)
     setShowOnlyTMA(false)
@@ -813,106 +492,6 @@ export default function PlotDetailPage() {
                   )}
                 </div>
 
-                {/* Validation button - only in "En attente" tab */}
-                {!appartementsLoading && activeTab === 'en_attente' && stats.en_attente > 0 && (
-                  isValidationMode ? (
-                    <Button
-                      onClick={handleCancelValidation}
-                      variant="secondary"
-                      className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
-                      title="Annuler la sélection"
-                    >
-                      <X className="w-5 h-5" />
-                      <span className="hidden sm:inline">Annuler</span>
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={handleStartValidation}
-                      variant="secondary"
-                      className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
-                      title="Valider lot(s)"
-                    >
-                      <CheckCircle className="w-5 h-5" />
-                      <span className="hidden sm:inline">Valider lot(s)</span>
-                    </Button>
-                  )
-                )}
-
-                {/* Invalidation button - only in "Prêt" tab */}
-                {!appartementsLoading && activeTab === 'pret' && stats.pret > 0 && !isSelectionMode && (
-                  isInvalidationMode ? (
-                    <Button
-                      onClick={handleCancelInvalidation}
-                      variant="secondary"
-                      className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
-                      title="Annuler la sélection"
-                    >
-                      <X className="w-5 h-5" />
-                      <span className="hidden sm:inline">Annuler</span>
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={handleStartInvalidation}
-                      variant="secondary"
-                      className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
-                      title="Invalider lot(s)"
-                    >
-                      <XCircle className="w-5 h-5" />
-                      <span className="hidden sm:inline">Invalider lot(s)</span>
-                    </Button>
-                  )
-                )}
-
-                {/* WhatsApp button - only in "Prêt" tab */}
-                {!appartementsLoading && activeTab === 'pret' && stats.pret > 0 && !isInvalidationMode && (
-                  isSelectionMode ? (
-                    <Button
-                      onClick={handleCancelSelection}
-                      variant="secondary"
-                      className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
-                      title="Annuler la sélection"
-                    >
-                      <X className="w-5 h-5" />
-                      <span className="hidden sm:inline">Annuler</span>
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={handleStartWhatsAppSelection}
-                      variant="secondary"
-                      className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
-                      title="Envoyer par WhatsApp"
-                    >
-                      <MessageCircle className="w-5 h-5" />
-                      <span className="hidden sm:inline">Envoyer par WhatsApp</span>
-                    </Button>
-                  )
-                )}
-
-                {/* WhatsApp button - only in "En cours" tab */}
-                {!appartementsLoading && activeTab === 'en_cours' && stats.en_cours > 0 && !isWhatsAppSelectionEnCours && (
-                  <Button
-                    onClick={handleStartWhatsAppSelectionEnCours}
-                    variant="secondary"
-                    className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
-                    title="Envoyer par WhatsApp"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    <span className="hidden sm:inline">Envoyer par WhatsApp</span>
-                  </Button>
-                )}
-
-                {/* Exceptional WhatsApp button - only in "En cours" tab */}
-                {!appartementsLoading && activeTab === 'en_cours' && stats.en_cours > 0 && !isWhatsAppSelectionEnCours && (
-                  <Button
-                    onClick={() => setIsExceptionalWhatsAppModalOpen(true)}
-                    variant="secondary"
-                    className="flex items-center gap-2 min-h-[44px] min-w-[44px]"
-                    title="Envoi exceptionnel"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    <span className="hidden sm:inline">Envoi exceptionnel</span>
-                  </Button>
-                )}
               </div>
             </div>
 
@@ -931,9 +510,7 @@ export default function PlotDetailPage() {
                   <Tabs
                     tabs={[
                       { id: 'tous', label: 'Tous', count: appartements.length },
-                      { id: 'en_cours', label: 'En cours', count: stats.en_cours },
-                      { id: 'en_attente', label: 'En attente', count: stats.en_attente },
-                      { id: 'pret', label: 'Prêt', count: stats.pret },
+                      { id: 'en_attente', label: 'En attente', count: stats.en_attente + stats.en_cours },
                       { id: 'finalise', label: 'Finalisé', count: stats.finalise }
                     ]}
                     activeTab={activeTab}
@@ -970,52 +547,7 @@ export default function PlotDetailPage() {
                     <span className="text-sm">Avec TMA</span>
                   </button>
 
-                  {/* Documents filter button - only in "En attente" tab */}
-                  {activeTab === 'en_attente' && stats.en_attente > 0 && !isValidationMode && (
-                    <button
-                      onClick={handleToggleDocumentsFilter}
-                      className={`flex items-center gap-2 px-4 py-3 border rounded-lg transition-colors min-h-[44px] whitespace-nowrap ${
-                        showOnlyWithAllDocuments
-                          ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
-                      title="Afficher uniquement les lots avec tous les documents obligatoires"
-                    >
-                      <FileCheck className="w-5 h-5" />
-                      <span className="text-sm">Documents obligatoires</span>
-                    </button>
-                  )}
 
-                  {/* Task sort button - only in "En cours" tab and if there are appartements */}
-                  {activeTab === 'en_cours' && stats.en_cours > 0 && (
-                    <button
-                      onClick={handleToggleTaskSort}
-                      className={`flex items-center gap-2 px-4 py-3 border rounded-lg transition-colors min-h-[44px] whitespace-nowrap ${
-                        sortByTaskCompletion
-                          ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
-                      title="Trier par progression des tâches"
-                    >
-                      <ListOrdered className="w-5 h-5" />
-                      <span className="text-sm">Trier par tâches</span>
-                    </button>
-                  )}
-
-                  {/* Tache filter - only in "En cours" tab and if there are taches */}
-                  {activeTab === 'en_cours' && stats.en_cours > 0 && tachesOptions.length > 0 && (
-                    <div className="min-w-[200px]">
-                      <Select
-                        value={selectedTacheFilter}
-                        onChange={setSelectedTacheFilter}
-                        options={[
-                          { value: '', label: 'Toutes les tâches' },
-                          ...tachesOptions
-                        ]}
-                        placeholder="Toutes les tâches"
-                      />
-                    </div>
-                  )}
 
                   {/* Etage filter - only in "Tous" tab */}
                   {activeTab === 'tous' && appartements.length > 0 && etageOptions.length > 0 && (
@@ -1034,8 +566,23 @@ export default function PlotDetailPage() {
                 </div>
               )}
 
+              {/* Filtre documents manquants - seulement dans l'onglet "En attente" */}
+              {!appartementsLoading && activeTab === 'en_attente' && (stats.en_attente + stats.en_cours) > 0 && (
+                <div className="mb-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={showDocumentsManquants}
+                      onChange={(e) => setShowDocumentsManquants(e.target.checked)}
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-gray-700">Documents obligatoires manquants</span>
+                  </label>
+                </div>
+              )}
+
               {/* Clear filters button */}
-              {!appartementsLoading && appartements.length > 0 && (searchQuery !== '' || (activeTab === 'en_attente' && showOnlyWithAllDocuments) || (activeTab === 'en_cours' && (sortByTaskCompletion || selectedTacheFilter !== '')) || (activeTab === 'tous' && selectedEtageFilter !== '')) && (
+              {!appartementsLoading && appartements.length > 0 && (searchQuery !== '' || showOnlyTMA || (activeTab === 'en_attente' && showDocumentsManquants) || (activeTab === 'tous' && selectedEtageFilter !== '')) && (
                 <div className="flex justify-end mb-4">
                   <button
                     onClick={handleClearAllFilters}
@@ -1085,11 +632,7 @@ export default function PlotDetailPage() {
               )}
 
               {!appartementsLoading && filteredAppartements.length > 0 && (
-                <div className={`space-y-3 ${
-                  (isSelectionMode || isValidationMode || isInvalidationMode || isWhatsAppSelectionEnCours)
-                    ? 'pb-40 md:pb-24'
-                    : ''
-                }`}>
+                <div className="space-y-3">
                   {filteredAppartements.map((appartement) => {
                     const statut = calculateAppartementStatut(appartement)
                     const statutConfig = getStatutConfig(statut)
@@ -1100,69 +643,16 @@ export default function PlotDetailPage() {
                     const tachesTerminees = (appartement.taches || []).filter(t => t.statut === 'terminee').length
                     const totalTaches = appartement.taches_count || 0
 
-                    // Determine which selection mode is active and which set to use
-                    const inAnySelectionMode = isSelectionMode || isValidationMode || isInvalidationMode || isWhatsAppSelectionEnCours
-                    let isSelected = false
-                    let toggleHandler = null
-
-                    // Check if appartement is blocked for WhatsApp (has tasks in progress)
-                    const isBlockedForWhatsApp = isWhatsAppSelectionEnCours && hasTasksEnCours(appartement.taches)
-
-                    // Check if appartement is blocked for validation (missing obligatoire documents)
-                    const isBlockedForValidation = isValidationMode && appartement.missing_obligatoire_documents
-
-                    // Combine both blocking conditions
-                    const isBlocked = isBlockedForWhatsApp || isBlockedForValidation
-
-                    if (isSelectionMode) {
-                      isSelected = selectedAppartements.has(appartement.id)
-                      toggleHandler = handleToggleAppartementSelection
-                    } else if (isValidationMode) {
-                      isSelected = selectedForValidation.has(appartement.id)
-                      toggleHandler = handleToggleValidationSelection
-                    } else if (isInvalidationMode) {
-                      isSelected = selectedForInvalidation.has(appartement.id)
-                      toggleHandler = handleToggleInvalidationSelection
-                    } else if (isWhatsAppSelectionEnCours) {
-                      isSelected = selectedForWhatsAppEnCours.has(appartement.id)
-                      toggleHandler = handleToggleWhatsAppEnCoursSelection
-                    }
 
                     return (
                       <div
                         key={appartement.id}
-                        onClick={() => {
-                          // Don't allow selection if blocked
-                          if (isBlocked) return
-
-                          if (inAnySelectionMode && toggleHandler) {
-                            toggleHandler(appartement.id)
-                          } else {
-                            handleAppartementClick(appartement)
-                          }
-                        }}
-                        className={`border rounded-lg p-4 transition-all bg-white ${
-                          isBlocked
-                            ? 'border-gray-200 opacity-60 cursor-not-allowed'
-                            : inAnySelectionMode && isSelected
-                            ? 'border-primary-500 bg-primary-50 cursor-pointer'
-                            : 'border-gray-200 hover:border-primary-500 hover:shadow-md cursor-pointer'
-                        }`}
+                        onClick={() => handleAppartementClick(appartement)}
+                        className="border rounded-lg p-4 transition-all bg-white border-gray-200 hover:border-primary-500 hover:shadow-md cursor-pointer"
                       >
                         <div className="flex flex-col gap-3">
                           {/* Ligne 1 : Nom + Étage */}
                           <div className="flex items-center gap-3">
-                            {/* Checkbox in any selection mode */}
-                            {inAnySelectionMode && toggleHandler && (
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                disabled={isBlocked}
-                                onChange={() => toggleHandler(appartement.id)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-5 h-5 text-primary-600 focus:ring-primary-500 rounded flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                              />
-                            )}
                             <span className="font-medium text-gray-900 text-base">
                               {appartement.nom}
                               {appartement.etage !== null && appartement.etage !== undefined && (
@@ -1196,21 +686,8 @@ export default function PlotDetailPage() {
                             </div>
                           )}
 
-                          {/* Warning message for blocked appartements */}
-                          {isBlockedForValidation && (
-                            <p className="text-xs text-red-600 font-medium">
-                              ⚠️ Impossible de valider : documents obligatoires manquants
-                            </p>
-                          )}
-                          {isBlockedForWhatsApp && (
-                            <p className="text-xs text-red-600 font-medium">
-                              ⚠️ Impossible de sélectionner : une tâche est en cours
-                            </p>
-                          )}
-
                           {/* Ligne 3 : Compteur + Badge notes + Actions */}
-                          {!inAnySelectionMode && (
-                            <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between">
                               {/* Compteur */}
                               <span className="text-sm text-gray-600">
                                 {activeTab === 'en_attente'
@@ -1299,7 +776,6 @@ export default function PlotDetailPage() {
                                 </div>
                               </div>
                             </div>
-                          )}
                         </div>
                       </div>
                     )
@@ -1433,207 +909,7 @@ export default function PlotDetailPage() {
               )}
             </Modal>
 
-            {/* WhatsApp Modal (for "Prêt" tab) */}
-            <SendWhatsAppModal
-              isOpen={isSendWhatsAppModalOpen}
-              onClose={handleCloseWhatsAppModal}
-              appartements={selectedAppartementsData}
-              chantierId={chantierId}
-              onSuccess={() => {
-                // Switch to "En cours" tab
-                setActiveTab('en_cours')
-                // Reload appartements to reflect status changes
-                loadAppartements()
-              }}
-            />
 
-            {/* WhatsApp Modal (for "En cours" tab) */}
-            <SendWhatsAppModal
-              isOpen={isSendWhatsAppEnCoursModalOpen}
-              onClose={handleCloseWhatsAppEnCoursModal}
-              appartements={selectedAppartementsEnCoursData}
-              chantierId={chantierId}
-              isEnCoursMode={true}
-              onSuccess={() => {
-                // Reload appartements to reflect status changes
-                loadAppartements()
-              }}
-            />
-
-            {/* Exceptional WhatsApp Modal */}
-            <ExceptionalWhatsAppModal
-              isOpen={isExceptionalWhatsAppModalOpen}
-              onClose={() => setIsExceptionalWhatsAppModalOpen(false)}
-              appartements={filterAppartementsByStatut(appartements, 'en_cours')}
-              chantierId={chantierId}
-            />
-
-            {/* Selection Mode Actions - Fixed Bottom Bar (for "Prêt" tab) */}
-            {isSelectionMode && (
-              <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg pb-16 md:pb-0">
-                <div className="max-w-7xl mx-auto px-4 py-4">
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                    {/* Left: Selection count */}
-                    <div className="text-center sm:text-left">
-                      <p className="text-sm text-gray-600">
-                        {selectedAppartements.size} lot{selectedAppartements.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedAppartements.size > 1 ? 's' : ''}
-                      </p>
-                    </div>
-
-                    {/* Right: Actions */}
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                      <Button
-                        onClick={handleCancelSelection}
-                        variant="secondary"
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
-                      >
-                        <X className="w-4 h-4" />
-                        <span>Annuler</span>
-                      </Button>
-                      <Button
-                        onClick={handleContinueToWhatsApp}
-                        disabled={selectedAppartements.size === 0}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
-                      >
-                        <MessageCircle className="w-5 h-5" />
-                        <span>Continuer ({selectedAppartements.size})</span>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* WhatsApp Selection Mode Actions - Fixed Bottom Bar (for "En cours" tab) */}
-            {isWhatsAppSelectionEnCours && (
-              <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg pb-16 md:pb-0">
-                <div className="max-w-7xl mx-auto px-4 py-4">
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                    {/* Left: Selection count */}
-                    <div className="text-center sm:text-left">
-                      <p className="text-sm text-gray-600">
-                        {selectedForWhatsAppEnCours.size} lot{selectedForWhatsAppEnCours.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedForWhatsAppEnCours.size > 1 ? 's' : ''}
-                      </p>
-                    </div>
-
-                    {/* Right: Actions */}
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                      <Button
-                        onClick={handleCancelWhatsAppSelectionEnCours}
-                        variant="secondary"
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
-                      >
-                        <X className="w-4 h-4" />
-                        <span>Annuler</span>
-                      </Button>
-                      <Button
-                        onClick={handleContinueToWhatsAppEnCours}
-                        disabled={selectedForWhatsAppEnCours.size === 0}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
-                      >
-                        <MessageCircle className="w-5 h-5" />
-                        <span>Continuer ({selectedForWhatsAppEnCours.size})</span>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Validation Mode Actions - Fixed Bottom Bar */}
-            {isValidationMode && (
-              <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg pb-16 md:pb-0">
-                <div className="max-w-7xl mx-auto px-4 py-4">
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                    {/* Left: Selection count */}
-                    <div className="text-center sm:text-left">
-                      <p className="text-sm text-gray-600">
-                        {selectedForValidation.size} lot{selectedForValidation.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedForValidation.size > 1 ? 's' : ''}
-                      </p>
-                    </div>
-
-                    {/* Right: Actions */}
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                      <Button
-                        onClick={handleCancelValidation}
-                        variant="secondary"
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
-                      >
-                        <X className="w-4 h-4" />
-                        <span>Annuler</span>
-                      </Button>
-                      <Button
-                        onClick={handleContinueToValidation}
-                        disabled={selectedForValidation.size === 0}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
-                      >
-                        <CheckCircle className="w-5 h-5" />
-                        <span>Valider ({selectedForValidation.size})</span>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Invalidation Mode Actions - Fixed Bottom Bar */}
-            {isInvalidationMode && (
-              <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg pb-16 md:pb-0">
-                <div className="max-w-7xl mx-auto px-4 py-4">
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                    {/* Left: Selection count */}
-                    <div className="text-center sm:text-left">
-                      <p className="text-sm text-gray-600">
-                        {selectedForInvalidation.size} lot{selectedForInvalidation.size > 1 ? 's sélectionné' : ' sélectionné'}{selectedForInvalidation.size > 1 ? 's' : ''}
-                      </p>
-                    </div>
-
-                    {/* Right: Actions */}
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                      <Button
-                        onClick={handleCancelInvalidation}
-                        variant="secondary"
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
-                      >
-                        <X className="w-4 h-4" />
-                        <span>Annuler</span>
-                      </Button>
-                      <Button
-                        onClick={handleContinueToInvalidation}
-                        disabled={selectedForInvalidation.size === 0}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px]"
-                      >
-                        <XCircle className="w-5 h-5" />
-                        <span>Invalider ({selectedForInvalidation.size})</span>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Confirmation Modals */}
-            <ConfirmModal
-              isOpen={showValidationConfirm}
-              onClose={() => setShowValidationConfirm(false)}
-              onConfirm={confirmValidation}
-              title="Valider les lots"
-              message={`Êtes-vous sûr de vouloir valider ${selectedForValidation.size} appartement(s) ? Ils passeront dans l'onglet 'Prêt'.`}
-              confirmLabel="Valider"
-              cancelLabel="Annuler"
-              variant="warning"
-            />
-
-            <ConfirmModal
-              isOpen={showInvalidationConfirm}
-              onClose={() => setShowInvalidationConfirm(false)}
-              onConfirm={confirmInvalidation}
-              title="Invalider les lots"
-              message={`Êtes-vous sûr de vouloir invalider ${selectedForInvalidation.size} appartement(s) ? Ils reviendront dans l'onglet 'En attente'.`}
-              confirmLabel="Invalider"
-              cancelLabel="Annuler"
-              variant="warning"
-            />
           </>
         )}
       </div>

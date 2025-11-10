@@ -207,30 +207,8 @@ export default function ChantierDetailPage() {
               </div>
 
               {/* Right: Action buttons */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full sm:w-auto items-start sm:justify-items-end">
-                <div className="flex flex-col gap-1 sm:order-1">
-                  <Button
-                    onClick={handleOpenTachesModal}
-                    variant={hasTaches ? 'secondary' : 'primary'}
-                    className="flex items-center justify-center gap-2 h-[52px] sm:h-[56px] w-full text-xs leading-tight"
-                  >
-                    <FileText className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-center">{tachesButtonLabel}</span>
-                  </Button>
-                </div>
-
-                <div className="flex flex-col gap-1 sm:order-2">
-                  <Button
-                    onClick={handleOpenDocumentsModal}
-                    variant={hasDocuments ? 'secondary' : 'primary'}
-                    className="flex items-center justify-center gap-2 h-[52px] sm:h-[56px] w-full text-xs leading-tight"
-                  >
-                    <FolderOpen className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-center">{documentsButtonLabel}</span>
-                  </Button>
-                </div>
-
-                <div className="flex flex-col gap-1 sm:order-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full sm:w-auto items-start">
+                <div className="flex flex-col gap-1">
                   <Button
                     onClick={handleOpenCreatePlotModal}
                     disabled={!hasTaches || !hasDocuments}
@@ -248,6 +226,28 @@ export default function ChantierDetailPage() {
                         : 'Définissez des documents d\'abord'}
                     </p>
                   )}
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <Button
+                    onClick={handleOpenTachesModal}
+                    variant={hasTaches ? 'secondary' : 'primary'}
+                    className="flex items-center justify-center gap-2 h-[52px] sm:h-[56px] w-full text-xs leading-tight"
+                  >
+                    <FileText className="w-4 h-4 flex-shrink-0" />
+                    <span className="text-center">{tachesButtonLabel}</span>
+                  </Button>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <Button
+                    onClick={handleOpenDocumentsModal}
+                    variant={hasDocuments ? 'secondary' : 'primary'}
+                    className="flex items-center justify-center gap-2 h-[52px] sm:h-[56px] w-full text-xs leading-tight"
+                  >
+                    <FolderOpen className="w-4 h-4 flex-shrink-0" />
+                    <span className="text-center">{documentsButtonLabel}</span>
+                  </Button>
                 </div>
               </div>
             </div>
