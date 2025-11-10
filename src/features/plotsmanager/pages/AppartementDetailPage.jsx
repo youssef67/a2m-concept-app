@@ -14,6 +14,8 @@ import Tabs from '../../../shared/components/ui/Tabs'
 import { getAppartementById } from '../services/appartementsService'
 import { useAppartementTaches } from '../hooks/useAppartements'
 import { useAppartementDocuments } from '../hooks/useAppartementDocuments'
+import { useAppartementNotes } from '../hooks/useAppartementNotes'
+import { useAppartementPhotos } from '../hooks/useAppartementPhotos'
 import AppartementDocumentUploadModal from '../components/AppartementDocumentUploadModal'
 import AppartementNotesTab from '../components/AppartementNotesTab'
 import AppartementPhotosTab from '../components/AppartementPhotosTab'
@@ -78,6 +80,12 @@ export default function AppartementDetailPage() {
     loadDocuments,
     uploadDocument
   } = useAppartementDocuments(appartementId, chantierId)
+
+  // Notes hook
+  const { notes } = useAppartementNotes(appartementId)
+
+  // Photos hook
+  const { photos } = useAppartementPhotos(appartementId)
 
   // Load appartement data
   useEffect(() => {
@@ -197,8 +205,8 @@ export default function AppartementDetailPage() {
     const allTabs = [
       { id: 'taches', label: 'Tâches', count: `${tachesStats.terminee}/${tachesStats.total}` },
       { id: 'documents', label: 'Documents', count: `${documentsStats.uploaded}/${documentsStats.total}` },
-      { id: 'notes', label: 'Notes' },
-      { id: 'photos', label: 'Photos' }
+      { id: 'notes', label: 'Notes', count: notes.length > 0 ? notes.length : undefined },
+      { id: 'photos', label: 'Photos', count: photos.length > 0 ? photos.length : undefined }
     ]
 
     // Get fromTab parameter from URL
@@ -215,7 +223,7 @@ export default function AppartementDetailPage() {
     }
 
     return allTabs
-  }, [appartementStatut, tachesStats.terminee, tachesStats.total, documentsStats.uploaded, documentsStats.total, searchParams])
+  }, [appartementStatut, tachesStats.terminee, tachesStats.total, documentsStats.uploaded, documentsStats.total, notes.length, photos.length, searchParams])
 
   // Switch to "documents" tab if "taches" is not available and currently active
   // BUT only if we don't have an explicit tab parameter in the URL
