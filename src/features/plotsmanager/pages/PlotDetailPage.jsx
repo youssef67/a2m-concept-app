@@ -234,7 +234,7 @@ export default function PlotDetailPage() {
   // Handle appartement click
   const handleAppartementClick = (appartement) => {
     const appartementId = appartement.id
-    if (activeTab === 'en_attente') {
+    if (activeTab === 'en_cours') {
       // Ouvrir sur l'onglet Tâches (là où il y a du travail)
       navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartementId}?tab=taches&fromTab=${activeTab}`)
     } else {
