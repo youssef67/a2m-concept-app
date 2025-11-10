@@ -93,9 +93,9 @@ export default function CreateAppartementModal({
 
       if (result.success) {
         handleClose()
-        // Notify parent to refresh appartements list
+        // Notify parent to refresh appartements list and pass created appartement data
         if (onSuccess) {
-          onSuccess()
+          onSuccess(result.data)
         }
       } else {
         alert(result.error?.message || `Erreur lors de ${isEditMode ? 'la modification' : 'la création'} du lot`)

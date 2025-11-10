@@ -244,15 +244,30 @@ export default function PlotDetailPage() {
   }
 
   // Handle appartement creation success
-  const handleAppartementCreated = () => {
+  const handleAppartementCreated = (createdAppartement) => {
     loadAppartements()
+
+    // Redirect to created appartement's tasks tab (only on creation, not edit)
+    if (createdAppartement && createdAppartement.id && !appartementToEdit) {
+      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${createdAppartement.id}?tab=taches&fromTab=tous`)
+    }
   }
 
   // Handle multiple appartements creation success
   const handleMultipleAppartementsCreated = (result) => {
     loadAppartements()
-    setCreationResult(result)
-    setShowResultModal(true)
+
+    // If there are errors, show result modal
+    if (result.failed > 0) {
+      setCreationResult(result)
+      setShowResultModal(true)
+    }
+
+    // Redirect to first created appartement if any
+    if (result.data && result.data.length > 0) {
+      const firstAppartement = result.data[0]
+      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${firstAppartement.id}?tab=taches&fromTab=tous`)
+    }
   }
 
   // Handle appartement edit

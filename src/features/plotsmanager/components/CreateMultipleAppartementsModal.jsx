@@ -128,7 +128,8 @@ export default function CreateMultipleAppartementsModal({
           onSuccess({
             created: result.created,
             failed: result.failed,
-            total: validatedAppartements.length
+            total: validatedAppartements.length,
+            data: result.data // Pass created appartements data
           })
         }
       } else {
