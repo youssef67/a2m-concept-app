@@ -146,8 +146,8 @@ export default function PlotDetailPage() {
   }, [filteredBySearch, showOnlyTMA])
 
   const filteredByDocuments = useMemo(() => {
-    if (!showDocumentsManquants || activeTab !== 'en_attente') return filteredByTMA
-    // Filter appartements with missing obligatoire documents (only in "en_attente" tab)
+    if (!showDocumentsManquants || activeTab !== 'tous') return filteredByTMA
+    // Filter appartements with missing obligatoire documents (only in "Tous" tab)
     return filteredByTMA.filter(appt => appt.missing_obligatoire_documents)
   }, [filteredByTMA, showDocumentsManquants, activeTab])
 
@@ -290,6 +290,11 @@ export default function PlotDetailPage() {
   // TMA filter handlers
   const handleToggleTMAFilter = () => {
     setShowOnlyTMA(prev => !prev)
+  }
+
+  // Documents filter handler
+  const handleToggleDocumentsFilter = () => {
+    setShowDocumentsManquants(prev => !prev)
   }
 
   const handleClearAllFilters = () => {
@@ -539,7 +544,21 @@ export default function PlotDetailPage() {
                     <span className="text-sm">Avec TMA</span>
                   </button>
 
-
+                  {/* Documents filter button - only in "Tous" tab */}
+                  {activeTab === 'tous' && appartements.length > 0 && (
+                    <button
+                      onClick={handleToggleDocumentsFilter}
+                      className={`flex items-center gap-2 px-4 py-3 border rounded-lg transition-colors min-h-[44px] whitespace-nowrap ${
+                        showDocumentsManquants
+                          ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                      title="Afficher uniquement les lots avec documents manquants"
+                    >
+                      <FileText className="w-5 h-5" />
+                      <span className="text-sm">Documents manquants</span>
+                    </button>
+                  )}
 
                   {/* Etage filter - only in "Tous" tab */}
                   {activeTab === 'tous' && appartements.length > 0 && etageOptions.length > 0 && (
@@ -555,21 +574,6 @@ export default function PlotDetailPage() {
                       />
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* Filtre documents manquants - seulement dans l'onglet "Tous" */}
-              {!appartementsLoading && activeTab === 'tous' && appartements.length > 0 && (
-                <div className="mb-4">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={showDocumentsManquants}
-                      onChange={(e) => setShowDocumentsManquants(e.target.checked)}
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="text-gray-700">Documents obligatoires manquants</span>
-                  </label>
                 </div>
               )}
 
