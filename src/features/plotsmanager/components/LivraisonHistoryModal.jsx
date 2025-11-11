@@ -3,7 +3,7 @@
  * Modal pour afficher l'historique des changements de statut de livraison
  */
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { Clock, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
@@ -40,7 +40,7 @@ export default function LivraisonHistoryModal({
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4" />
-            <p className="text-sm text-gray-600">Chargement de l'historique...</p>
+            <p className="text-sm text-gray-600">Chargement de l&apos;historique...</p>
           </div>
         </div>
       </Modal>

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { Camera, ImagePlus, X, AlertCircle } from 'lucide-react'
+import { Camera, ImagePlus, X } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Select from '../../../shared/components/ui/Select'
@@ -14,10 +14,8 @@ import { useToast } from '../../../shared/hooks/useToast'
 import {
   STATUTS_OPTIONS,
   STATUTS_LIVRAISON,
-  getLivraisonStatutConfig,
   validateStatutForm
 } from '../utils/livraisonHelpers'
-import { getPhotoUrl } from '../services/appartementLivraisonService'
 
 export default function LivraisonFormModal({
   isOpen,
@@ -26,6 +24,7 @@ export default function LivraisonFormModal({
   appartement,
   onUpdate,
   onUploadPhoto,
+  // eslint-disable-next-line no-unused-vars
   onDeletePhoto,
   onSuccess
 }) {
@@ -43,8 +42,6 @@ export default function LivraisonFormModal({
 
   const [newPhotoFiles, setNewPhotoFiles] = useState([])
   const [photoPreviews, setPhotoPreviews] = useState([])
-  const [existingPhotos, setExistingPhotos] = useState([])
-  const [photosToDelete, setPhotosToDelete] = useState([])
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationErrors, setValidationErrors] = useState({})
@@ -65,8 +62,6 @@ export default function LivraisonFormModal({
 
       setNewPhotoFiles([])
       setPhotoPreviews([])
-      setExistingPhotos([])
-      setPhotosToDelete([])
       setValidationErrors({})
     }
   }, [isOpen, livraison])
@@ -218,8 +213,6 @@ export default function LivraisonFormModal({
       onClose()
     }
   }
-
-  const statutConfig = getLivraisonStatutConfig(formData.statut)
 
   return (
     <>

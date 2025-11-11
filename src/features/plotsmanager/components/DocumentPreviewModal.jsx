@@ -30,6 +30,7 @@ export default function DocumentPreviewModal({
       setLoading(true)
       setError(null)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, file])
 
   /**

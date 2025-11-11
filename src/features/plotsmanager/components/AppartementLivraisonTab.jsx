@@ -202,7 +202,7 @@ export default function AppartementLivraisonTab({ appartement }) {
           className="w-full flex items-center justify-center gap-2 min-h-[44px]"
         >
           <History className="w-5 h-5" />
-          <span>Voir l'historique</span>
+          <span>Voir l&apos;historique</span>
         </Button>
       </div>
 

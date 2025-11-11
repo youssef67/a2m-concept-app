@@ -22,6 +22,7 @@ export default function PhotoViewModal({ isOpen, onClose, photo, photoNumber }) 
       setImageUrl(null)
       setError(null)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, photo])
 
   const loadPhotoUrl = async () => {

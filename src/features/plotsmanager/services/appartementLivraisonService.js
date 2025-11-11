@@ -119,7 +119,7 @@ export async function uploadPhotoIncomplete(livraisonId, appartementId, file) {
     const fileName = `${appartementId}_${timestamp}_${file.name}`
     const storagePath = `livraisons/${appartementId}/${fileName}`
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('appartements-livraisons')
       .upload(storagePath, file)
 

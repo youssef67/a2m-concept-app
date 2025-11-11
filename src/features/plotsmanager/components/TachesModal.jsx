@@ -9,6 +9,8 @@ import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Input from '../../../shared/components/ui/Input'
 import Select from '../../../shared/components/ui/Select'
+import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
+import { useToast } from '../../../shared/hooks/useToast'
 
 // Status options for Select component
 const STATUS_OPTIONS = [
@@ -106,7 +108,9 @@ export default function TachesModal({
   const [taches, setTaches] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [tacheToDelete, setTacheToDelete] = useState(null)
   const tasksContainerRef = useRef(null)
+  const { showToast } = useToast()
 
   // Initialize taches when modal opens
   useEffect(() => {
@@ -158,15 +162,25 @@ export default function TachesModal({
     }, 100)
   }
 
-  // Remove a task (disabled if only 1 task)
-  const handleRemoveTache = (index) => {
+  // Open delete confirmation modal
+  const handleDeleteTache = (index) => {
     if (taches.length <= 1) {
-      setErrorMessage('Au moins une tâche est requise')
+      showToast('Au moins une tâche est requise', 'warning')
       return
     }
-    const newTaches = taches.filter((_, i) => i !== index)
+    setTacheToDelete(index)
+  }
+
+  // Confirm and delete task
+  const confirmDeleteTache = () => {
+    if (tacheToDelete === null) return
+
+    const newTaches = taches.filter((_, i) => i !== tacheToDelete)
     setTaches(newTaches)
+    setTacheToDelete(null)
     setErrorMessage('')
+
+    showToast('Tâche supprimée avec succès', 'success')
   }
 
   // Move task up (swap with previous)
@@ -219,13 +233,19 @@ export default function TachesModal({
       const result = await onSave(taches)
 
       if (result.success) {
+        showToast(
+          isEditMode ? 'Tâches modifiées avec succès' : 'Tâches créées avec succès',
+          'success'
+        )
         handleClose()
       } else {
         setErrorMessage(result.error?.message || 'Erreur lors de la sauvegarde')
+        showToast('Erreur lors de la sauvegarde des tâches', 'error')
       }
     } catch (error) {
       console.error('Error saving taches:', error)
       setErrorMessage('Erreur lors de la sauvegarde des tâches')
+      showToast('Erreur lors de la sauvegarde des tâches', 'error')
     } finally {
       setIsSubmitting(false)
     }
@@ -295,7 +315,7 @@ export default function TachesModal({
                   onStatutChange={handleStatutChange}
                   onMoveUp={handleMoveUp}
                   onMoveDown={handleMoveDown}
-                  onRemove={handleRemoveTache}
+                  onRemove={handleDeleteTache}
                   isSubmitting={isSubmitting}
                   canRemove={taches.length > 1}
                   isFirst={index === 0}
@@ -333,6 +353,22 @@ export default function TachesModal({
           </div>
         </form>
       </div>
+
+      {/* Confirmation modal for task deletion */}
+      <ConfirmModal
+        isOpen={tacheToDelete !== null}
+        onClose={() => setTacheToDelete(null)}
+        onConfirm={confirmDeleteTache}
+        title="Supprimer la tâche"
+        message={`Êtes-vous sûr de vouloir supprimer cette tâche${
+          tacheToDelete !== null && taches[tacheToDelete]?.intitule
+            ? ` "${taches[tacheToDelete].intitule}"`
+            : ''
+        } ? Cette action est irréversible.`}
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        variant="danger"
+      />
     </Modal>
   )
 }
