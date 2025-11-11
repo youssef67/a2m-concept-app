@@ -47,6 +47,46 @@ export default function NoteFormModal({
       setPhotoPreviews([])
       setPhotosToDelete([])
       setErrorMessage('')
+
+      // Restore photos from localStorage (PWA recovery)
+      try {
+        const storedPhotos = JSON.parse(localStorage.getItem('pendingNotePhotos') || '[]')
+        if (storedPhotos.length > 0) {
+          console.log('[NoteFormModal] Restoring', storedPhotos.length, 'photos from localStorage')
+
+          // Convert base64 data back to File objects
+          const restoredFiles = []
+          const restoredPreviews = []
+
+          storedPhotos.forEach((photoData) => {
+            // Convert dataUrl to Blob
+            const arr = photoData.dataUrl.split(',')
+            const mime = arr[0].match(/:(.*?);/)[1]
+            const bstr = atob(arr[1])
+            let n = bstr.length
+            const u8arr = new Uint8Array(n)
+            while (n--) {
+              u8arr[n] = bstr.charCodeAt(n)
+            }
+            const blob = new Blob([u8arr], { type: mime })
+
+            // Create File from Blob
+            const file = new File([blob], photoData.name, { type: photoData.type })
+            restoredFiles.push(file)
+            restoredPreviews.push({ file, url: photoData.dataUrl })
+          })
+
+          setNewPhotoFiles(restoredFiles)
+          setPhotoPreviews(restoredPreviews)
+
+          // Clean up localStorage
+          localStorage.removeItem('pendingNotePhotos')
+          console.log('[NoteFormModal] Photos restored and localStorage cleaned')
+        }
+      } catch (error) {
+        console.error('[NoteFormModal] Error restoring photos from localStorage:', error)
+        localStorage.removeItem('pendingNotePhotos')
+      }
     }
   }, [isOpen, initialNote])
 
@@ -71,12 +111,29 @@ export default function NoteFormModal({
     const newFiles = [...newPhotoFiles, ...files]
     setNewPhotoFiles(newFiles)
 
-    // Create previews for new files
+    // Create previews for new files and save to localStorage for PWA recovery
     files.forEach((file) => {
       const reader = new FileReader()
       reader.onloadend = () => {
         console.log('[NoteFormModal] Preview created for file:', file.name)
-        setPhotoPreviews(prev => [...prev, { file, url: reader.result }])
+        const preview = { file, url: reader.result }
+        setPhotoPreviews(prev => [...prev, preview])
+
+        // Save to localStorage for PWA recovery (base64 data)
+        try {
+          const storedPhotos = JSON.parse(localStorage.getItem('pendingNotePhotos') || '[]')
+          storedPhotos.push({
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            dataUrl: reader.result, // base64 data
+            timestamp: Date.now()
+          })
+          localStorage.setItem('pendingNotePhotos', JSON.stringify(storedPhotos))
+          console.log('[NoteFormModal] Photo saved to localStorage for PWA recovery')
+        } catch (error) {
+          console.error('[NoteFormModal] Error saving photo to localStorage:', error)
+        }
       }
       reader.readAsDataURL(file)
     })
@@ -171,6 +228,10 @@ export default function NoteFormModal({
     setExistingPhotos([])
     setPhotosToDelete([])
     setErrorMessage('')
+
+    // Clean up localStorage when closing normally
+    localStorage.removeItem('pendingNotePhotos')
+
     onClose()
   }
 
