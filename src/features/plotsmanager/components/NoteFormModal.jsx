@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react'
 import { Camera, ImagePlus, X } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
+import CameraCapture from './CameraCapture'
 
 export default function NoteFormModal({
   isOpen,
@@ -24,6 +25,7 @@ export default function NoteFormModal({
   const [photosToDelete, setPhotosToDelete] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [isCameraOpen, setIsCameraOpen] = useState(false)
 
   const isEditMode = initialNote !== null
 
@@ -158,6 +160,26 @@ export default function NoteFormModal({
     setPhotosToDelete(prev => prev.filter(id => id !== photoId))
   }
 
+  // Handle camera capture (getUserMedia API)
+  const handleCameraCapture = (file) => {
+    console.log('[NoteFormModal] Photo captured from camera:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    })
+
+    // Add to photo files list
+    setNewPhotoFiles(prev => [...prev, file])
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPhotoPreviews(prev => [...prev, { file, url: reader.result }])
+      console.log('[NoteFormModal] Preview created for captured photo')
+    }
+    reader.readAsDataURL(file)
+  }
+
   // Handle submit
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -242,12 +264,13 @@ export default function NoteFormModal({
   const totalPhotos = displayedExistingPhotos.length + newPhotoFiles.length
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title={isEditMode ? `Modifier la note - ${appartementNom}` : `Nouvelle note - ${appartementNom}`}
-      size="lg"
-    >
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title={isEditMode ? `Modifier la note - ${appartementNom}` : `Nouvelle note - ${appartementNom}`}
+        size="lg"
+      >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Error message */}
         {errorMessage && (
@@ -287,24 +310,16 @@ export default function NoteFormModal({
 
           {/* Photo upload buttons */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-            {/* Camera button */}
-            <label
-              htmlFor="camera-input"
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg cursor-pointer transition-colors min-h-[56px]"
+            {/* Camera button - uses getUserMedia API for PWA compatibility */}
+            <button
+              type="button"
+              onClick={() => setIsCameraOpen(true)}
+              disabled={isSubmitting}
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors min-h-[56px] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Camera className="w-5 h-5 flex-shrink-0" />
               <span className="text-sm font-medium">Prendre une photo</span>
-            </label>
-            <input
-              id="camera-input"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              capture="environment"
-              onChange={handleFileChange}
-              className="hidden"
-              disabled={isSubmitting}
-              multiple
-            />
+            </button>
 
             {/* Gallery button */}
             <label
@@ -435,5 +450,13 @@ export default function NoteFormModal({
         </div>
       </form>
     </Modal>
+
+    {/* Camera Capture Modal */}
+    <CameraCapture
+      isOpen={isCameraOpen}
+      onClose={() => setIsCameraOpen(false)}
+      onCapture={handleCameraCapture}
+    />
+  </>
   )
 }

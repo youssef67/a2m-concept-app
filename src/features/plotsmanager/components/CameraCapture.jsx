@@ -1,0 +1,182 @@
+/**
+ * CameraCapture
+ * Component to capture photos using getUserMedia API
+ * Works in PWA without causing app reload
+ */
+
+import React, { useState, useRef, useEffect } from 'react'
+import { Camera, X, RotateCcw } from 'lucide-react'
+import Modal from '../../../shared/components/ui/Modal'
+import Button from '../../../shared/components/ui/Button'
+
+export default function CameraCapture({ isOpen, onClose, onCapture }) {
+  const videoRef = useRef(null)
+  const canvasRef = useRef(null)
+  const [stream, setStream] = useState(null)
+  const [error, setError] = useState(null)
+  const [facingMode, setFacingMode] = useState('environment') // 'user' or 'environment'
+
+  // Start camera stream
+  useEffect(() => {
+    if (isOpen) {
+      startCamera()
+    } else {
+      stopCamera()
+    }
+
+    return () => {
+      stopCamera()
+    }
+  }, [isOpen, facingMode])
+
+  const startCamera = async () => {
+    try {
+      setError(null)
+      console.log('[CameraCapture] Starting camera with facingMode:', facingMode)
+
+      const constraints = {
+        video: {
+          facingMode: facingMode,
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      }
+
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
+      setStream(mediaStream)
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream
+      }
+
+      console.log('[CameraCapture] Camera started successfully')
+    } catch (err) {
+      console.error('[CameraCapture] Error starting camera:', err)
+      setError('Impossible d\'accéder à la caméra. Vérifiez les permissions.')
+    }
+  }
+
+  const stopCamera = () => {
+    if (stream) {
+      console.log('[CameraCapture] Stopping camera')
+      stream.getTracks().forEach(track => track.stop())
+      setStream(null)
+    }
+  }
+
+  const handleCapture = () => {
+    if (!videoRef.current || !canvasRef.current) {
+      console.error('[CameraCapture] Video or canvas ref not available')
+      return
+    }
+
+    try {
+      const video = videoRef.current
+      const canvas = canvasRef.current
+
+      // Set canvas dimensions to match video
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+
+      // Draw current video frame to canvas
+      const context = canvas.getContext('2d')
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+      // Convert canvas to blob
+      canvas.toBlob((blob) => {
+        if (blob) {
+          // Create File from Blob
+          const timestamp = new Date().getTime()
+          const file = new File([blob], `photo_${timestamp}.jpg`, { type: 'image/jpeg' })
+
+          console.log('[CameraCapture] Photo captured:', {
+            name: file.name,
+            size: file.size,
+            type: file.type
+          })
+
+          // Return photo to parent
+          onCapture(file)
+
+          // Close camera
+          handleClose()
+        } else {
+          console.error('[CameraCapture] Failed to create blob from canvas')
+          setError('Erreur lors de la capture de la photo')
+        }
+      }, 'image/jpeg', 0.95)
+    } catch (err) {
+      console.error('[CameraCapture] Error capturing photo:', err)
+      setError('Erreur lors de la capture de la photo')
+    }
+  }
+
+  const handleFlipCamera = () => {
+    setFacingMode(prev => prev === 'environment' ? 'user' : 'environment')
+  }
+
+  const handleClose = () => {
+    stopCamera()
+    setError(null)
+    onClose()
+  }
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Prendre une photo"
+      size="full"
+    >
+      <div className="flex flex-col h-full">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
+
+        {/* Camera preview */}
+        <div className="flex-1 bg-black rounded-lg overflow-hidden relative mb-4">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover"
+          />
+          <canvas ref={canvasRef} className="hidden" />
+
+          {/* Flip camera button */}
+          <button
+            onClick={handleFlipCamera}
+            className="absolute top-4 right-4 p-3 bg-white bg-opacity-90 rounded-full shadow-lg hover:bg-opacity-100 transition-all"
+            title="Changer de caméra"
+          >
+            <RotateCcw className="w-6 h-6 text-gray-700" />
+          </button>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            className="flex-1"
+          >
+            <X className="w-5 h-5 mr-2" />
+            Annuler
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleCapture}
+            disabled={!stream || !!error}
+            className="flex-1"
+          >
+            <Camera className="w-5 h-5 mr-2" />
+            Capturer
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
