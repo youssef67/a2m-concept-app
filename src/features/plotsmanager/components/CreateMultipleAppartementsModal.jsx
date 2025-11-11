@@ -12,6 +12,7 @@ import Select from '../../../shared/components/ui/Select'
 import { Plus, Trash2 } from 'lucide-react'
 import { useAppartements } from '../hooks/useAppartements'
 import { getEtageOptions } from '../utils/etageConstants'
+import { useToast } from '../../../shared/hooks/useToast'
 
 const MAX_APPARTEMENTS = 20
 
@@ -25,6 +26,7 @@ export default function CreateMultipleAppartementsModal({
   onSuccess
 }) {
   const { createMultipleAppartements } = useAppartements(plotId, chantierId)
+  const { showToast } = useToast()
 
   const [appartements, setAppartements] = useState([{ nom: '', etage: null }])
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -123,6 +125,25 @@ export default function CreateMultipleAppartementsModal({
       const result = await createMultipleAppartements(validatedAppartements)
 
       if (result.success) {
+        const created = result.created || 0
+        const failed = result.failed || 0
+
+        // Tous créés avec succès
+        if (created > 0 && failed === 0) {
+          showToast(
+            `${created} lot${created > 1 ? 's' : ''} créé${created > 1 ? 's' : ''} avec succès`,
+            'success'
+          )
+        }
+        // Créations partielles (succès + échecs)
+        else if (created > 0 && failed > 0) {
+          const failedNames = result.failedNames || []
+          showToast(
+            `${created} lot${created > 1 ? 's' : ''} créé${created > 1 ? 's' : ''} avec succès. ${failed} échec${failed > 1 ? 's' : ''} : ${failedNames.join(', ')}`,
+            'warning'
+          )
+        }
+
         handleClose()
         if (onSuccess) {
           onSuccess({
@@ -134,10 +155,12 @@ export default function CreateMultipleAppartementsModal({
         }
       } else {
         setError(result.error?.message || 'Erreur lors de la création des lots')
+        showToast(result.error?.message || 'Erreur lors de la création des lots', 'error')
       }
     } catch (err) {
       console.error('Erreur création multiple appartements:', err)
       setError('Erreur lors de la création des lots')
+      showToast('Erreur lors de la création des lots', 'error')
     } finally {
       setIsSubmitting(false)
     }

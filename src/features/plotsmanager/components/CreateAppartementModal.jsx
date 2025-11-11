@@ -11,6 +11,7 @@ import Input from '../../../shared/components/ui/Input'
 import Select from '../../../shared/components/ui/Select'
 import { useAppartements } from '../hooks/useAppartements'
 import { getEtageOptions } from '../utils/etageConstants'
+import { useToast } from '../../../shared/hooks/useToast'
 
 export default function CreateAppartementModal({
   isOpen,
@@ -22,6 +23,7 @@ export default function CreateAppartementModal({
   onSuccess
 }) {
   const { createAppartement, updateAppartement } = useAppartements(plotId, chantierId)
+  const { showToast } = useToast()
   const isEditMode = !!appartementToEdit
 
   const [formData, setFormData] = useState({
@@ -30,10 +32,12 @@ export default function CreateAppartementModal({
     has_tma: false
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [validationError, setValidationError] = useState(null)
 
   // Initialize form data when modal opens (create or edit mode)
   useEffect(() => {
     if (isOpen) {
+      setValidationError(null)
       if (isEditMode && appartementToEdit) {
         // Edit mode: pre-fill with existing data
         setFormData({
@@ -59,6 +63,10 @@ export default function CreateAppartementModal({
       ...prev,
       [name]: value
     }))
+    // Clear validation error when user types
+    if (name === 'nom' && validationError) {
+      setValidationError(null)
+    }
   }
 
   // Handle etage change
@@ -73,8 +81,9 @@ export default function CreateAppartementModal({
   const handleSubmit = async (e) => {
     e.preventDefault()
 
+    // Validation inline
     if (!formData.nom.trim()) {
-      alert('Le nom est obligatoire')
+      setValidationError('Le nom est obligatoire')
       return
     }
 
@@ -92,17 +101,24 @@ export default function CreateAppartementModal({
       }
 
       if (result.success) {
+        showToast(
+          isEditMode ? 'Lot modifié avec succès' : 'Lot créé avec succès',
+          'success'
+        )
         handleClose()
         // Notify parent to refresh appartements list and pass created appartement data
         if (onSuccess) {
           onSuccess(result.data)
         }
       } else {
-        alert(result.error?.message || `Erreur lors de ${isEditMode ? 'la modification' : 'la création'} du lot`)
+        showToast(
+          result.error?.message || `Erreur lors de ${isEditMode ? 'la modification' : 'la création'} du lot`,
+          'error'
+        )
       }
     } catch (error) {
       console.error(`Erreur ${isEditMode ? 'modification' : 'création'} appartement:`, error)
-      alert(`Erreur lors de ${isEditMode ? 'la modification' : 'la création'} du lot`)
+      showToast(`Erreur lors de ${isEditMode ? 'la modification' : 'la création'} du lot`, 'error')
     } finally {
       setIsSubmitting(false)
     }
@@ -116,6 +132,7 @@ export default function CreateAppartementModal({
         etage: null,
         has_tma: false
       })
+      setValidationError(null)
       onClose()
     }
   }
@@ -161,6 +178,9 @@ export default function CreateAppartementModal({
               required
               disabled={isSubmitting}
             />
+            {validationError && (
+              <p className="mt-1 text-sm text-red-600">{validationError}</p>
+            )}
           </div>
 
           {/* Étage du lot */}

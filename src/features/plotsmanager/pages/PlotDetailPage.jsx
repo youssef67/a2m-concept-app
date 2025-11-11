@@ -19,6 +19,7 @@ import CreateMultipleAppartementsModal from '../components/CreateMultipleApparte
 import { getPlotById } from '../services/plotsService'
 import { useAppartements } from '../hooks/useAppartements'
 import { usePlots } from '../hooks/usePlots'
+import { useToast } from '../../../shared/hooks/useToast'
 import {
   searchAppartements,
   filterAppartementsByStatut,
@@ -59,6 +60,9 @@ export default function PlotDetailPage() {
 
   // Plots hook (pour la navigation entre plots)
   const { plots, loadPlots: loadAllPlots } = usePlots(chantierId)
+
+  // Toast notifications
+  const { showToast } = useToast()
 
   // État pour le dropdown du titre
   const [isTitleDropdownOpen, setIsTitleDropdownOpen] = useState(false)
@@ -289,9 +293,10 @@ export default function PlotDetailPage() {
 
     const result = await deleteAppartement(appartementToDelete.id)
     if (result.success) {
+      showToast('Lot supprimé avec succès', 'success')
       loadAppartements()
     } else {
-      alert('Erreur lors de la suppression de l\'appartement')
+      showToast('Erreur lors de la suppression du lot', 'error')
     }
     setAppartementToDelete(null)
   }
