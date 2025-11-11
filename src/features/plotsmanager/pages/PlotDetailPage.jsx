@@ -24,12 +24,14 @@ import {
   searchAppartements,
   filterAppartementsByStatut,
   filterAppartementsByEtage,
+  filterAppartementsByLivraison,
   sortAppartementsAlphabetically,
   calculateAppartementStatut,
   getStatutConfig,
   getTasksEnCours
 } from '../utils/appartementHelpers'
 import { formatEtage } from '../utils/etageConstants'
+import { getLivraisonStatutConfig, STATUTS_OPTIONS } from '../utils/livraisonHelpers'
 
 export default function PlotDetailPage() {
   const { chantierId, plotId } = useParams()
@@ -50,6 +52,7 @@ export default function PlotDetailPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState(initialTab)
   const [selectedEtageFilter, setSelectedEtageFilter] = useState('') // '' = tous, null = non spécifié, 0-10 = étage
+  const [selectedLivraisonFilter, setSelectedLivraisonFilter] = useState('') // '' = tous, string = statut livraison
   const [showOnlyTMA, setShowOnlyTMA] = useState(false) // Filtre pour afficher uniquement les appartements avec TMA
   const [showDocumentsManquants, setShowDocumentsManquants] = useState(false) // Filtre pour documents obligatoires manquants
   const [creationResult, setCreationResult] = useState(null)
@@ -155,9 +158,13 @@ export default function PlotDetailPage() {
     return filteredByTMA.filter(appt => appt.missing_obligatoire_documents)
   }, [filteredByTMA, showDocumentsManquants, activeTab])
 
+  const filteredByLivraison = useMemo(() => {
+    return filterAppartementsByLivraison(filteredByDocuments, selectedLivraisonFilter)
+  }, [filteredByDocuments, selectedLivraisonFilter])
+
   const filteredByEtage = useMemo(() => {
-    return filterAppartementsByEtage(filteredByDocuments, selectedEtageFilter)
-  }, [filteredByDocuments, selectedEtageFilter])
+    return filterAppartementsByEtage(filteredByLivraison, selectedEtageFilter)
+  }, [filteredByLivraison, selectedEtageFilter])
 
   const filteredByStatut = useMemo(() => {
     if (activeTab === 'tous') return filteredByEtage
@@ -324,9 +331,11 @@ export default function PlotDetailPage() {
     if (activeTab === 'en_attente') {
       setShowDocumentsManquants(false)
     }
-    // Only clear etage filter if in "tous" tab
+    // Only clear etage and livraison filters if in "tous" tab
     if (activeTab === 'tous') {
       setSelectedEtageFilter('')
+      setSelectedLivraisonFilter('')
+      setShowDocumentsManquants(false)
     }
   }
 
@@ -336,6 +345,11 @@ export default function PlotDetailPage() {
     // Reset documents filter when leaving "en_attente" tab
     if (activeTab !== 'en_attente') {
       setShowDocumentsManquants(false)
+    }
+    // Reset etage and livraison filters when leaving "tous" tab
+    if (activeTab !== 'tous') {
+      setSelectedEtageFilter('')
+      setSelectedLivraisonFilter('')
     }
     // Reset TMA filter on tab change (filter is visible on all tabs)
     setShowOnlyTMA(false)
@@ -538,8 +552,9 @@ export default function PlotDetailPage() {
 
               {/* Search Bar and filters */}
               {!appartementsLoading && appartements.length > 0 && (
-                <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                  <div className="relative flex-1">
+                <div className="space-y-2 mb-4">
+                  {/* Search bar */}
+                  <div className="relative w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
@@ -550,55 +565,76 @@ export default function PlotDetailPage() {
                     />
                   </div>
 
-                  {/* TMA filter button - visible on all tabs */}
-                  <button
-                    onClick={handleToggleTMAFilter}
-                    className={`flex items-center gap-2 px-4 py-3 border rounded-lg transition-colors min-h-[44px] whitespace-nowrap ${
-                      showOnlyTMA
-                        ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                    }`}
-                    title="Afficher uniquement les lots avec TMA"
-                  >
-                    <BadgeCheck className="w-5 h-5" />
-                    <span className="text-sm">Avec TMA</span>
-                  </button>
-
-                  {/* Documents filter button - only in "Tous" tab */}
-                  {activeTab === 'tous' && appartements.length > 0 && (
+                  {/* Filters row */}
+                  <div className="flex flex-col md:flex-row gap-2">
+                    {/* TMA filter button - visible on all tabs */}
                     <button
-                      onClick={handleToggleDocumentsFilter}
+                      onClick={handleToggleTMAFilter}
                       className={`flex items-center gap-2 px-4 py-3 border rounded-lg transition-colors min-h-[44px] whitespace-nowrap ${
-                        showDocumentsManquants
+                        showOnlyTMA
                           ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
                           : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                       }`}
-                      title="Afficher uniquement les lots avec documents manquants"
+                      title="Afficher uniquement les lots avec TMA"
                     >
-                      <FileText className="w-5 h-5" />
-                      <span className="text-sm">Documents manquants</span>
+                      <BadgeCheck className="w-5 h-5" />
+                      <span className="text-sm">Avec TMA</span>
                     </button>
-                  )}
 
-                  {/* Etage filter - only in "Tous" tab */}
-                  {activeTab === 'tous' && appartements.length > 0 && etageOptions.length > 0 && (
-                    <div className="min-w-[200px]">
-                      <Select
-                        value={selectedEtageFilter}
-                        onChange={setSelectedEtageFilter}
-                        options={[
-                          { value: '', label: 'Tous les étages' },
-                          ...etageOptions
-                        ]}
-                        placeholder="Tous les étages"
-                      />
-                    </div>
-                  )}
+                    {/* Documents filter button - only in "Tous" tab */}
+                    {activeTab === 'tous' && appartements.length > 0 && (
+                      <button
+                        onClick={handleToggleDocumentsFilter}
+                        className={`flex items-center gap-2 px-4 py-3 border rounded-lg transition-colors min-h-[44px] whitespace-nowrap ${
+                          showDocumentsManquants
+                            ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        }`}
+                        title="Afficher uniquement les lots avec documents manquants"
+                      >
+                        <FileText className="w-5 h-5" />
+                        <span className="text-sm">Documents manquants</span>
+                      </button>
+                    )}
+
+                    {/* Livraison filter - only in "Tous" tab */}
+                    {activeTab === 'tous' && appartements.length > 0 && (
+                      <div className="min-w-[200px]">
+                        <Select
+                          value={selectedLivraisonFilter}
+                          onChange={setSelectedLivraisonFilter}
+                          options={[
+                            { value: '', label: 'Tous les statuts' },
+                            ...STATUTS_OPTIONS.map(opt => ({
+                              value: opt.value,
+                              label: opt.label
+                            }))
+                          ]}
+                          placeholder="Tous les statuts"
+                        />
+                      </div>
+                    )}
+
+                    {/* Etage filter - only in "Tous" tab */}
+                    {activeTab === 'tous' && appartements.length > 0 && etageOptions.length > 0 && (
+                      <div className="min-w-[200px]">
+                        <Select
+                          value={selectedEtageFilter}
+                          onChange={setSelectedEtageFilter}
+                          options={[
+                            { value: '', label: 'Tous les étages' },
+                            ...etageOptions
+                          ]}
+                          placeholder="Tous les étages"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
               {/* Clear filters button */}
-              {!appartementsLoading && appartements.length > 0 && (searchQuery !== '' || showOnlyTMA || (activeTab === 'tous' && showDocumentsManquants) || (activeTab === 'tous' && selectedEtageFilter !== '')) && (
+              {!appartementsLoading && appartements.length > 0 && (searchQuery !== '' || showOnlyTMA || (activeTab === 'tous' && showDocumentsManquants) || (activeTab === 'tous' && selectedEtageFilter !== '') || (activeTab === 'tous' && selectedLivraisonFilter !== '')) && (
                 <div className="flex justify-end mb-4">
                   <button
                     onClick={handleClearAllFilters}
@@ -659,6 +695,14 @@ export default function PlotDetailPage() {
                     const tachesTerminees = (appartement.taches || []).filter(t => t.statut === 'terminee').length
                     const totalTaches = appartement.taches_count || 0
 
+                    // Get livraison configuration
+                    const livraisonStatut = appartement.livraison_statut || 'non_commande'
+                    const livraisonJoursRetard = appartement.livraison_jours_retard || 0
+                    const livraisonConfig = getLivraisonStatutConfig(livraisonStatut)
+                    const livraisonLabel = livraisonJoursRetard > 0
+                      ? `${livraisonConfig.label} - ${livraisonJoursRetard}j retard`
+                      : livraisonConfig.label
+
 
                     return (
                       <div
@@ -686,6 +730,9 @@ export default function PlotDetailPage() {
                             )}
                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${statutConfig.color}`}>
                               {statutConfig.label}
+                            </span>
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full border ${livraisonConfig.color}`}>
+                              {livraisonLabel}
                             </span>
                             {appartement.missing_obligatoire_documents && (
                               <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 border border-red-200 flex items-center gap-1">

@@ -129,6 +129,20 @@ export function filterAppartementsByEtage(appartements, etageFilter) {
 }
 
 /**
+ * Filtre les appartements par statut de livraison
+ * @param {Array} appartements - Liste des appartements
+ * @param {string} livraisonFilter - Statut de livraison à filtrer ('' = tous)
+ * @returns {Array} Appartements filtrés
+ */
+export function filterAppartementsByLivraison(appartements, livraisonFilter) {
+  if (livraisonFilter === '') return appartements // Pas de filtre = tous
+
+  return appartements.filter((appt) => {
+    return appt.livraison_statut === livraisonFilter
+  })
+}
+
+/**
  * Trie les appartements par ordre alphabétique (nom)
  * @param {Array} appartements - Liste des appartements
  * @returns {Array} Appartements triés

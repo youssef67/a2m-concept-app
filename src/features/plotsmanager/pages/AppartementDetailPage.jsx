@@ -17,6 +17,7 @@ import { useAppartementDocuments } from '../hooks/useAppartementDocuments'
 import { useAppartementNotes } from '../hooks/useAppartementNotes'
 import AppartementDocumentUploadModal from '../components/AppartementDocumentUploadModal'
 import AppartementNotesTab from '../components/AppartementNotesTab'
+import AppartementLivraisonTab from '../components/AppartementLivraisonTab'
 import DocumentFilesList from '../components/DocumentFilesList'
 import { calculateAppartementStatut } from '../utils/appartementHelpers'
 
@@ -207,7 +208,8 @@ export default function AppartementDetailPage() {
     const allTabs = [
       { id: 'taches', label: 'Tâches', count: `${tachesStats.terminee}/${tachesStats.total}` },
       { id: 'documents', label: 'Documents', count: `${documentsStats.uploaded}/${documentsStats.total}` },
-      { id: 'notes', label: 'Notes', count: notes.length }
+      { id: 'notes', label: 'Notes', count: notes.length },
+      { id: 'livraison', label: 'Livraison' }
     ]
 
     // Get fromTab parameter from URL
@@ -474,6 +476,13 @@ export default function AppartementDetailPage() {
               {/* Notes Tab */}
               {activeTab === 'notes' && (
                 <AppartementNotesTab
+                  appartement={appartement}
+                />
+              )}
+
+              {/* Livraison Tab */}
+              {activeTab === 'livraison' && (
+                <AppartementLivraisonTab
                   appartement={appartement}
                 />
               )}

@@ -64,7 +64,7 @@ export default function Modal({
       onClick={handleBackdropClick}
     >
       <div
-        className={`bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col animate-slideUp mx-4`}
+        className={`bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]} max-h-[95vh] flex flex-col animate-slideUp mx-4`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -80,7 +80,7 @@ export default function Modal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 pt-4 pb-20 md:pb-6">
+        <div className="flex-1 overflow-y-auto px-6 pt-4 pb-96">
           {children}
         </div>
       </div>

@@ -50,7 +50,7 @@ export async function getAppartementsByPlot(plotId) {
  */
 export async function getAppartementsByPlotWithDetails(plotId, chantierId) {
   try {
-    // 1. Récupérer les appartements avec leurs tâches
+    // 1. Récupérer les appartements avec leurs tâches et livraison
     const { data: appartements, error: apptsError } = await supabase
       .from('appartements')
       .select(`
@@ -67,6 +67,21 @@ export async function getAppartementsByPlotWithDetails(plotId, chantierId) {
       .order('ordre', { ascending: true })
 
     if (apptsError) throw apptsError
+
+    // 1b. Récupérer les livraisons pour tous les appartements
+    const appartementIds = (appartements || []).map(a => a.id)
+    const { data: livraisons, error: livraisonsError } = await supabase
+      .from('appartement_livraisons_with_retard')
+      .select('appartement_id, statut, jours_retard')
+      .in('appartement_id', appartementIds)
+
+    if (livraisonsError) throw livraisonsError
+
+    // Créer un map des livraisons par appartement_id
+    const livraisonsMap = {}
+    ;(livraisons || []).forEach(liv => {
+      livraisonsMap[liv.appartement_id] = liv
+    })
 
     // 2. Récupérer tous les documents requis du chantier
     const { data: documentsRequis, error: docsRequisError } = await supabase
@@ -103,6 +118,9 @@ export async function getAppartementsByPlotWithDetails(plotId, chantierId) {
         // Count unique document types covered (not total files)
         const uniqueDocTypes = new Set(uploadedDocIds)
 
+        // Get livraison data for this appartement
+        const livraison = livraisonsMap[appt.id]
+
         return {
           ...appt,
           taches: appt.appartement_taches || [],
@@ -110,7 +128,9 @@ export async function getAppartementsByPlotWithDetails(plotId, chantierId) {
           documents_required_count: totalDocumentsRequis,
           taches_count: appt.appartement_taches?.length || 0,
           notes_count: notes?.length || 0,
-          missing_obligatoire_documents: missingObligatoireDocs.length > 0
+          missing_obligatoire_documents: missingObligatoireDocs.length > 0,
+          livraison_statut: livraison?.statut || 'non_commande',
+          livraison_jours_retard: livraison?.jours_retard || 0
         }
       })
     )
