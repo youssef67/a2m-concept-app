@@ -12,7 +12,7 @@ import Button from '../../../shared/components/ui/Button'
 import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import NoteFormModal from './NoteFormModal'
 
-export default function AppartementNotesTab({ appartement }) {
+export default function AppartementNotesTab({ appartement, onModalStateChange }) {
   const {
     notes,
     loading,
@@ -34,6 +34,30 @@ export default function AppartementNotesTab({ appartement }) {
   useEffect(() => {
     loadNotes()
   }, [loadNotes])
+
+  // Prevent page unload/navigation when modal is open (PWA issue fix)
+  useEffect(() => {
+    if (isFormModalOpen) {
+      // Prevent accidental page navigation
+      const handleBeforeUnload = (e) => {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+
+      window.addEventListener('beforeunload', handleBeforeUnload)
+
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload)
+      }
+    }
+  }, [isFormModalOpen])
+
+  // Notify parent when modal state changes (PWA issue fix)
+  useEffect(() => {
+    if (onModalStateChange) {
+      onModalStateChange(isFormModalOpen)
+    }
+  }, [isFormModalOpen, onModalStateChange])
 
   // Handle create note
   const handleCreateNote = () => {

@@ -67,6 +67,9 @@ export default function AppartementDetailPage() {
   const [selectedDocumentRequisId, setSelectedDocumentRequisId] = useState(null)
   const [uploading, setUploading] = useState(false)
 
+  // Track if user is currently interacting with notes modal (PWA issue fix)
+  const [isNotesModalActive, setIsNotesModalActive] = useState(false)
+
   // Taches hook
   const { taches, loading: tachesLoading, loadTaches, updateTacheStatut } = useAppartementTaches(appartementId)
 
@@ -229,6 +232,7 @@ export default function AppartementDetailPage() {
   // Switch to "documents" tab if "taches" is not available and currently active
   // BUT only if we don't have an explicit tab parameter in the URL
   // AND we're not coming from "tous" tab (which shows all tabs)
+  // AND there's no modal currently active (PWA issue fix)
   useEffect(() => {
     const tabParam = searchParams.get('tab')
     const fromTab = searchParams.get('fromTab')
@@ -238,10 +242,11 @@ export default function AppartementDetailPage() {
     // 2. Current tab is taches
     // 3. NO explicit tab parameter in URL (meaning user didn't navigate with ?tab=taches)
     // 4. NOT coming from "tous" tab (which should show all tabs including taches)
-    if (appartementStatut === 'en_attente' && activeTab === 'taches' && !tabParam && fromTab !== 'tous') {
+    // 5. NO modal is currently active (prevents interrupting user workflow)
+    if (appartementStatut === 'en_attente' && activeTab === 'taches' && !tabParam && fromTab !== 'tous' && !isNotesModalActive) {
       setActiveTab('documents')
     }
-  }, [appartementStatut, activeTab, searchParams])
+  }, [appartementStatut, activeTab, searchParams, isNotesModalActive])
 
   return (
     <AppLayout>
@@ -473,7 +478,10 @@ export default function AppartementDetailPage() {
 
               {/* Notes Tab */}
               {activeTab === 'notes' && (
-                <AppartementNotesTab appartement={appartement} />
+                <AppartementNotesTab
+                  appartement={appartement}
+                  onModalStateChange={setIsNotesModalActive}
+                />
               )}
             </div>
 
