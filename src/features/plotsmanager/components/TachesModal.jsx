@@ -3,24 +3,8 @@
  * Modal pour gérer les tâches d'un chantier (création et modification en batch)
  */
 
-import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, GripVertical } from 'lucide-react'
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import React, { useState, useEffect, useRef } from 'react'
+import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Input from '../../../shared/components/ui/Input'
@@ -33,47 +17,45 @@ const STATUS_OPTIONS = [
   { value: 'terminee', label: 'Terminée' }
 ]
 
-// SortableItem component for draggable task rows
-function SortableItem({
-  id,
+// TaskItem component for task rows with arrow buttons
+function TaskItem({
   tache,
   index,
   onIntituleChange,
   onStatutChange,
+  onMoveUp,
+  onMoveDown,
   onRemove,
   isSubmitting,
-  canRemove
+  canRemove,
+  isFirst,
+  isLast
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1
-  }
-
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex flex-col sm:flex-row gap-2 p-3 bg-gray-50 rounded-lg"
-    >
-      {/* Drag handle */}
-      <button
-        type="button"
-        className="p-2 hover:bg-gray-200 rounded cursor-grab active:cursor-grabbing self-start sm:self-auto"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="w-5 h-5 text-gray-400" />
-      </button>
+    <div className="flex flex-col sm:flex-row gap-2 p-3 bg-gray-50 rounded-lg">
+      {/* Arrow buttons */}
+      <div className="flex gap-1 self-start sm:self-auto">
+        <button
+          type="button"
+          onClick={() => onMoveUp(index)}
+          disabled={isFirst || isSubmitting}
+          className="p-2 hover:bg-gray-200 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
+          title="Monter"
+          aria-label="Monter la tâche"
+        >
+          <ChevronUp className="w-5 h-5 text-gray-600" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onMoveDown(index)}
+          disabled={isLast || isSubmitting}
+          className="p-2 hover:bg-gray-200 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
+          title="Descendre"
+          aria-label="Descendre la tâche"
+        >
+          <ChevronDown className="w-5 h-5 text-gray-600" />
+        </button>
+      </div>
 
       {/* Intitule input */}
       <div className="flex-1">
@@ -102,8 +84,9 @@ function SortableItem({
         type="button"
         onClick={() => onRemove(index)}
         disabled={isSubmitting || !canRemove}
-        className="p-3 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed self-start sm:self-auto"
+        className="p-3 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed self-start sm:self-auto min-w-[44px] min-h-[44px] flex items-center justify-center"
         title={!canRemove ? 'Au moins une tâche est requise' : 'Supprimer'}
+        aria-label="Supprimer la tâche"
       >
         <Trash2 className="w-5 h-5 text-red-600" />
       </button>
@@ -123,14 +106,7 @@ export default function TachesModal({
   const [taches, setTaches] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-
-  // Configure sensors for drag and drop
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates
-    })
-  )
+  const tasksContainerRef = useRef(null)
 
   // Initialize taches when modal opens
   useEffect(() => {
@@ -169,6 +145,16 @@ export default function TachesModal({
   // Add a new task
   const handleAddTache = () => {
     setTaches([...taches, { intitule: '', statut: 'a_faire' }])
+
+    // Scroll to bottom after task is added (useful on mobile)
+    setTimeout(() => {
+      if (tasksContainerRef.current) {
+        tasksContainerRef.current.scrollTo({
+          top: tasksContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        })
+      }
+    }, 100)
   }
 
   // Remove a task (disabled if only 1 task)
@@ -182,17 +168,30 @@ export default function TachesModal({
     setErrorMessage('')
   }
 
-  // Handle drag end event
-  const handleDragEnd = (event) => {
-    const { active, over } = event
+  // Move task up (swap with previous)
+  const handleMoveUp = (index) => {
+    if (index === 0) return // Already at top
 
-    if (over && active.id !== over.id) {
-      setTaches((items) => {
-        const oldIndex = items.findIndex((_, i) => i === active.id)
-        const newIndex = items.findIndex((_, i) => i === over.id)
-        return arrayMove(items, oldIndex, newIndex)
-      })
-    }
+    setTaches(prevTaches => {
+      const newTaches = [...prevTaches]
+      const temp = newTaches[index]
+      newTaches[index] = newTaches[index - 1]
+      newTaches[index - 1] = temp
+      return newTaches
+    })
+  }
+
+  // Move task down (swap with next)
+  const handleMoveDown = (index) => {
+    if (index === taches.length - 1) return // Already at bottom
+
+    setTaches(prevTaches => {
+      const newTaches = [...prevTaches]
+      const temp = newTaches[index]
+      newTaches[index] = newTaches[index + 1]
+      newTaches[index + 1] = temp
+      return newTaches
+    })
   }
 
   // Validate and submit
@@ -284,33 +283,25 @@ export default function TachesModal({
               </Button>
             </div>
 
-            {/* Task rows with drag & drop */}
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={taches.map((_, index) => index)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {taches.map((tache, index) => (
-                    <SortableItem
-                      key={index}
-                      id={index}
-                      tache={tache}
-                      index={index}
-                      onIntituleChange={handleIntituleChange}
-                      onStatutChange={handleStatutChange}
-                      onRemove={handleRemoveTache}
-                      isSubmitting={isSubmitting}
-                      canRemove={taches.length > 1}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+            {/* Task rows with arrow buttons */}
+            <div ref={tasksContainerRef} className="space-y-3 max-h-96 overflow-y-auto">
+              {taches.map((tache, index) => (
+                <TaskItem
+                  key={index}
+                  tache={tache}
+                  index={index}
+                  onIntituleChange={handleIntituleChange}
+                  onStatutChange={handleStatutChange}
+                  onMoveUp={handleMoveUp}
+                  onMoveDown={handleMoveDown}
+                  onRemove={handleRemoveTache}
+                  isSubmitting={isSubmitting}
+                  canRemove={taches.length > 1}
+                  isFirst={index === 0}
+                  isLast={index === taches.length - 1}
+                />
+              ))}
+            </div>
 
             {/* Helper text */}
             <p className="text-xs text-gray-600">
