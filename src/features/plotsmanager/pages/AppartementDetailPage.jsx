@@ -134,7 +134,25 @@ export default function AppartementDetailPage() {
   }, [appartementId, loadNotes])
 
   // Synchronize activeTab with URL parameter when appartement changes
+  // Also check localStorage for PWA note modal recovery
   useEffect(() => {
+    // First check localStorage for PWA recovery
+    const storedState = localStorage.getItem('noteModalState')
+    if (storedState) {
+      try {
+        const { activeTab: storedTab, appartementId: storedApptId } = JSON.parse(storedState)
+        // Only use stored tab if it's for the same appartement
+        if (storedTab && storedApptId === appartementId) {
+          console.log('[AppartementDetailPage] Restoring activeTab from localStorage:', storedTab)
+          setActiveTab(storedTab)
+          return // Don't proceed with URL-based logic
+        }
+      } catch (error) {
+        console.error('[AppartementDetailPage] Error parsing stored tab:', error)
+      }
+    }
+
+    // Otherwise use URL parameter
     const tabParam = searchParams.get('tab')
     if (tabParam) {
       setActiveTab(tabParam)

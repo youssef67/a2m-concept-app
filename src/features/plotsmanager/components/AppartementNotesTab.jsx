@@ -107,6 +107,7 @@ export default function AppartementNotesTab({ appartement, onModalStateChange })
     localStorage.setItem('noteModalState', JSON.stringify({
       isOpen: true,
       appartementId: appartement.id,
+      activeTab: 'notes', // Force staying on notes tab after reload
       timestamp: Date.now()
     }))
 
