@@ -31,10 +31,10 @@ export async function getTachesByChantier(chantierId) {
 }
 
 /**
- * Save taches for a chantier (batch operation: DELETE all + INSERT new)
- * This allows for complete reordering, adding, and removing in a single transaction
+ * Save taches for a chantier (differential update: UPDATE/INSERT/DELETE selective)
+ * This preserves statuts of existing taches while allowing reordering, adding, and removing
  * @param {string} chantierId - Chantier ID
- * @param {Array} tachesData - Array of tache objects {intitule, statut}
+ * @param {Array} tachesData - Array of tache objects {id?, intitule, statut}
  * @returns {Promise<{data: Array, error: Error|null}>}
  */
 export async function saveTaches(chantierId, tachesData) {
@@ -58,36 +58,93 @@ export async function saveTaches(chantierId, tachesData) {
       }
     }
 
-    // Step 1: Delete all existing taches for this chantier
-    const { error: deleteError } = await supabase
-      .from('chantier_taches')
-      .delete()
-      .eq('chantier_id', chantierId)
-
-    if (deleteError) {
-      console.error('Error deleting existing taches:', deleteError)
-      return { data: null, error: deleteError }
+    // Step 1: Get existing taches
+    const { data: existingTaches, error: fetchError } = await getTachesByChantier(chantierId)
+    if (fetchError) {
+      return { data: null, error: fetchError }
     }
 
-    // Step 2: Insert new taches with ordre
-    const tachesToInsert = tachesData.map((tache, index) => ({
-      chantier_id: chantierId,
-      intitule: tache.intitule.trim(),
-      statut: tache.statut || 'a_faire',
-      ordre: index + 1
-    }))
+    const existingIds = new Set(existingTaches.map(t => t.id))
+    const updatedIds = new Set()
 
-    const { data, error: insertError } = await supabase
-      .from('chantier_taches')
-      .insert(tachesToInsert)
-      .select()
+    // Step 2: Update existing taches and insert new ones
+    const updates = []
+    const inserts = []
 
-    if (insertError) {
-      console.error('Error inserting new taches:', insertError)
-      return { data: null, error: insertError }
+    for (let index = 0; index < tachesData.length; index++) {
+      const tache = tachesData[index]
+      const ordre = index + 1
+
+      if (tache.id && existingIds.has(tache.id)) {
+        // Existing tache: UPDATE (triggers will update appartement_taches with preserved statuts)
+        updates.push({
+          id: tache.id,
+          intitule: tache.intitule.trim(),
+          statut: tache.statut || 'a_faire',
+          ordre
+        })
+        updatedIds.add(tache.id)
+      } else {
+        // New tache: INSERT (triggers will copy to all appartements)
+        inserts.push({
+          chantier_id: chantierId,
+          intitule: tache.intitule.trim(),
+          statut: tache.statut || 'a_faire',
+          ordre
+        })
+      }
     }
 
-    return { data, error: null }
+    // Step 3: Execute updates
+    for (const update of updates) {
+      const { error: updateError } = await supabase
+        .from('chantier_taches')
+        .update({
+          intitule: update.intitule,
+          statut: update.statut,
+          ordre: update.ordre
+        })
+        .eq('id', update.id)
+
+      if (updateError) {
+        console.error('Error updating tache:', updateError)
+        return { data: null, error: updateError }
+      }
+    }
+
+    // Step 4: Execute inserts
+    if (inserts.length > 0) {
+      const { error: insertError } = await supabase
+        .from('chantier_taches')
+        .insert(inserts)
+
+      if (insertError) {
+        console.error('Error inserting new taches:', insertError)
+        return { data: null, error: insertError }
+      }
+    }
+
+    // Step 5: Delete removed taches (CASCADE will delete appartement_taches)
+    const idsToDelete = Array.from(existingIds).filter(id => !updatedIds.has(id))
+    if (idsToDelete.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('chantier_taches')
+        .delete()
+        .in('id', idsToDelete)
+
+      if (deleteError) {
+        console.error('Error deleting removed taches:', deleteError)
+        return { data: null, error: deleteError }
+      }
+    }
+
+    // Step 6: Fetch and return updated taches
+    const { data: finalData, error: finalError } = await getTachesByChantier(chantierId)
+    if (finalError) {
+      return { data: null, error: finalError }
+    }
+
+    return { data: finalData, error: null }
   } catch (err) {
     console.error('Exception in saveTaches:', err)
     return { data: null, error: err }

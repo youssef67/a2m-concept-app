@@ -112,9 +112,10 @@ export default function TachesModal({
   useEffect(() => {
     if (isOpen) {
       if (initialTaches && initialTaches.length > 0) {
-        // Edit mode: load existing taches
+        // Edit mode: load existing taches (preserve IDs for differential updates)
         setTaches(
           initialTaches.map((t) => ({
+            id: t.id,  // Preserve ID to enable UPDATE instead of DELETE+INSERT
             intitule: t.intitule,
             statut: t.statut || 'a_faire'
           }))
