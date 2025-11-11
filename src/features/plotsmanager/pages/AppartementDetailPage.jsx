@@ -143,7 +143,6 @@ export default function AppartementDetailPage() {
         const { activeTab: storedTab, appartementId: storedApptId } = JSON.parse(storedState)
         // Only use stored tab if it's for the same appartement
         if (storedTab && storedApptId === appartementId) {
-          console.log('[AppartementDetailPage] Restoring activeTab from localStorage:', storedTab)
           setActiveTab(storedTab)
           return // Don't proceed with URL-based logic
         }
@@ -255,15 +254,6 @@ export default function AppartementDetailPage() {
     const tabParam = searchParams.get('tab')
     const fromTab = searchParams.get('fromTab')
 
-    console.log('[AppartementDetailPage] Tab switch effect:', {
-      appartementStatut,
-      activeTab,
-      tabParam,
-      fromTab,
-      isNotesModalActive,
-      timestamp: new Date().toISOString()
-    })
-
     // Only force the switch if:
     // 1. Appartement is en_attente
     // 2. Current tab is taches
@@ -271,7 +261,6 @@ export default function AppartementDetailPage() {
     // 4. NOT coming from "tous" tab (which should show all tabs including taches)
     // 5. NO modal is currently active (prevents interrupting user workflow)
     if (appartementStatut === 'en_attente' && activeTab === 'taches' && !tabParam && fromTab !== 'tous' && !isNotesModalActive) {
-      console.log('[AppartementDetailPage] SWITCHING TAB TO DOCUMENTS')
       setActiveTab('documents')
     }
   }, [appartementStatut, activeTab, searchParams, isNotesModalActive])

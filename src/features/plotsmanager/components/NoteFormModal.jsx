@@ -31,12 +31,6 @@ export default function NoteFormModal({
 
   // Initialize form when modal opens
   useEffect(() => {
-    console.log('[NoteFormModal] useEffect isOpen changed:', {
-      isOpen,
-      hasInitialNote: !!initialNote,
-      timestamp: new Date().toISOString()
-    })
-
     if (isOpen) {
       if (initialNote) {
         setContenu(initialNote.contenu || '')
@@ -54,8 +48,6 @@ export default function NoteFormModal({
       try {
         const storedPhotos = JSON.parse(localStorage.getItem('pendingNotePhotos') || '[]')
         if (storedPhotos.length > 0) {
-          console.log('[NoteFormModal] Restoring', storedPhotos.length, 'photos from localStorage')
-
           // Convert base64 data back to File objects
           const restoredFiles = []
           const restoredPreviews = []
@@ -83,7 +75,6 @@ export default function NoteFormModal({
 
           // Clean up localStorage
           localStorage.removeItem('pendingNotePhotos')
-          console.log('[NoteFormModal] Photos restored and localStorage cleaned')
         }
       } catch (error) {
         console.error('[NoteFormModal] Error restoring photos from localStorage:', error)
@@ -94,19 +85,11 @@ export default function NoteFormModal({
 
   // Handle file selection
   const handleFileChange = (e) => {
-    console.log('[NoteFormModal] handleFileChange called', {
-      filesCount: e.target.files?.length,
-      isOpen,
-      timestamp: new Date().toISOString()
-    })
-
     const files = Array.from(e.target.files || [])
     if (files.length === 0) {
-      console.log('[NoteFormModal] No files selected')
       return
     }
 
-    console.log('[NoteFormModal] Files selected:', files.map(f => ({ name: f.name, size: f.size })))
     setErrorMessage('')
 
     // Add new files to the list
@@ -117,7 +100,6 @@ export default function NoteFormModal({
     files.forEach((file) => {
       const reader = new FileReader()
       reader.onloadend = () => {
-        console.log('[NoteFormModal] Preview created for file:', file.name)
         const preview = { file, url: reader.result }
         setPhotoPreviews(prev => [...prev, preview])
 
@@ -132,7 +114,6 @@ export default function NoteFormModal({
             timestamp: Date.now()
           })
           localStorage.setItem('pendingNotePhotos', JSON.stringify(storedPhotos))
-          console.log('[NoteFormModal] Photo saved to localStorage for PWA recovery')
         } catch (error) {
           console.error('[NoteFormModal] Error saving photo to localStorage:', error)
         }
@@ -162,12 +143,6 @@ export default function NoteFormModal({
 
   // Handle camera capture (getUserMedia API)
   const handleCameraCapture = (file) => {
-    console.log('[NoteFormModal] Photo captured from camera:', {
-      name: file.name,
-      size: file.size,
-      type: file.type
-    })
-
     // Add to photo files list
     setNewPhotoFiles(prev => [...prev, file])
 
@@ -175,7 +150,6 @@ export default function NoteFormModal({
     const reader = new FileReader()
     reader.onloadend = () => {
       setPhotoPreviews(prev => [...prev, { file, url: reader.result }])
-      console.log('[NoteFormModal] Preview created for captured photo')
     }
     reader.readAsDataURL(file)
   }

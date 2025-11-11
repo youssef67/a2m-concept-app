@@ -32,7 +32,6 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
   const startCamera = async () => {
     try {
       setError(null)
-      console.log('[CameraCapture] Starting camera with facingMode:', facingMode)
 
       const constraints = {
         video: {
@@ -48,8 +47,6 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream
       }
-
-      console.log('[CameraCapture] Camera started successfully')
     } catch (err) {
       console.error('[CameraCapture] Error starting camera:', err)
       setError('Impossible d\'accéder à la caméra. Vérifiez les permissions.')
@@ -58,7 +55,6 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
 
   const stopCamera = () => {
     if (stream) {
-      console.log('[CameraCapture] Stopping camera')
       stream.getTracks().forEach(track => track.stop())
       setStream(null)
     }
@@ -88,12 +84,6 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
           // Create File from Blob
           const timestamp = new Date().getTime()
           const file = new File([blob], `photo_${timestamp}.jpg`, { type: 'image/jpeg' })
-
-          console.log('[CameraCapture] Photo captured:', {
-            name: file.name,
-            size: file.size,
-            type: file.type
-          })
 
           // Return photo to parent
           onCapture(file)

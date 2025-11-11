@@ -46,16 +46,7 @@ export default function AppartementNotesTab({ appartement, onModalStateChange })
         const isRecent = Date.now() - timestamp < 2 * 60 * 1000
         const isSameAppartement = appartementId === appartement.id
 
-        console.log('[AppartementNotesTab] Found stored modal state:', {
-          isOpen,
-          appartementId,
-          isSameAppartement,
-          isRecent,
-          currentAppartementId: appartement.id
-        })
-
         if (isOpen && isSameAppartement && isRecent) {
-          console.log('[AppartementNotesTab] Restoring modal state from localStorage')
           setIsFormModalOpen(true)
           setEditingNote(null)
         }
@@ -88,10 +79,6 @@ export default function AppartementNotesTab({ appartement, onModalStateChange })
 
   // Notify parent when modal state changes (PWA issue fix)
   useEffect(() => {
-    console.log('[AppartementNotesTab] isFormModalOpen changed:', {
-      isFormModalOpen,
-      timestamp: new Date().toISOString()
-    })
     if (onModalStateChange) {
       onModalStateChange(isFormModalOpen)
     }
@@ -99,7 +86,6 @@ export default function AppartementNotesTab({ appartement, onModalStateChange })
 
   // Handle create note
   const handleCreateNote = () => {
-    console.log('[AppartementNotesTab] handleCreateNote called')
     setEditingNote(null)
     setIsFormModalOpen(true)
 
@@ -110,8 +96,6 @@ export default function AppartementNotesTab({ appartement, onModalStateChange })
       activeTab: 'notes', // Force staying on notes tab after reload
       timestamp: Date.now()
     }))
-
-    console.log('[AppartementNotesTab] Modal should be opening now')
   }
 
   // Handle edit note
