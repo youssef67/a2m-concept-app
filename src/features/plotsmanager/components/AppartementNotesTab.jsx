@@ -54,6 +54,10 @@ export default function AppartementNotesTab({ appartement, onModalStateChange })
 
   // Notify parent when modal state changes (PWA issue fix)
   useEffect(() => {
+    console.log('[AppartementNotesTab] isFormModalOpen changed:', {
+      isFormModalOpen,
+      timestamp: new Date().toISOString()
+    })
     if (onModalStateChange) {
       onModalStateChange(isFormModalOpen)
     }
@@ -61,8 +65,10 @@ export default function AppartementNotesTab({ appartement, onModalStateChange })
 
   // Handle create note
   const handleCreateNote = () => {
+    console.log('[AppartementNotesTab] handleCreateNote called')
     setEditingNote(null)
     setIsFormModalOpen(true)
+    console.log('[AppartementNotesTab] Modal should be opening now')
   }
 
   // Handle edit note

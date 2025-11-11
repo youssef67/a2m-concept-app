@@ -29,6 +29,12 @@ export default function NoteFormModal({
 
   // Initialize form when modal opens
   useEffect(() => {
+    console.log('[NoteFormModal] useEffect isOpen changed:', {
+      isOpen,
+      hasInitialNote: !!initialNote,
+      timestamp: new Date().toISOString()
+    })
+
     if (isOpen) {
       if (initialNote) {
         setContenu(initialNote.contenu || '')
@@ -46,9 +52,19 @@ export default function NoteFormModal({
 
   // Handle file selection
   const handleFileChange = (e) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
+    console.log('[NoteFormModal] handleFileChange called', {
+      filesCount: e.target.files?.length,
+      isOpen,
+      timestamp: new Date().toISOString()
+    })
 
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) {
+      console.log('[NoteFormModal] No files selected')
+      return
+    }
+
+    console.log('[NoteFormModal] Files selected:', files.map(f => ({ name: f.name, size: f.size })))
     setErrorMessage('')
 
     // Add new files to the list
@@ -59,6 +75,7 @@ export default function NoteFormModal({
     files.forEach((file) => {
       const reader = new FileReader()
       reader.onloadend = () => {
+        console.log('[NoteFormModal] Preview created for file:', file.name)
         setPhotoPreviews(prev => [...prev, { file, url: reader.result }])
       }
       reader.readAsDataURL(file)
