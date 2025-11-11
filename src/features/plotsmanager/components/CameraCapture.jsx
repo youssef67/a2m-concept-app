@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Camera, X, RotateCcw } from 'lucide-react'
+import { Camera, X } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 
@@ -14,7 +14,6 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
   const canvasRef = useRef(null)
   const [stream, setStream] = useState(null)
   const [error, setError] = useState(null)
-  const [facingMode, setFacingMode] = useState('environment') // 'user' or 'environment'
 
   // Start camera stream
   useEffect(() => {
@@ -27,21 +26,41 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
     return () => {
       stopCamera()
     }
-  }, [isOpen, facingMode])
+  }, [isOpen])
 
   const startCamera = async () => {
     try {
+      // Arrêter le stream précédent si existant
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop())
+      }
+
       setError(null)
 
-      const constraints = {
+      // Essayer avec caméra arrière
+      let constraints = {
         video: {
-          facingMode: facingMode,
+          facingMode: 'environment',
           width: { ideal: 1920 },
           height: { ideal: 1080 }
         }
       }
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
+      let mediaStream
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
+      } catch (err) {
+        // Fallback : essayer sans facingMode (appareil avec une seule caméra)
+        console.error('[CameraCapture] Fallback to default camera:', err)
+        constraints = {
+          video: {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
+        }
+        mediaStream = await navigator.mediaDevices.getUserMedia(constraints)
+      }
+
       setStream(mediaStream)
 
       if (videoRef.current) {
@@ -49,6 +68,7 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
       }
     } catch (err) {
       console.error('[CameraCapture] Error starting camera:', err)
+      setStream(null)
       setError('Impossible d\'accéder à la caméra. Vérifiez les permissions.')
     }
   }
@@ -101,10 +121,6 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
     }
   }
 
-  const handleFlipCamera = () => {
-    setFacingMode(prev => prev === 'environment' ? 'user' : 'environment')
-  }
-
   const handleClose = () => {
     stopCamera()
     setError(null)
@@ -135,15 +151,6 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
             className="w-full h-full object-cover"
           />
           <canvas ref={canvasRef} className="hidden" />
-
-          {/* Flip camera button */}
-          <button
-            onClick={handleFlipCamera}
-            className="absolute top-4 right-4 p-3 bg-white bg-opacity-90 rounded-full shadow-lg hover:bg-opacity-100 transition-all"
-            title="Changer de caméra"
-          >
-            <RotateCcw className="w-6 h-6 text-gray-700" />
-          </button>
         </div>
 
         {/* Actions - with safe area padding */}
