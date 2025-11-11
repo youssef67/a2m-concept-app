@@ -11,6 +11,7 @@ import Button from '../../../shared/components/ui/Button'
 import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import NoteFormModal from './NoteFormModal'
 import PhotoViewModal from './PhotoViewModal'
+import { useToast } from '../../../shared/hooks/useToast'
 
 export default function AppartementNotesTab({ appartement }) {
   const {
@@ -25,6 +26,7 @@ export default function AppartementNotesTab({ appartement }) {
     deletePhoto
   } = useAppartementNotes(appartement.id)
 
+  const { showToast } = useToast()
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [editingNote, setEditingNote] = useState(null)
   const [deletingNoteId, setDeletingNoteId] = useState(null)
@@ -72,7 +74,14 @@ export default function AppartementNotesTab({ appartement }) {
     if (!noteToDelete) return
 
     setDeletingNoteId(noteToDelete.id)
-    await deleteNote(noteToDelete.id)
+    const result = await deleteNote(noteToDelete.id)
+
+    if (result.success) {
+      showToast('Note supprimée avec succès', 'success')
+    } else {
+      showToast('Erreur lors de la suppression de la note', 'error')
+    }
+
     setDeletingNoteId(null)
     setNoteToDelete(null)
   }

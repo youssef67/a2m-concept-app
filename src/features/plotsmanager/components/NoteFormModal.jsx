@@ -8,6 +8,7 @@ import { Camera, ImagePlus, X } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import CameraCapture from './CameraCapture'
+import { useToast } from '../../../shared/hooks/useToast'
 
 export default function NoteFormModal({
   isOpen,
@@ -18,6 +19,7 @@ export default function NoteFormModal({
   onDeletePhoto,
   onAddPhotos
 }) {
+  const { showToast } = useToast()
   const [contenu, setContenu] = useState('')
   const [newPhotoFiles, setNewPhotoFiles] = useState([])
   const [photoPreviews, setPhotoPreviews] = useState([])
@@ -121,7 +123,9 @@ export default function NoteFormModal({
         // 1. Update note content
         const updateResult = await onSave(contenu)
         if (!updateResult || !updateResult.success) {
-          setErrorMessage(updateResult?.error?.message || 'Erreur lors de la modification de la note')
+          const errorMsg = updateResult?.error?.message || 'Erreur lors de la modification de la note'
+          setErrorMessage(errorMsg)
+          showToast(errorMsg, 'error')
           setIsSubmitting(false)
           return
         }
@@ -137,28 +141,34 @@ export default function NoteFormModal({
         if (newPhotoFiles.length > 0) {
           const addResult = await onAddPhotos(initialNote.id, newPhotoFiles)
           if (!addResult || !addResult.success) {
-            setErrorMessage('Note modifiée mais erreur lors de l\'ajout des photos')
+            const errorMsg = 'Note modifiée mais erreur lors de l\'ajout des photos'
+            setErrorMessage(errorMsg)
+            showToast(errorMsg, 'error')
             setIsSubmitting(false)
             return
           }
         }
 
+        showToast('Note modifiée avec succès', 'success')
         handleClose()
       } else {
         // Create mode: create note with photos
         const result = await onSave(contenu, newPhotoFiles)
 
         if (result && result.success) {
+          showToast('Note créée avec succès', 'success')
           handleClose()
         } else {
-          setErrorMessage(
-            result?.error?.message || 'Erreur lors de la création de la note'
-          )
+          const errorMsg = result?.error?.message || 'Erreur lors de la création de la note'
+          setErrorMessage(errorMsg)
+          showToast(errorMsg, 'error')
         }
       }
     } catch (error) {
       console.error('Error in form submit:', error)
-      setErrorMessage('Erreur inattendue lors de la sauvegarde')
+      const errorMsg = 'Erreur inattendue lors de la sauvegarde'
+      setErrorMessage(errorMsg)
+      showToast(errorMsg, 'error')
     } finally {
       setIsSubmitting(false)
     }
