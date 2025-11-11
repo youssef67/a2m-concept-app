@@ -30,6 +30,7 @@ export default function AppartementNotesTab({ appartement }) {
   const [deletingNoteId, setDeletingNoteId] = useState(null)
   const [noteToDelete, setNoteToDelete] = useState(null)
   const [viewingPhoto, setViewingPhoto] = useState(null)
+  const [viewingPhotoNumber, setViewingPhotoNumber] = useState(null)
 
   // Load notes on mount
   useEffect(() => {
@@ -89,8 +90,9 @@ export default function AppartementNotesTab({ appartement }) {
   }
 
   // Handle view photo in modal
-  const handleViewPhoto = (photo) => {
+  const handleViewPhoto = (photo, photoNumber) => {
     setViewingPhoto(photo)
+    setViewingPhotoNumber(photoNumber)
   }
 
   if (loading && notes.length === 0) {
@@ -156,16 +158,16 @@ export default function AppartementNotesTab({ appartement }) {
               {note.photos && note.photos.length > 0 && (
                 <div className="p-3 bg-gray-50 border-b border-gray-200">
                   <div className="flex flex-wrap gap-2">
-                    {note.photos.map((photo) => (
+                    {note.photos.map((photo, index) => (
                       <button
                         key={photo.id}
-                        onClick={() => handleViewPhoto(photo)}
+                        onClick={() => handleViewPhoto(photo, index + 1)}
                         className="flex items-center gap-2 px-3 py-2 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-colors"
-                        title={`Voir ${photo.nom_fichier}`}
+                        title={`Voir Photo ${index + 1}`}
                       >
                         <ImageIcon className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                        <span className="text-sm text-gray-700 truncate max-w-[150px]">
-                          {photo.nom_fichier}
+                        <span className="text-sm text-gray-700">
+                          Photo {index + 1}
                         </span>
                       </button>
                     ))}
@@ -246,8 +248,12 @@ export default function AppartementNotesTab({ appartement }) {
       {/* Photo View Modal */}
       <PhotoViewModal
         isOpen={!!viewingPhoto}
-        onClose={() => setViewingPhoto(null)}
+        onClose={() => {
+          setViewingPhoto(null)
+          setViewingPhotoNumber(null)
+        }}
         photo={viewingPhoto}
+        photoNumber={viewingPhotoNumber}
       />
     </div>
   )

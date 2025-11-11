@@ -8,7 +8,7 @@ import { X } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import { getPhotoUrl } from '../services/appartementPhotosService'
 
-export default function PhotoViewModal({ isOpen, onClose, photo }) {
+export default function PhotoViewModal({ isOpen, onClose, photo, photoNumber }) {
   const [imageUrl, setImageUrl] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -50,7 +50,7 @@ export default function PhotoViewModal({ isOpen, onClose, photo }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={photo.nom_fichier}
+      title={photoNumber ? `Photo ${photoNumber}` : photo.nom_fichier}
       size="full"
     >
       <div className="flex flex-col h-full">
@@ -78,7 +78,7 @@ export default function PhotoViewModal({ isOpen, onClose, photo }) {
           <div className="flex-1 flex items-center justify-center overflow-hidden bg-black rounded-lg">
             <img
               src={imageUrl}
-              alt={photo.nom_fichier}
+              alt={photoNumber ? `Photo ${photoNumber}` : photo.nom_fichier}
               className="max-w-full max-h-full object-contain"
               style={{
                 maxWidth: '100%',
