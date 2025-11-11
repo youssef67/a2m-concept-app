@@ -146,12 +146,12 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
           </button>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-3">
+        {/* Actions - with safe area padding */}
+        <div className="flex gap-3 pb-safe" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
           <Button
             variant="outline"
             onClick={handleClose}
-            className="flex-1"
+            className="flex-1 min-h-[48px]"
           >
             <X className="w-5 h-5 mr-2" />
             Annuler
@@ -160,7 +160,7 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
             variant="primary"
             onClick={handleCapture}
             disabled={!stream || !!error}
-            className="flex-1"
+            className="flex-1 min-h-[48px]"
           >
             <Camera className="w-5 h-5 mr-2" />
             Capturer
