@@ -7,10 +7,10 @@ import React, { useEffect, useState } from 'react'
 import { Plus, Edit2, Trash2, FileText, Image as ImageIcon } from 'lucide-react'
 import { useAppartementNotes } from '../hooks/useAppartementNotes'
 import { formatNoteDate } from '../services/appartementNotesService'
-import { getPhotoUrl } from '../services/appartementPhotosService'
 import Button from '../../../shared/components/ui/Button'
 import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import NoteFormModal from './NoteFormModal'
+import PhotoViewModal from './PhotoViewModal'
 
 export default function AppartementNotesTab({ appartement }) {
   const {
@@ -29,6 +29,7 @@ export default function AppartementNotesTab({ appartement }) {
   const [editingNote, setEditingNote] = useState(null)
   const [deletingNoteId, setDeletingNoteId] = useState(null)
   const [noteToDelete, setNoteToDelete] = useState(null)
+  const [viewingPhoto, setViewingPhoto] = useState(null)
 
   // Load notes on mount
   useEffect(() => {
@@ -87,19 +88,9 @@ export default function AppartementNotesTab({ appartement }) {
     return result
   }
 
-  // Handle view photo in new tab
-  const handleViewPhoto = async (photo) => {
-    try {
-      const { data: url } = await getPhotoUrl(photo.storage_path)
-      if (url) {
-        window.open(url, '_blank')
-      } else {
-        alert('Erreur lors de l\'ouverture de la photo')
-      }
-    } catch (error) {
-      console.error('Error loading photo URL:', error)
-      alert('Erreur lors de l\'ouverture de la photo')
-    }
+  // Handle view photo in modal
+  const handleViewPhoto = (photo) => {
+    setViewingPhoto(photo)
   }
 
   if (loading && notes.length === 0) {
@@ -250,6 +241,13 @@ export default function AppartementNotesTab({ appartement }) {
         confirmLabel="Supprimer"
         cancelLabel="Annuler"
         variant="danger"
+      />
+
+      {/* Photo View Modal */}
+      <PhotoViewModal
+        isOpen={!!viewingPhoto}
+        onClose={() => setViewingPhoto(null)}
+        photo={viewingPhoto}
       />
     </div>
   )
