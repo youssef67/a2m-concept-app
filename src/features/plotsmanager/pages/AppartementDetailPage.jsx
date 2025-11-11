@@ -67,9 +67,6 @@ export default function AppartementDetailPage() {
   const [selectedDocumentRequisId, setSelectedDocumentRequisId] = useState(null)
   const [uploading, setUploading] = useState(false)
 
-  // Track if user is currently interacting with notes modal (PWA issue fix)
-  const [isNotesModalActive, setIsNotesModalActive] = useState(false)
-
   // Taches hook
   const { taches, loading: tachesLoading, loadTaches, updateTacheStatut } = useAppartementTaches(appartementId)
 
@@ -134,24 +131,7 @@ export default function AppartementDetailPage() {
   }, [appartementId, loadNotes])
 
   // Synchronize activeTab with URL parameter when appartement changes
-  // Also check localStorage for PWA note modal recovery
   useEffect(() => {
-    // First check localStorage for PWA recovery
-    const storedState = localStorage.getItem('noteModalState')
-    if (storedState) {
-      try {
-        const { activeTab: storedTab, appartementId: storedApptId } = JSON.parse(storedState)
-        // Only use stored tab if it's for the same appartement
-        if (storedTab && storedApptId === appartementId) {
-          setActiveTab(storedTab)
-          return // Don't proceed with URL-based logic
-        }
-      } catch (error) {
-        console.error('[AppartementDetailPage] Error parsing stored tab:', error)
-      }
-    }
-
-    // Otherwise use URL parameter
     const tabParam = searchParams.get('tab')
     if (tabParam) {
       setActiveTab(tabParam)
@@ -249,7 +229,6 @@ export default function AppartementDetailPage() {
   // Switch to "documents" tab if "taches" is not available and currently active
   // BUT only if we don't have an explicit tab parameter in the URL
   // AND we're not coming from "tous" tab (which shows all tabs)
-  // AND there's no modal currently active (PWA issue fix)
   useEffect(() => {
     const tabParam = searchParams.get('tab')
     const fromTab = searchParams.get('fromTab')
@@ -259,11 +238,10 @@ export default function AppartementDetailPage() {
     // 2. Current tab is taches
     // 3. NO explicit tab parameter in URL (meaning user didn't navigate with ?tab=taches)
     // 4. NOT coming from "tous" tab (which should show all tabs including taches)
-    // 5. NO modal is currently active (prevents interrupting user workflow)
-    if (appartementStatut === 'en_attente' && activeTab === 'taches' && !tabParam && fromTab !== 'tous' && !isNotesModalActive) {
+    if (appartementStatut === 'en_attente' && activeTab === 'taches' && !tabParam && fromTab !== 'tous') {
       setActiveTab('documents')
     }
-  }, [appartementStatut, activeTab, searchParams, isNotesModalActive])
+  }, [appartementStatut, activeTab, searchParams])
 
   return (
     <AppLayout>
@@ -497,7 +475,6 @@ export default function AppartementDetailPage() {
               {activeTab === 'notes' && (
                 <AppartementNotesTab
                   appartement={appartement}
-                  onModalStateChange={setIsNotesModalActive}
                 />
               )}
             </div>

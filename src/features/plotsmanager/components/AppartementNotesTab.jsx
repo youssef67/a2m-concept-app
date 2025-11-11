@@ -12,7 +12,7 @@ import Button from '../../../shared/components/ui/Button'
 import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import NoteFormModal from './NoteFormModal'
 
-export default function AppartementNotesTab({ appartement, onModalStateChange }) {
+export default function AppartementNotesTab({ appartement }) {
   const {
     notes,
     loading,
@@ -35,67 +35,10 @@ export default function AppartementNotesTab({ appartement, onModalStateChange })
     loadNotes()
   }, [loadNotes])
 
-  // Recover modal state from localStorage (PWA fix for camera reload)
-  useEffect(() => {
-    const storedState = localStorage.getItem('noteModalState')
-    if (storedState) {
-      try {
-        const { isOpen, appartementId, timestamp } = JSON.parse(storedState)
-
-        // Only restore if it's for the same appartement and within 2 minutes
-        const isRecent = Date.now() - timestamp < 2 * 60 * 1000
-        const isSameAppartement = appartementId === appartement.id
-
-        if (isOpen && isSameAppartement && isRecent) {
-          setIsFormModalOpen(true)
-          setEditingNote(null)
-        }
-
-        // Clean up localStorage
-        localStorage.removeItem('noteModalState')
-      } catch (error) {
-        console.error('[AppartementNotesTab] Error parsing stored modal state:', error)
-        localStorage.removeItem('noteModalState')
-      }
-    }
-  }, [appartement.id])
-
-  // Prevent page unload/navigation when modal is open (PWA issue fix)
-  useEffect(() => {
-    if (isFormModalOpen) {
-      // Prevent accidental page navigation
-      const handleBeforeUnload = (e) => {
-        e.preventDefault()
-        e.returnValue = ''
-      }
-
-      window.addEventListener('beforeunload', handleBeforeUnload)
-
-      return () => {
-        window.removeEventListener('beforeunload', handleBeforeUnload)
-      }
-    }
-  }, [isFormModalOpen])
-
-  // Notify parent when modal state changes (PWA issue fix)
-  useEffect(() => {
-    if (onModalStateChange) {
-      onModalStateChange(isFormModalOpen)
-    }
-  }, [isFormModalOpen, onModalStateChange])
-
   // Handle create note
   const handleCreateNote = () => {
     setEditingNote(null)
     setIsFormModalOpen(true)
-
-    // Store modal state in localStorage for PWA recovery after camera use
-    localStorage.setItem('noteModalState', JSON.stringify({
-      isOpen: true,
-      appartementId: appartement.id,
-      activeTab: 'notes', // Force staying on notes tab after reload
-      timestamp: Date.now()
-    }))
   }
 
   // Handle edit note
@@ -289,8 +232,6 @@ export default function AppartementNotesTab({ appartement, onModalStateChange })
         onClose={() => {
           setIsFormModalOpen(false)
           setEditingNote(null)
-          // Clean up localStorage when modal closes normally
-          localStorage.removeItem('noteModalState')
         }}
         onSave={handleSaveNote}
         onDeletePhoto={handleDeletePhoto}
