@@ -868,11 +868,13 @@ export default function PlotDetailPage() {
 
               {/* Pagination */}
               {!appartementsLoading && paginatedAppartements.length > 0 && totalPages > 1 && (
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                />
+                <div className="mt-6">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
               )}
             </div>
 
