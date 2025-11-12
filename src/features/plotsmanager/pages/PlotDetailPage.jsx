@@ -14,6 +14,7 @@ import Modal from '../../../shared/components/ui/Modal'
 import Tabs from '../../../shared/components/ui/Tabs'
 import Select from '../../../shared/components/ui/Select'
 import Dropdown, { DropdownItem } from '../../../shared/components/ui/Dropdown'
+import Pagination from '../../../shared/components/ui/Pagination'
 import CreateAppartementModal from '../components/CreateAppartementModal'
 import CreateMultipleAppartementsModal from '../components/CreateMultipleAppartementsModal'
 import { getPlotById } from '../services/plotsService'
@@ -32,6 +33,9 @@ import {
 } from '../utils/appartementHelpers'
 import { formatEtage } from '../utils/etageConstants'
 import { getLivraisonStatutConfig, STATUTS_OPTIONS } from '../utils/livraisonHelpers'
+
+// Nombre de lots par page
+const ITEMS_PER_PAGE = 10
 
 export default function PlotDetailPage() {
   const { chantierId, plotId } = useParams()
@@ -57,6 +61,7 @@ export default function PlotDetailPage() {
   const [showDocumentsManquants, setShowDocumentsManquants] = useState(false) // Filtre pour documents obligatoires manquants
   const [creationResult, setCreationResult] = useState(null)
   const [showResultModal, setShowResultModal] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Appartements hook
   const { appartements, loading: appartementsLoading, loadAppartements, deleteAppartement } = useAppartements(plotId, chantierId)
@@ -178,6 +183,16 @@ export default function PlotDetailPage() {
   }, [filteredByStatut])
 
   const filteredAppartements = sortedAppartements
+
+  // Calculate pagination
+  const totalPages = Math.ceil(sortedAppartements.length / ITEMS_PER_PAGE)
+
+  // Get appartements for current page
+  const paginatedAppartements = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+    const endIndex = startIndex + ITEMS_PER_PAGE
+    return sortedAppartements.slice(startIndex, endIndex)
+  }, [sortedAppartements, currentPage])
 
   // Calculate stats for tabs
   const stats = useMemo(() => {
@@ -354,6 +369,11 @@ export default function PlotDetailPage() {
     // Reset TMA filter on tab change (filter is visible on all tabs)
     setShowOnlyTMA(false)
   }, [activeTab])
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, activeTab, showOnlyTMA, showDocumentsManquants, selectedEtageFilter, selectedLivraisonFilter])
 
   // Type labels
   const TYPE_LABELS = {
@@ -685,7 +705,7 @@ export default function PlotDetailPage() {
 
               {!appartementsLoading && filteredAppartements.length > 0 && (
                 <div className="space-y-3">
-                  {filteredAppartements.map((appartement) => {
+                  {paginatedAppartements.map((appartement) => {
                     const statut = calculateAppartementStatut(appartement)
                     const statutConfig = getStatutConfig(statut)
                     const tachesEnCours = getTasksEnCours(appartement)
@@ -844,6 +864,15 @@ export default function PlotDetailPage() {
                     )
                   })}
                 </div>
+              )}
+
+              {/* Pagination */}
+              {!appartementsLoading && paginatedAppartements.length > 0 && totalPages > 1 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
               )}
             </div>
 
