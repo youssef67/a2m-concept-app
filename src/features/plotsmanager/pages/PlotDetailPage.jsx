@@ -15,6 +15,7 @@ import Tabs from '../../../shared/components/ui/Tabs'
 import Select from '../../../shared/components/ui/Select'
 import Dropdown, { DropdownItem } from '../../../shared/components/ui/Dropdown'
 import Pagination from '../../../shared/components/ui/Pagination'
+import Tooltip from '../../../shared/components/ui/Tooltip'
 import CreateAppartementModal from '../components/CreateAppartementModal'
 import CreateMultipleAppartementsModal from '../components/CreateMultipleAppartementsModal'
 import { getPlotById } from '../services/plotsService'
@@ -776,10 +777,12 @@ export default function PlotDetailPage() {
                               {livraisonLabel}
                             </span>
                             {appartement.missing_obligatoire_documents && (
-                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 border border-red-200 flex items-center gap-1">
-                                <AlertTriangle className="w-3 h-3" />
-                                Docs manquants
-                              </span>
+                              <Tooltip content={appartement.missing_obligatoire_documents_list} position="top">
+                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 border border-red-200 flex items-center gap-1 cursor-help">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  Docs manquants
+                                </span>
+                              </Tooltip>
                             )}
                           </div>
 

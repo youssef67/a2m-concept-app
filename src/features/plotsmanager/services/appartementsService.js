@@ -115,6 +115,14 @@ export async function getAppartementsByPlotWithDetails(plotId, chantierId) {
           docId => !uploadedDocIds.includes(docId)
         )
 
+        // Get names of missing obligatoire documents
+        const missingObligatoireDocsList = missingObligatoireDocs
+          .map(docId => {
+            const doc = documentsRequis.find(d => d.id === docId)
+            return doc ? doc.nom_document : null
+          })
+          .filter(Boolean) // Remove any null values
+
         // Count unique document types covered (not total files)
         const uniqueDocTypes = new Set(uploadedDocIds)
 
@@ -129,6 +137,7 @@ export async function getAppartementsByPlotWithDetails(plotId, chantierId) {
           taches_count: appt.appartement_taches?.length || 0,
           notes_count: notes?.length || 0,
           missing_obligatoire_documents: missingObligatoireDocs.length > 0,
+          missing_obligatoire_documents_list: missingObligatoireDocsList,
           livraison_statut: livraison?.statut || 'non_commande',
           livraison_jours_retard: livraison?.jours_retard || 0
         }
