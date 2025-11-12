@@ -144,7 +144,14 @@ export default function AppartementDetailPage() {
 
   // Handle back button
   const handleBack = () => {
-    // Get the tab we came from (if any) to navigate back to it
+    // Try to get returnUrl (new method with filters)
+    const returnUrl = searchParams.get('returnUrl')
+    if (returnUrl) {
+      navigate(decodeURIComponent(returnUrl))
+      return
+    }
+
+    // Fallback to fromTab (old method for compatibility)
     const fromTab = searchParams.get('fromTab')
     if (fromTab) {
       navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}?activeTab=${fromTab}`)

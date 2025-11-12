@@ -53,15 +53,15 @@ export default function PlotDetailPage() {
   const [showCreateMenu, setShowCreateMenu] = useState(false)
   const [appartementToEdit, setAppartementToEdit] = useState(null)
   const [appartementToDelete, setAppartementToDelete] = useState(null)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [activeTab, setActiveTab] = useState(initialTab)
-  const [selectedEtageFilter, setSelectedEtageFilter] = useState('') // '' = tous, null = non spécifié, 0-10 = étage
-  const [selectedLivraisonFilter, setSelectedLivraisonFilter] = useState('') // '' = tous, string = statut livraison
-  const [showOnlyTMA, setShowOnlyTMA] = useState(false) // Filtre pour afficher uniquement les appartements avec TMA
-  const [showDocumentsManquants, setShowDocumentsManquants] = useState(false) // Filtre pour documents obligatoires manquants
+  const [selectedEtageFilter, setSelectedEtageFilter] = useState(searchParams.get('etage') || '') // '' = tous, null = non spécifié, 0-10 = étage
+  const [selectedLivraisonFilter, setSelectedLivraisonFilter] = useState(searchParams.get('livraison') || '') // '' = tous, string = statut livraison
+  const [showOnlyTMA, setShowOnlyTMA] = useState(searchParams.get('tma') === 'true') // Filtre pour afficher uniquement les appartements avec TMA
+  const [showDocumentsManquants, setShowDocumentsManquants] = useState(searchParams.get('docs') === 'true') // Filtre pour documents obligatoires manquants
   const [creationResult, setCreationResult] = useState(null)
   const [showResultModal, setShowResultModal] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
 
   // Appartements hook
   const { appartements, loading: appartementsLoading, loadAppartements, deleteAppartement } = useAppartements(plotId, chantierId)
@@ -117,6 +117,21 @@ export default function PlotDetailPage() {
     }
   }, [chantierId, loadAllPlots])
 
+  // Synchronize filters with URL
+  useEffect(() => {
+    const params = new URLSearchParams()
+
+    if (activeTab && activeTab !== 'tous') params.set('activeTab', activeTab)
+    if (searchQuery) params.set('search', searchQuery)
+    if (selectedEtageFilter) params.set('etage', selectedEtageFilter)
+    if (selectedLivraisonFilter) params.set('livraison', selectedLivraisonFilter)
+    if (showOnlyTMA) params.set('tma', 'true')
+    if (showDocumentsManquants) params.set('docs', 'true')
+    if (currentPage > 1) params.set('page', currentPage.toString())
+
+    setSearchParams(params, { replace: true })
+  }, [activeTab, searchQuery, selectedEtageFilter, selectedLivraisonFilter, showOnlyTMA, showDocumentsManquants, currentPage, setSearchParams])
+
   // Close title dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
@@ -135,17 +150,6 @@ export default function PlotDetailPage() {
       document.removeEventListener('touchstart', handleClickOutside)
     }
   }, [isTitleDropdownOpen])
-
-  // Clean up activeTab URL parameter after reading it
-  useEffect(() => {
-    const activeTabParam = searchParams.get('activeTab')
-    if (activeTabParam) {
-      // Remove the parameter from URL without triggering a navigation
-      searchParams.delete('activeTab')
-      setSearchParams(searchParams, { replace: true })
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Run only once on mount
 
   // Filter appartements based on search query and status
   const filteredBySearch = useMemo(() => {
@@ -245,6 +249,20 @@ export default function PlotDetailPage() {
     }))
   }, [plots])
 
+  // Helper function to build return URL with all current filters
+  const buildReturnUrl = () => {
+    const returnParams = new URLSearchParams()
+    if (activeTab && activeTab !== 'tous') returnParams.set('activeTab', activeTab)
+    if (searchQuery) returnParams.set('search', searchQuery)
+    if (selectedEtageFilter) returnParams.set('etage', selectedEtageFilter)
+    if (selectedLivraisonFilter) returnParams.set('livraison', selectedLivraisonFilter)
+    if (showOnlyTMA) returnParams.set('tma', 'true')
+    if (showDocumentsManquants) returnParams.set('docs', 'true')
+    if (currentPage > 1) returnParams.set('page', currentPage.toString())
+
+    return `/admin/plotsmanager/${chantierId}/plot/${plotId}?${returnParams.toString()}`
+  }
+
   // Handle back button
   const handleBack = () => {
     navigate(`/admin/plotsmanager/${chantierId}`)
@@ -260,13 +278,13 @@ export default function PlotDetailPage() {
   // Handle appartement click
   const handleAppartementClick = (appartement) => {
     const appartementId = appartement.id
-    if (activeTab === 'en_cours') {
-      // Ouvrir sur l'onglet Tâches (là où il y a du travail)
-      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartementId}?tab=taches&fromTab=${activeTab}`)
-    } else {
-      // Finalisé ou Tous : onglet par défaut
-      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartementId}?fromTab=${activeTab}`)
-    }
+    const returnUrl = buildReturnUrl()
+
+    const targetParams = new URLSearchParams()
+    if (activeTab === 'en_cours') targetParams.set('tab', 'taches')
+    targetParams.set('returnUrl', encodeURIComponent(returnUrl))
+
+    navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartementId}?${targetParams.toString()}`)
   }
 
   // Handle appartement creation success
@@ -275,7 +293,8 @@ export default function PlotDetailPage() {
 
     // Redirect to created appartement's tasks tab (only on creation, not edit)
     if (createdAppartement && createdAppartement.id && !appartementToEdit) {
-      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${createdAppartement.id}?tab=taches&fromTab=tous`)
+      const returnUrl = buildReturnUrl()
+      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${createdAppartement.id}?tab=taches&returnUrl=${encodeURIComponent(returnUrl)}`)
     }
   }
 
@@ -292,7 +311,9 @@ export default function PlotDetailPage() {
     // Redirect to first created appartement if any
     if (result.data && result.data.length > 0) {
       const firstAppartement = result.data[0]
-      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${firstAppartement.id}?tab=taches&fromTab=tous`)
+      const returnUrl = buildReturnUrl()
+
+      navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${firstAppartement.id}?tab=taches&returnUrl=${encodeURIComponent(returnUrl)}`)
     }
   }
 
@@ -811,7 +832,8 @@ export default function PlotDetailPage() {
                                       <DropdownItem
                                         onClick={(e) => {
                                           e.stopPropagation()
-                                          navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?tab=notes&fromTab=${activeTab}`)
+                                          const returnUrl = buildReturnUrl()
+                                          navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?tab=notes&returnUrl=${encodeURIComponent(returnUrl)}`)
                                         }}
                                       >
                                         <FileText className="w-4 h-4" />
@@ -841,7 +863,8 @@ export default function PlotDetailPage() {
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation()
-                                        navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?tab=notes&fromTab=${activeTab}`)
+                                        const returnUrl = buildReturnUrl()
+                                        navigate(`/admin/plotsmanager/${chantierId}/plot/${plotId}/appartement/${appartement.id}?tab=notes&returnUrl=${encodeURIComponent(returnUrl)}`)
                                       }}
                                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                                       title={`Voir les notes (${appartement.notes_count})`}
