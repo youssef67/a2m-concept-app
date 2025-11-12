@@ -19,7 +19,6 @@ import AppartementDocumentUploadModal from '../components/AppartementDocumentUpl
 import AppartementNotesTab from '../components/AppartementNotesTab'
 import AppartementLivraisonTab from '../components/AppartementLivraisonTab'
 import DocumentFilesList from '../components/DocumentFilesList'
-import { calculateAppartementStatut } from '../utils/appartementHelpers'
 
 // Status options
 const STATUS_OPTIONS = [
@@ -201,56 +200,16 @@ export default function AppartementDetailPage() {
     ? Math.round((tachesStats.terminee / tachesStats.total) * 100)
     : 0
 
-  // Calculate appartement statut
-  const appartementStatut = useMemo(() => {
-    if (!appartement) return null
-    return calculateAppartementStatut({
-      ...appartement,
-      taches: taches || []
-    }, documentsWithStatus)
-  }, [appartement, taches, documentsWithStatus])
-
-  // Determine available tabs - hide "Tâches" ONLY for "en_attente" appartements (except when coming from "tous" tab)
+  // Determine available tabs - always show all tabs including "Tâches"
   const availableTabs = useMemo(() => {
-    const allTabs = [
+    return [
       { id: 'taches', label: 'Tâches', count: `${tachesStats.terminee}/${tachesStats.total}` },
       { id: 'documents', label: 'Documents', count: `${documentsStats.uploaded}/${documentsStats.total}` },
       { id: 'notes', label: 'Notes', count: notes.length },
       { id: 'livraison', label: 'Livraison' }
     ]
+  }, [tachesStats.terminee, tachesStats.total, documentsStats.uploaded, documentsStats.total, notes.length])
 
-    // Get fromTab parameter from URL
-    const fromTab = searchParams.get('fromTab')
-
-    // If coming from "tous" tab, show ALL tabs regardless of appartement status
-    if (fromTab === 'tous') {
-      return allTabs
-    }
-
-    // Otherwise, apply normal logic: hide "Tâches" tab for "en_attente" appartements
-    if (appartementStatut === 'en_attente') {
-      return allTabs.filter(tab => tab.id !== 'taches')
-    }
-
-    return allTabs
-  }, [appartementStatut, tachesStats.terminee, tachesStats.total, documentsStats.uploaded, documentsStats.total, notes.length, searchParams])
-
-  // Switch to "documents" tab if "taches" is not available and currently active
-  // BUT only if we don't have an explicit tab parameter in the URL
-  // AND we're not coming from "tous" tab (which shows all tabs)
-  useEffect(() => {
-    const tabParam = searchParams.get('tab')
-    const fromTab = searchParams.get('fromTab')
-
-    // Only force the switch if:
-    // 1. Appartement is en_attente
-    // 2. Current tab is taches
-    // 3. NO explicit tab parameter in URL (meaning user didn't navigate with ?tab=taches)
-    // 4. NOT coming from "tous" tab (which should show all tabs including taches)
-    if (appartementStatut === 'en_attente' && activeTab === 'taches' && !tabParam && fromTab !== 'tous') {
-      setActiveTab('documents')
-    }
-  }, [appartementStatut, activeTab, searchParams])
 
   return (
     <AppLayout>
