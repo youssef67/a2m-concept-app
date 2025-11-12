@@ -27,6 +27,36 @@ export function AuthProvider({ children }) {
         const { data: sub } = authService.onAuthStateChange(async (event, newSession) => {
           if (!mounted) return
 
+          console.log('[AuthContext] Auth event:', event, 'Session:', !!newSession)
+
+          // Handle TOKEN_REFRESHED with failure
+          if (event === 'TOKEN_REFRESHED' && !newSession) {
+            console.error('[AuthContext] Token refresh failed - forcing sign out')
+            await authService.signOut()
+            setSession(null)
+            setUser(null)
+            setProfile(null)
+            if (mounted && isFirstCheck) {
+              setLoading(false)
+              isFirstCheck = false
+            }
+            return
+          }
+
+          // Handle SIGNED_OUT
+          if (event === 'SIGNED_OUT') {
+            console.log('[AuthContext] User signed out')
+            setSession(null)
+            setUser(null)
+            setProfile(null)
+            lastUserIdRef.current = null
+            if (mounted && isFirstCheck) {
+              setLoading(false)
+              isFirstCheck = false
+            }
+            return
+          }
+
           // Only fetch profile if user actually changed (not just a URL change)
           const currentUserId = newSession?.user?.id
           const userIdChanged = currentUserId !== lastUserIdRef.current
@@ -40,12 +70,60 @@ export function AuthProvider({ children }) {
             // Wait for Supabase to update auth headers
             await new Promise(resolve => setTimeout(resolve, 300))
 
-            const { data, error } = await authService.getProfileById(newSession.user.id)
+            // Retry logic for profile fetch (handles JWT expired)
+            let profileData = null
+            let profileError = null
+            let attempts = 0
+            const maxAttempts = 3
 
-            if (mounted && !error && data) {
-              setProfile(data)
-            } else if (error) {
-              console.error('[AuthContext] Failed to fetch profile:', error)
+            while (attempts < maxAttempts && !profileData && mounted) {
+              attempts++
+              console.log(`[AuthContext] Fetching profile (attempt ${attempts}/${maxAttempts})...`)
+
+              const result = await authService.getProfileById(newSession.user.id)
+
+              // Check for JWT expired error (PGRST303)
+              if (result.error?.code === 'PGRST303' || result.error?.message?.includes('JWT')) {
+                console.warn('[AuthContext] JWT expired detected, refreshing session...')
+
+                // Try to refresh the session
+                const { data: { session: refreshedSession }, error: refreshError } = await authService.refreshSession()
+
+                if (refreshError || !refreshedSession) {
+                  console.error('[AuthContext] Session refresh failed:', refreshError)
+                  profileError = result.error
+                  break
+                }
+
+                console.log('[AuthContext] Session refreshed successfully, retrying profile fetch...')
+                setSession(refreshedSession)
+                await new Promise(resolve => setTimeout(resolve, 500))
+                continue
+              }
+
+              if (result.data) {
+                profileData = result.data
+              } else if (result.error) {
+                profileError = result.error
+                // Wait before retry
+                if (attempts < maxAttempts) {
+                  await new Promise(resolve => setTimeout(resolve, 1000 * attempts))
+                }
+              }
+            }
+
+            if (mounted) {
+              if (profileData) {
+                console.log('[AuthContext] Profile loaded successfully:', profileData.role)
+                setProfile(profileData)
+              } else {
+                console.error('[AuthContext] Failed to fetch profile after', attempts, 'attempts:', profileError)
+                // Force sign out if profile cannot be loaded
+                await authService.signOut()
+                setSession(null)
+                setUser(null)
+                setProfile(null)
+              }
             }
           } else if (!newSession?.user) {
             lastUserIdRef.current = null
