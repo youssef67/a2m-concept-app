@@ -750,9 +750,9 @@ export default function PlotDetailPage() {
                       <div
                         key={appartement.id}
                         onClick={() => handleAppartementClick(appartement)}
-                        className="border rounded-lg p-4 transition-all bg-white border-gray-200 hover:border-primary-500 hover:shadow-md cursor-pointer"
+                        className="border rounded-lg p-4 transition-all bg-white border-gray-200 hover:border-primary-500 hover:shadow-md cursor-pointer overflow-visible"
                       >
-                        <div className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-3 overflow-visible">
                           {/* Ligne 1 : Nom + Étage */}
                           <div className="flex items-center gap-3">
                             <span className="font-medium text-gray-900 text-base">

@@ -35,10 +35,13 @@ export default function Tooltip({ children, content, position = 'top' }) {
 
   return (
     <div
-      className="relative inline-block"
+      className="relative inline-flex"
       onMouseEnter={() => setIsVisible(true)}
       onMouseLeave={() => setIsVisible(false)}
-      onClick={() => setIsVisible(!isVisible)}
+      onClick={(e) => {
+        e.stopPropagation()
+        setIsVisible(!isVisible)
+      }}
     >
       {children}
 
@@ -47,7 +50,7 @@ export default function Tooltip({ children, content, position = 'top' }) {
         <>
           {/* Backdrop for mobile (dismisses on click) */}
           <div
-            className="fixed inset-0 z-40 md:hidden"
+            className="fixed inset-0 z-[9998] md:hidden"
             onClick={(e) => {
               e.stopPropagation()
               setIsVisible(false)
@@ -57,12 +60,12 @@ export default function Tooltip({ children, content, position = 'top' }) {
           {/* Tooltip content */}
           <div
             className={`
-              absolute z-50 px-3 py-2 text-xs text-white bg-gray-900 rounded-lg shadow-lg
+              absolute z-[9999] px-3 py-2 text-xs text-white bg-gray-900 rounded-lg shadow-xl
               max-w-xs whitespace-normal
               ${positionClasses[position]}
-              pointer-events-none
             `}
             style={{ maxHeight: '200px', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
           >
             {contentArray.length === 1 ? (
               <div>{contentArray[0]}</div>
