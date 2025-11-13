@@ -311,26 +311,16 @@ export default function AppartementDetailPage() {
                     const config = STATUS_CONFIG[tache.statut]
                     const StatusIcon = config.icon
 
-                    // Check if there's a task en_cours
-                    const tacheEnCours = taches.find(t => t.statut === 'en_cours')
-                    // Disable select if there's a task en_cours and this is not that task
-                    const isDisabled = tacheEnCours && tache.id !== tacheEnCours.id
-
                     return (
                       <div
                         key={tache.id}
-                        className={`border ${config.borderColor} ${config.bgColor} rounded-lg p-4 ${isDisabled ? 'opacity-60' : ''}`}
+                        className={`border ${config.borderColor} ${config.bgColor} rounded-lg p-4`}
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                           {/* Status icon and task name */}
                           <div className="flex items-center gap-3 flex-1">
                             <StatusIcon className={`w-5 h-5 ${config.color} flex-shrink-0`} />
                             <span className="font-medium text-gray-900">{tache.intitule}</span>
-                            {isDisabled && (
-                              <span className="text-xs text-gray-500 italic">
-                                (Non modifiable tant qu&apos;une tâche est en cours)
-                              </span>
-                            )}
                           </div>
 
                           {/* Status selector */}
@@ -339,7 +329,6 @@ export default function AppartementDetailPage() {
                               value={tache.statut}
                               onChange={(value) => handleStatusChange(tache.id, value)}
                               options={STATUS_OPTIONS}
-                              disabled={isDisabled}
                             />
                           </div>
                         </div>
