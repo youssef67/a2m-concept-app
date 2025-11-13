@@ -111,6 +111,17 @@ export default function PlotDetailPage() {
     }
   }, [plotId, loadAppartements])
 
+  // Reset all filters when plot changes
+  useEffect(() => {
+    setSearchQuery('')
+    setActiveTab('tous')
+    setSelectedEtageFilter('')
+    setSelectedLivraisonFilter('')
+    setShowOnlyTMA(false)
+    setShowDocumentsManquants(false)
+    setCurrentPage(1)
+  }, [plotId])
+
   // Load all plots for navigation
   useEffect(() => {
     if (chantierId) {
