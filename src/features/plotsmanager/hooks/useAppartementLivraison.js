@@ -5,31 +5,33 @@
 
 import { useState, useCallback } from 'react'
 import {
-  getLivraisonByAppartement,
+  getLivraisonsByAppartement,
   getLivraisonHistory,
   getLivraisonPhotos,
   updateLivraisonStatut,
   uploadPhotoIncomplete,
   deletePhotoIncomplete,
+  createLivraison as createLivraisonService,
   deleteLivraison as deleteLivraisonService
 } from '../services/appartementLivraisonService'
 
 /**
- * Hook pour gérer les livraisons d'un appartement
+ * Hook pour gérer les livraisons d'un appartement (supporte plusieurs livraisons)
  * @param {string} appartementId - UUID de l'appartement
- * @returns {Object} - État et fonctions de gestion de la livraison
+ * @returns {Object} - État et fonctions de gestion des livraisons
  */
 export function useAppartementLivraison(appartementId) {
-  const [livraison, setLivraison] = useState(null)
+  const [livraisons, setLivraisons] = useState([])
+  const [selectedLivraison, setSelectedLivraison] = useState(null)
   const [history, setHistory] = useState([])
   const [photos, setPhotos] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
   /**
-   * Charger la livraison d'un appartement
+   * Charger toutes les livraisons d'un appartement
    */
-  const loadLivraison = useCallback(async () => {
+  const loadLivraisons = useCallback(async () => {
     if (!appartementId) {
       setError('ID appartement manquant')
       return
@@ -38,31 +40,33 @@ export function useAppartementLivraison(appartementId) {
     setLoading(true)
     setError(null)
 
-    const { data, error: fetchError } = await getLivraisonByAppartement(appartementId)
+    const { data, error: fetchError } = await getLivraisonsByAppartement(appartementId)
 
     if (fetchError) {
-      console.error('[useAppartementLivraison] loadLivraison error:', fetchError)
-      setError('Erreur lors du chargement de la livraison')
-      setLivraison(null)
+      console.error('[useAppartementLivraison] loadLivraisons error:', fetchError)
+      setError('Erreur lors du chargement des livraisons')
+      setLivraisons([])
     } else {
-      setLivraison(data)
+      setLivraisons(data || [])
     }
 
     setLoading(false)
   }, [appartementId])
 
   /**
-   * Charger l'historique des changements de statut
+   * Charger l'historique des changements de statut pour une livraison
+   * @param {string} livraisonId - UUID de la livraison
    */
-  const loadHistory = useCallback(async () => {
-    if (!appartementId) {
+  const loadHistory = useCallback(async (livraisonId) => {
+    if (!livraisonId) {
+      setHistory([])
       return
     }
 
     setLoading(true)
     setError(null)
 
-    const { data, error: fetchError } = await getLivraisonHistory(appartementId)
+    const { data, error: fetchError } = await getLivraisonHistory(livraisonId)
 
     if (fetchError) {
       console.error('[useAppartementLivraison] loadHistory error:', fetchError)
@@ -73,7 +77,7 @@ export function useAppartementLivraison(appartementId) {
     }
 
     setLoading(false)
-  }, [appartementId])
+  }, [])
 
   /**
    * Charger les photos d'une livraison
@@ -96,20 +100,48 @@ export function useAppartementLivraison(appartementId) {
   }, [])
 
   /**
-   * Mettre à jour le statut de la livraison
+   * Créer une nouvelle livraison
+   * @param {string} nomLivraison - Nom de la livraison
+   * @param {string} statut - Statut initial (optionnel)
+   * @returns {Promise<{success: boolean, data: Object|null, error: Error|null}>}
+   */
+  const createLivraison = async (nomLivraison, statut = 'non_commande') => {
+    if (!appartementId) {
+      return { success: false, data: null, error: new Error('ID appartement manquant') }
+    }
+
+    setLoading(true)
+    setError(null)
+
+    const result = await createLivraisonService(appartementId, nomLivraison, statut)
+
+    if (result.success) {
+      // Recharger la liste des livraisons
+      await loadLivraisons()
+    } else {
+      setError('Erreur lors de la création de la livraison')
+    }
+
+    setLoading(false)
+    return result
+  }
+
+  /**
+   * Mettre à jour le statut d'une livraison
+   * @param {string} livraisonId - UUID de la livraison
    * @param {Object} statutData - Données de mise à jour (statut, dates, etc.)
    * @returns {Promise<{success: boolean, data: Object|null, error: Error|null}>}
    */
-  const updateStatut = async (statutData) => {
-    if (!livraison) {
-      return { success: false, data: null, error: new Error('Livraison non chargée') }
+  const updateStatut = async (livraisonId, statutData) => {
+    if (!livraisonId) {
+      return { success: false, data: null, error: new Error('ID livraison manquant') }
     }
 
     setLoading(true)
     setError(null)
 
     const { data, error: updateError } = await updateLivraisonStatut(
-      livraison.id,
+      livraisonId,
       statutData
     )
 
@@ -121,7 +153,7 @@ export function useAppartementLivraison(appartementId) {
     }
 
     // Recharger les données
-    await loadLivraison()
+    await loadLivraisons()
     setLoading(false)
 
     return { success: true, data, error: null }
@@ -129,23 +161,24 @@ export function useAppartementLivraison(appartementId) {
 
   /**
    * Upload une photo pour commande incomplète
+   * @param {string} livraisonId - UUID de la livraison
    * @param {File} file - Fichier photo à uploader
    * @returns {Promise<{success: boolean, data: Object|null, error: Error|null}>}
    */
-  const uploadPhoto = async (file) => {
-    if (!livraison) {
-      return { success: false, data: null, error: new Error('Livraison non chargée') }
+  const uploadPhoto = async (livraisonId, file) => {
+    if (!livraisonId) {
+      return { success: false, data: null, error: new Error('ID livraison manquant') }
     }
 
     const result = await uploadPhotoIncomplete(
-      livraison.id,
+      livraisonId,
       appartementId,
       file
     )
 
     if (result.success) {
       // Recharger les photos
-      await loadPhotos(livraison.id)
+      await loadPhotos(livraisonId)
     }
 
     return result
@@ -160,31 +193,33 @@ export function useAppartementLivraison(appartementId) {
   const deletePhoto = async (photoId, storagePath) => {
     const result = await deletePhotoIncomplete(photoId, storagePath)
 
-    if (result.success && livraison) {
-      // Recharger les photos
-      await loadPhotos(livraison.id)
-    }
+    // Note: Photos are managed by the modal component, so no reload needed here
 
     return result
   }
 
   /**
-   * Supprimer complètement la livraison (avec photos et historique)
+   * Supprimer complètement une livraison (avec photos et historique)
+   * @param {string} livraisonId - UUID de la livraison
    * @returns {Promise<{success: boolean, error: Error|null}>}
    */
-  const deleteLivraison = async () => {
-    if (!appartementId) {
-      return { success: false, error: new Error('ID appartement manquant') }
+  const deleteLivraison = async (livraisonId) => {
+    if (!livraisonId) {
+      return { success: false, error: new Error('ID livraison manquant') }
     }
 
     setLoading(true)
     setError(null)
 
-    const result = await deleteLivraisonService(appartementId)
+    const result = await deleteLivraisonService(livraisonId)
 
     if (result.success) {
-      // Réinitialiser l'état
-      setLivraison(null)
+      // Recharger la liste des livraisons
+      await loadLivraisons()
+      // Réinitialiser la sélection si c'était la livraison sélectionnée
+      if (selectedLivraison?.id === livraisonId) {
+        setSelectedLivraison(null)
+      }
       setHistory([])
       setPhotos([])
     } else {
@@ -196,14 +231,17 @@ export function useAppartementLivraison(appartementId) {
   }
 
   return {
-    livraison,
+    livraisons,
+    selectedLivraison,
+    setSelectedLivraison,
     history,
     photos,
     loading,
     error,
-    loadLivraison,
+    loadLivraisons,
     loadHistory,
     loadPhotos,
+    createLivraison,
     updateStatut,
     uploadPhoto,
     deletePhoto,

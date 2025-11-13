@@ -3,11 +3,11 @@
  * Modal pour afficher l'historique des changements de statut de livraison
  */
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Clock, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
-import { useAppartementLivraison } from '../hooks/useAppartementLivraison'
+import { getLivraisonHistory } from '../services/appartementLivraisonService'
 import {
   getLivraisonStatutConfig,
   formatDateHistorique,
@@ -17,16 +17,39 @@ import {
 export default function LivraisonHistoryModal({
   isOpen,
   onClose,
-  appartementId
+  livraisonId
 }) {
-  const { history, loading, error, loadHistory } = useAppartementLivraison(appartementId)
+  const [history, setHistory] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   // Charger l'historique à l'ouverture
   useEffect(() => {
-    if (isOpen && appartementId) {
-      loadHistory()
+    const loadData = async () => {
+      if (!livraisonId) {
+        setHistory([])
+        return
+      }
+
+      setLoading(true)
+      setError(null)
+
+      const { data, error: fetchError } = await getLivraisonHistory(livraisonId)
+
+      if (fetchError) {
+        setError('Erreur lors du chargement de l\'historique')
+        setHistory([])
+      } else {
+        setHistory(data || [])
+      }
+
+      setLoading(false)
     }
-  }, [isOpen, appartementId, loadHistory])
+
+    if (isOpen && livraisonId) {
+      loadData()
+    }
+  }, [isOpen, livraisonId])
 
   // Loading state
   if (loading && history.length === 0) {
@@ -65,7 +88,7 @@ export default function LivraisonHistoryModal({
           <Button
             variant="outline"
             size="sm"
-            onClick={loadHistory}
+            onClick={() => window.location.reload()}
             className="mt-3"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
