@@ -10,7 +10,8 @@ import {
   getLivraisonPhotos,
   updateLivraisonStatut,
   uploadPhotoIncomplete,
-  deletePhotoIncomplete
+  deletePhotoIncomplete,
+  deleteLivraison as deleteLivraisonService
 } from '../services/appartementLivraisonService'
 
 /**
@@ -167,6 +168,33 @@ export function useAppartementLivraison(appartementId) {
     return result
   }
 
+  /**
+   * Supprimer complètement la livraison (avec photos et historique)
+   * @returns {Promise<{success: boolean, error: Error|null}>}
+   */
+  const deleteLivraison = async () => {
+    if (!appartementId) {
+      return { success: false, error: new Error('ID appartement manquant') }
+    }
+
+    setLoading(true)
+    setError(null)
+
+    const result = await deleteLivraisonService(appartementId)
+
+    if (result.success) {
+      // Réinitialiser l'état
+      setLivraison(null)
+      setHistory([])
+      setPhotos([])
+    } else {
+      setError('Erreur lors de la suppression de la livraison')
+    }
+
+    setLoading(false)
+    return result
+  }
+
   return {
     livraison,
     history,
@@ -178,6 +206,7 @@ export function useAppartementLivraison(appartementId) {
     loadPhotos,
     updateStatut,
     uploadPhoto,
-    deletePhoto
+    deletePhoto,
+    deleteLivraison
   }
 }

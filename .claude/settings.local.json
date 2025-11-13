@@ -1,31 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(PGPASSWORD=\"$SUPABASE_DB_PASSWORD\" psql:*)",
-      "Bash(bash -c 'source .env.prod && PGPASSWORD=\"\"$SUPABASE_DB_PASSWORD\"\" psql -h \"\"$SUPABASE_DB_HOST\"\" -p \"\"$SUPABASE_DB_PORT\"\" -U \"\"$SUPABASE_DB_USER\"\" -d \"\"$SUPABASE_DB_NAME\"\" -f database/migrations/038_add_has_tma_to_appartements.sql')",
       "Bash(PGPASSWORD='rVLjMXyVgGbNeyfx' psql:*)",
-      "Bash(src/features/plotsmanager/pages/PlotDetailPage.jsx)",
-      "Bash(src/features/plotsmanager/components/CreateAppartementModal.jsx)",
-      "Bash(src/features/plotsmanager/components/CreateMultipleAppartementsModal.jsx)",
-      "Bash(src/features/plotsmanager/pages/AppartementDetailPage.jsx)",
-      "Bash(git checkout:*)",
-      "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nfeat(plotsmanager): Afficher statistiques des lots dans les cards de plots\n\n- Modifier getPlotsByChantier pour calculer les statistiques de statut pour chaque lot\n- Changer \"appartement\" en \"lot\" dans PlotCardDisplay\n- Afficher le nombre total de lots + breakdown par statut (en attente, prêt, en cours, finalisé)\n- Utiliser calculateAppartementStatut pour déterminer le statut de chaque lot\n- Ajout de couleurs pour chaque statut (orange, bleu, jaune, vert)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git push:*)",
-      "Bash(git commit:*)",
-      "Bash(npm run lint:*)",
-      "WebSearch",
-      "Bash(curl:*)",
-      "Bash(source .env.dev)",
-      "Bash(npm install:*)",
-      "Bash(git merge:*)",
-      "Bash(git stash:*)",
-      "Bash(source:*)",
-      "Bash(git rm:*)",
-      "Bash(git pull:*)",
-      "Bash(cat:*)",
-      "Bash(./run-migration-dev.sh:*)",
-      "Bash(npm run build:*)"
+      "Bash(./run-migration-prod.sh:*)",
+      "Bash(printf:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

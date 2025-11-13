@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react'
-import { RefreshCw, Edit, History, AlertCircle } from 'lucide-react'
+import { RefreshCw, Edit, History, AlertCircle, Trash2 } from 'lucide-react'
 import { useAppartementLivraison } from '../hooks/useAppartementLivraison'
 import {
   getLivraisonStatutConfig,
@@ -13,6 +13,7 @@ import {
   formatDateLivraison
 } from '../utils/livraisonHelpers'
 import Button from '../../../shared/components/ui/Button'
+import { useToast } from '../../../shared/hooks/useToast'
 import LivraisonFormModal from './LivraisonFormModal'
 import LivraisonHistoryModal from './LivraisonHistoryModal'
 
@@ -24,16 +25,37 @@ export default function AppartementLivraisonTab({ appartement }) {
     loadLivraison,
     updateStatut,
     uploadPhoto,
-    deletePhoto
+    deletePhoto,
+    deleteLivraison
   } = useAppartementLivraison(appartement.id)
+
+  const { showToast } = useToast()
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // Charger la livraison au montage
   useEffect(() => {
     loadLivraison()
   }, [loadLivraison])
+
+  // Handle delete livraison
+  const handleDelete = async () => {
+    setIsDeleting(true)
+    const result = await deleteLivraison()
+    setIsDeleting(false)
+
+    if (result.success) {
+      showToast('Livraison supprimée avec succès', 'success')
+      setShowDeleteConfirm(false)
+      // Reload to show empty state
+      loadLivraison()
+    } else {
+      showToast(result.error?.message || 'Erreur lors de la suppression', 'error')
+    }
+  }
 
   // Loading state
   if (loading && !livraison) {
@@ -186,23 +208,35 @@ export default function AppartementLivraisonTab({ appartement }) {
       </div>
 
       {/* Boutons actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Button
-          variant="primary"
-          onClick={() => setIsFormModalOpen(true)}
-          className="w-full flex items-center justify-center gap-2 min-h-[44px]"
-        >
-          <Edit className="w-5 h-5" />
-          <span>Mettre à jour le statut</span>
-        </Button>
+      <div className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Button
+            variant="primary"
+            onClick={() => setIsFormModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 min-h-[44px]"
+          >
+            <Edit className="w-5 h-5" />
+            <span>Mettre à jour le statut</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => setIsHistoryModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 min-h-[44px]"
+          >
+            <History className="w-5 h-5" />
+            <span>Voir l&apos;historique</span>
+          </Button>
+        </div>
 
         <Button
-          variant="outline"
-          onClick={() => setIsHistoryModalOpen(true)}
+          variant="danger"
+          onClick={() => setShowDeleteConfirm(true)}
           className="w-full flex items-center justify-center gap-2 min-h-[44px]"
+          disabled={isDeleting}
         >
-          <History className="w-5 h-5" />
-          <span>Voir l&apos;historique</span>
+          <Trash2 className="w-5 h-5" />
+          <span>Supprimer la livraison</span>
         </Button>
       </div>
 
@@ -227,6 +261,48 @@ export default function AppartementLivraisonTab({ appartement }) {
         onClose={() => setIsHistoryModalOpen(false)}
         appartementId={appartement.id}
       />
+
+      {/* Confirmation suppression */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Supprimer la livraison ?
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Cette action supprimera définitivement toutes les informations de livraison,
+                  l&apos;historique et les photos associées. Cette action ne peut pas être annulée.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse sm:flex-row gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="w-full sm:w-auto"
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                loading={isDeleting}
+                className="w-full sm:w-auto"
+              >
+                {isDeleting ? 'Suppression...' : 'Oui, supprimer'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

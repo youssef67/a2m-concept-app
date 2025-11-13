@@ -96,6 +96,88 @@ export async function updateLivraisonStatut(livraisonId, statutData) {
 }
 
 // ============================================
+// SUPPRESSION
+// ============================================
+
+/**
+ * Supprimer une livraison complète (avec ses photos et historique)
+ * @param {string} appartementId - UUID de l'appartement
+ * @returns {Promise<{success: boolean, error: Error|null}>}
+ */
+export async function deleteLivraison(appartementId) {
+  try {
+    // Récupérer la livraison pour avoir son ID et les photos
+    const { data: livraison, error: fetchError } = await supabase
+      .from('appartement_livraisons')
+      .select('id')
+      .eq('appartement_id', appartementId)
+      .single()
+
+    if (fetchError || !livraison) {
+      console.error('[deleteLivraison] Fetch error:', fetchError)
+      return { success: false, error: fetchError || new Error('Livraison introuvable') }
+    }
+
+    const livraisonId = livraison.id
+
+    // 1. Récupérer les photos pour supprimer les fichiers du storage
+    const { data: photos } = await supabase
+      .from('appartement_livraison_photos')
+      .select('storage_path')
+      .eq('livraison_id', livraisonId)
+
+    // 2. Supprimer les fichiers du storage
+    if (photos && photos.length > 0) {
+      const storagePaths = photos.map(p => p.storage_path)
+      const { error: storageError } = await supabase.storage
+        .from('appartements-livraisons')
+        .remove(storagePaths)
+
+      if (storageError) {
+        console.error('[deleteLivraison] Storage error (non-blocking):', storageError)
+        // Continue même si erreur storage
+      }
+    }
+
+    // 3. Supprimer les photos de la table (CASCADE devrait gérer, mais pour être sûr)
+    const { error: photosError } = await supabase
+      .from('appartement_livraison_photos')
+      .delete()
+      .eq('livraison_id', livraisonId)
+
+    if (photosError) {
+      console.error('[deleteLivraison] Photos delete error:', photosError)
+    }
+
+    // 4. Supprimer l'historique (CASCADE devrait gérer, mais pour être sûr)
+    const { error: historyError } = await supabase
+      .from('appartement_livraison_historique')
+      .delete()
+      .eq('appartement_id', appartementId)
+
+    if (historyError) {
+      console.error('[deleteLivraison] History delete error:', historyError)
+    }
+
+    // 5. Supprimer la livraison
+    const { error: deleteError } = await supabase
+      .from('appartement_livraisons')
+      .delete()
+      .eq('id', livraisonId)
+
+    if (deleteError) {
+      console.error('[deleteLivraison] Delete error:', deleteError)
+      return { success: false, error: deleteError }
+    }
+
+    return { success: true, error: null }
+  } catch (err) {
+    console.error('[deleteLivraison] Unexpected error:', err)
+    return { success: false, error: err }
+  }
+}
+
+// ============================================
 // PHOTOS
 // ============================================
 

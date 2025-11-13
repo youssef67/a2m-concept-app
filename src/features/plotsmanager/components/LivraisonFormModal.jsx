@@ -154,13 +154,27 @@ export default function LivraisonFormModal({
     try {
       // Préparer les données de mise à jour
       const updateData = {
-        statut: formData.statut,
-        date_commande: formData.date_commande || null,
-        fournisseur: formData.fournisseur || null,
-        numero_commande: formData.numero_commande || null,
-        date_livraison_prevue: formData.date_livraison_prevue || null,
-        date_reception: formData.date_reception || null,
-        note_incomplete: formData.note_incomplete || null
+        statut: formData.statut
+      }
+
+      // Ne mettre à jour que les champs qui ont une valeur (persister les données)
+      if (formData.date_commande) {
+        updateData.date_commande = formData.date_commande
+      }
+      if (formData.fournisseur) {
+        updateData.fournisseur = formData.fournisseur
+      }
+      if (formData.numero_commande) {
+        updateData.numero_commande = formData.numero_commande
+      }
+      if (formData.date_livraison_prevue) {
+        updateData.date_livraison_prevue = formData.date_livraison_prevue
+      }
+      if (formData.date_reception) {
+        updateData.date_reception = formData.date_reception
+      }
+      if (formData.note_incomplete) {
+        updateData.note_incomplete = formData.note_incomplete
       }
 
       // Mettre à jour le statut
@@ -243,53 +257,56 @@ export default function LivraisonFormModal({
             />
           </div>
 
-          {/* Champs conditionnels selon statut */}
+          {/* Informations de commande - Toujours visible */}
+          <div className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">Informations de commande</h3>
 
-          {/* COMMANDE EFFECTUÉE */}
-          {formData.statut === STATUTS_LIVRAISON.COMMANDE_EFFECTUEE && (
-            <div className="space-y-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date de commande <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="date"
-                  value={formData.date_commande}
-                  onChange={(e) => handleFieldChange('date_commande', e.target.value)}
-                  disabled={isSubmitting}
-                />
-                {validationErrors.date_commande && (
-                  <p className="mt-1 text-sm text-red-600">{validationErrors.date_commande}</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Date de commande
+                {formData.statut === STATUTS_LIVRAISON.COMMANDE_EFFECTUEE && (
+                  <span className="text-red-500"> *</span>
                 )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fournisseur
-                </label>
-                <Input
-                  type="text"
-                  value={formData.fournisseur}
-                  onChange={(e) => handleFieldChange('fournisseur', e.target.value)}
-                  placeholder="Ex: ABC Matériaux"
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Numéro de commande
-                </label>
-                <Input
-                  type="text"
-                  value={formData.numero_commande}
-                  onChange={(e) => handleFieldChange('numero_commande', e.target.value)}
-                  placeholder="Ex: CMD-12345"
-                  disabled={isSubmitting}
-                />
-              </div>
+              </label>
+              <Input
+                type="date"
+                value={formData.date_commande}
+                onChange={(e) => handleFieldChange('date_commande', e.target.value)}
+                disabled={isSubmitting}
+              />
+              {validationErrors.date_commande && (
+                <p className="mt-1 text-sm text-red-600">{validationErrors.date_commande}</p>
+              )}
             </div>
-          )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fournisseur
+              </label>
+              <Input
+                type="text"
+                value={formData.fournisseur}
+                onChange={(e) => handleFieldChange('fournisseur', e.target.value)}
+                placeholder="Ex: ABC Matériaux"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Numéro de commande
+              </label>
+              <Input
+                type="text"
+                value={formData.numero_commande}
+                onChange={(e) => handleFieldChange('numero_commande', e.target.value)}
+                placeholder="Ex: CMD-12345"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          {/* Champs conditionnels selon statut */}
 
           {/* EN COURS DE LIVRAISON */}
           {formData.statut === STATUTS_LIVRAISON.EN_COURS_LIVRAISON && (
