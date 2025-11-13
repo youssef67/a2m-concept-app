@@ -8,7 +8,7 @@ import React from 'react'
  */
 export default function Tabs({ tabs, activeTab, onChange }) {
   return (
-    <div className="border-b border-gray-200 -mx-6 md:mx-0 overflow-x-auto">
+    <div className="border-b border-gray-200 -mx-6 md:mx-0 overflow-x-auto md:overflow-x-visible">
       <nav className="-mb-px flex space-x-2 md:space-x-8 px-6 md:px-0 min-w-max md:min-w-0" aria-label="Tabs">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id
