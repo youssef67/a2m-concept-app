@@ -15,7 +15,8 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
   const [formData, setFormData] = useState({
     nom: '',
     type: 'immeuble',
-    description: ''
+    description: '',
+    nombre_etages: 10
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -29,13 +30,15 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
         setFormData({
           nom: plotToEdit.nom || '',
           type: plotToEdit.type || 'immeuble',
-          description: plotToEdit.description || ''
+          description: plotToEdit.description || '',
+          nombre_etages: plotToEdit.nombre_etages || 10
         })
       } else {
         setFormData({
           nom: '',
           type: 'immeuble',
-          description: ''
+          description: '',
+          nombre_etages: 10
         })
       }
       setErrorMessage('')
@@ -86,6 +89,13 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
       return
     }
 
+    // Validate nombre_etages
+    const nombreEtages = parseInt(formData.nombre_etages)
+    if (isNaN(nombreEtages) || nombreEtages < 1 || nombreEtages > 15) {
+      setErrorMessage('Le nombre d\'étages doit être entre 1 et 15')
+      return
+    }
+
     setErrorMessage('')
 
     setIsSubmitting(true)
@@ -121,7 +131,8 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
       setFormData({
         nom: '',
         type: 'immeuble',
-        description: ''
+        description: '',
+        nombre_etages: 10
       })
       setErrorMessage('')
       onClose()
@@ -175,6 +186,28 @@ export default function CreatePlotModal({ isOpen, onClose, chantierId, chantierT
               options={typeOptions}
               placeholder="Sélectionner un type"
             />
+          </div>
+
+          {/* Nombre d'étages */}
+          <div>
+            <label htmlFor="nombre_etages" className="block text-sm font-medium text-gray-700 mb-1">
+              Nombre d&apos;étages <span className="text-red-500">*</span>
+            </label>
+            <Input
+              id="nombre_etages"
+              name="nombre_etages"
+              type="number"
+              value={formData.nombre_etages}
+              onChange={handleChange}
+              min={1}
+              max={15}
+              required
+              disabled={isSubmitting}
+              placeholder="Ex: 10"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Nombre d&apos;étages du plot (de 1 à 15)
+            </p>
           </div>
 
           {/* Description */}

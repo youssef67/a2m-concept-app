@@ -127,13 +127,14 @@ export async function createPlot(chantierId, plotData) {
       : 1
 
     // Insert plot
-    const { data, error: insertError } = await supabase
+    const { data, error: insertError} = await supabase
       .from('plots')
       .insert({
         chantier_id: chantierId,
         nom: plotData.nom.trim(),
         type: plotData.type || 'immeuble',
         description: plotData.description?.trim() || null,
+        nombre_etages: plotData.nombre_etages || 10,
         ordre: nextOrdre
       })
       .select()
@@ -181,6 +182,34 @@ export async function updatePlot(plotId, plotData) {
 
     if (plotData.ordre !== undefined) {
       updateData.ordre = plotData.ordre
+    }
+
+    // Option A: Validate nombre_etages before updating
+    if (plotData.nombre_etages !== undefined) {
+      const nouveauNombreEtages = parseInt(plotData.nombre_etages)
+
+      // Check if any appartements exist with etage > nouveauNombreEtages
+      const { data: appartementsAuDela, error: checkError } = await supabase
+        .from('appartements')
+        .select('etage')
+        .eq('plot_id', plotId)
+        .gt('etage', nouveauNombreEtages)
+        .limit(1)
+
+      if (checkError) {
+        console.error('Error checking appartements etages:', checkError)
+        return { data: null, error: checkError }
+      }
+
+      if (appartementsAuDela && appartementsAuDela.length > 0) {
+        const maxEtage = appartementsAuDela[0].etage
+        return {
+          data: null,
+          error: new Error(`Impossible de réduire le nombre d'étages à ${nouveauNombreEtages} car des appartements existent à l'étage ${maxEtage} ou au-delà. Veuillez d'abord supprimer ces appartements.`)
+        }
+      }
+
+      updateData.nombre_etages = nouveauNombreEtages
     }
 
     const { data, error: updateError } = await supabase

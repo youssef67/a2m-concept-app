@@ -22,6 +22,7 @@ export default function CreateMultipleAppartementsModal({
   plotId,
   chantierId,
   plotNom,
+  plotNombreEtages = 10,
   existingAppartementNames = [],
   onSuccess
 }) {
@@ -250,7 +251,7 @@ export default function CreateMultipleAppartementsModal({
                   <Select
                     value={appt.etage}
                     onChange={(value) => handleEtageChange(index, value)}
-                    options={getEtageOptions()}
+                    options={getEtageOptions(plotNombreEtages)}
                     placeholder="Sélectionner un étage..."
                     disabled={isSubmitting}
                   />

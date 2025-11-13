@@ -911,6 +911,7 @@ export default function PlotDetailPage() {
               plotId={plotId}
               chantierId={chantierId}
               plotNom={plot.nom}
+              plotNombreEtages={plot.nombre_etages}
               appartementToEdit={appartementToEdit}
               onSuccess={handleAppartementCreated}
             />
@@ -922,6 +923,7 @@ export default function PlotDetailPage() {
               plotId={plotId}
               chantierId={chantierId}
               plotNom={plot.nom}
+              plotNombreEtages={plot.nombre_etages}
               existingAppartementNames={existingAppartementNames}
               onSuccess={handleMultipleAppartementsCreated}
             />

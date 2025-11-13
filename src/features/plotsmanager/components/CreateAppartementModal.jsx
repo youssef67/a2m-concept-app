@@ -19,6 +19,7 @@ export default function CreateAppartementModal({
   plotId,
   chantierId,
   plotNom,
+  plotNombreEtages = 10,
   appartementToEdit = null,
   onSuccess
 }) {
@@ -191,7 +192,7 @@ export default function CreateAppartementModal({
             <Select
               value={formData.etage}
               onChange={handleEtageChange}
-              options={getEtageOptions()}
+              options={getEtageOptions(plotNombreEtages)}
               placeholder="Sélectionner un étage..."
               disabled={isSubmitting}
             />

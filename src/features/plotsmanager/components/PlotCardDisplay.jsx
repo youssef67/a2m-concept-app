@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { Building2, Home, Edit, Trash2 } from 'lucide-react'
+import { Building2, Home, Edit, Trash2, Layers } from 'lucide-react'
 import Card from '../../../shared/components/ui/Card'
 
 // Type labels in French
@@ -60,9 +60,15 @@ export default function PlotCardDisplay({ plot, appartementCount = 0, stats, onC
           <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 mb-1">
             {plot.nom}
           </h3>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
             <Building2 className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">{TYPE_LABELS[plot.type] || plot.type}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Layers className="w-4 h-4 flex-shrink-0" />
+            <span>
+              {plot.nombre_etages || 10} {plot.nombre_etages === 1 ? 'étage' : 'étages'}
+            </span>
           </div>
         </div>
 
