@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useRef } from 'react'
 import { authService } from '../../features/auth/services/authService'
 import { waitForSupabaseReady } from '../../lib/supabaseClient'
+import { logger } from '../utils/logger'
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext(null)
@@ -27,11 +28,11 @@ export function AuthProvider({ children }) {
         const { data: sub } = authService.onAuthStateChange(async (event, newSession) => {
           if (!mounted) return
 
-          console.log('[AuthContext] Auth event:', event, 'Session:', !!newSession)
+          logger.log('[AuthContext] Auth event:', event, 'Session:', !!newSession)
 
           // Handle TOKEN_REFRESHED with failure
           if (event === 'TOKEN_REFRESHED' && !newSession) {
-            console.error('[AuthContext] Token refresh failed - forcing sign out')
+            logger.error('[AuthContext] Token refresh failed - forcing sign out')
             await authService.signOut()
             setSession(null)
             setUser(null)
@@ -45,7 +46,7 @@ export function AuthProvider({ children }) {
 
           // Handle SIGNED_OUT
           if (event === 'SIGNED_OUT') {
-            console.log('[AuthContext] User signed out')
+            logger.log('[AuthContext] User signed out')
             setSession(null)
             setUser(null)
             setProfile(null)
@@ -78,24 +79,24 @@ export function AuthProvider({ children }) {
 
             while (attempts < maxAttempts && !profileData && mounted) {
               attempts++
-              console.log(`[AuthContext] Fetching profile (attempt ${attempts}/${maxAttempts})...`)
+              logger.log(`[AuthContext] Fetching profile (attempt ${attempts}/${maxAttempts})...`)
 
               const result = await authService.getProfileById(newSession.user.id)
 
               // Check for JWT expired error (PGRST303)
               if (result.error?.code === 'PGRST303' || result.error?.message?.includes('JWT')) {
-                console.warn('[AuthContext] JWT expired detected, refreshing session...')
+                logger.warn('[AuthContext] JWT expired detected, refreshing session...')
 
                 // Try to refresh the session
                 const { data: { session: refreshedSession }, error: refreshError } = await authService.refreshSession()
 
                 if (refreshError || !refreshedSession) {
-                  console.error('[AuthContext] Session refresh failed:', refreshError)
+                  logger.error('[AuthContext] Session refresh failed:', refreshError)
                   profileError = result.error
                   break
                 }
 
-                console.log('[AuthContext] Session refreshed successfully, retrying profile fetch...')
+                logger.log('[AuthContext] Session refreshed successfully, retrying profile fetch...')
                 setSession(refreshedSession)
                 await new Promise(resolve => setTimeout(resolve, 500))
                 continue
@@ -114,10 +115,10 @@ export function AuthProvider({ children }) {
 
             if (mounted) {
               if (profileData) {
-                console.log('[AuthContext] Profile loaded successfully:', profileData.role)
+                logger.log('[AuthContext] Profile loaded successfully:', profileData.role)
                 setProfile(profileData)
               } else {
-                console.error('[AuthContext] Failed to fetch profile after', attempts, 'attempts:', profileError)
+                logger.error('[AuthContext] Failed to fetch profile after', attempts, 'attempts:', profileError)
                 // Force sign out if profile cannot be loaded
                 await authService.signOut()
                 setSession(null)
@@ -141,7 +142,7 @@ export function AuthProvider({ children }) {
 
         subscription = sub
       } catch (error) {
-        console.error('[AuthContext] Initialization error:', error)
+        logger.error('[AuthContext] Initialization error:', error)
         if (mounted) {
           setLoading(false)
         }

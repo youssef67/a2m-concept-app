@@ -9,6 +9,7 @@
  */
 
 import { supabase } from '../../../lib/supabaseClient'
+import { logger } from '../../../shared/utils/logger'
 
 /**
  * Send payment notification (full or partial)
@@ -53,15 +54,15 @@ export async function sendPaymentNotification(facture, payment, isFullPayment) {
     })
 
     if (error) {
-      console.error('[Email Notification] Payment email failed:', error)
+      logger.error('[Email Notification] Payment email failed:', error)
       return { success: false, error }
     }
 
-    console.log('[Email Notification] Payment email sent:', data)
+    logger.log('[Email Notification] Payment email sent:', data)
     return { success: true, data }
 
   } catch (error) {
-    console.error('[Email Notification] Payment email exception:', error)
+    logger.error('[Email Notification] Payment email exception:', error)
     return { success: false, error: error.message }
   }
 }
@@ -94,15 +95,15 @@ export async function sendInvoiceCreatedNotification(facture) {
     })
 
     if (error) {
-      console.error('[Email Notification] Invoice creation email failed:', error)
+      logger.error('[Email Notification] Invoice creation email failed:', error)
       return { success: false, error }
     }
 
-    console.log('[Email Notification] Invoice creation email sent:', data)
+    logger.log('[Email Notification] Invoice creation email sent:', data)
     return { success: true, data }
 
   } catch (error) {
-    console.error('[Email Notification] Invoice creation email exception:', error)
+    logger.error('[Email Notification] Invoice creation email exception:', error)
     return { success: false, error: error.message }
   }
 }
@@ -134,15 +135,15 @@ export async function sendInvoiceDeletedNotification(facture) {
     })
 
     if (error) {
-      console.error('[Email Notification] Invoice deletion email failed:', error)
+      logger.error('[Email Notification] Invoice deletion email failed:', error)
       return { success: false, error }
     }
 
-    console.log('[Email Notification] Invoice deletion email sent:', data)
+    logger.log('[Email Notification] Invoice deletion email sent:', data)
     return { success: true, data }
 
   } catch (error) {
-    console.error('[Email Notification] Invoice deletion email exception:', error)
+    logger.error('[Email Notification] Invoice deletion email exception:', error)
     return { success: false, error: error.message }
   }
 }

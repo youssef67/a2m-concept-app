@@ -103,24 +103,12 @@ export default function AppartementDocumentUploadModal({
       return
     }
 
-    // Log upload attempt for debugging
-    console.log('📸 Upload document:', {
-      documentRequisId,
-      fileName: selectedFile.name,
-      fileType: selectedFile.type,
-      fileSize: selectedFile.size
-    })
-
     const result = await onUpload(documentRequisId, selectedFile)
-
-    // Log upload result for debugging
-    console.log('📸 Upload result:', result)
 
     if (result.success) {
       handleClose()
     } else {
       const errorMessage = result.error?.message || 'Erreur lors de l\'upload'
-      console.error('📸 Upload failed:', errorMessage, result.error)
       setError(errorMessage)
     }
   }
