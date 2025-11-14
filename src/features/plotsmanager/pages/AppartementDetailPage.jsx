@@ -346,7 +346,7 @@ export default function AppartementDetailPage() {
                   className="h-[48px] px-2.5 md:px-3"
                   title="Nouvelle livraison"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Package className="w-5 h-5" />
                   <span className="hidden md:inline ml-2">Nouvelle livraison</span>
                 </Button>
 
