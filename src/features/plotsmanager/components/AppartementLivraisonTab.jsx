@@ -286,97 +286,88 @@ export default function AppartementLivraisonTab({
           <h3 className="text-lg font-semibold text-gray-900">Plinthes</h3>
         </div>
 
-        {plinthes ? (
-          (() => {
-            const statutConfig = getPlinthesStatutConfig(plinthes.statut)
-            const StatutIcon = statutConfig.icon
+        {plinthes && plinthes.length > 0 ? (
+          <>
+            {/* Grille de cards pour chaque pièce */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {plinthes.map((plinthesData) => {
+                const statutConfig = getPlinthesStatutConfig(plinthesData.statut)
+                const StatutIcon = statutConfig.icon
 
-            return (
-              <div className={`${statutConfig.bgColor} border-2 ${statutConfig.color.replace('bg-', 'border-')} rounded-lg p-4`}>
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className={`${statutConfig.badgeColor} p-2 rounded-lg`}>
-                      <StatutIcon className="w-5 h-5 text-white" />
+                return (
+                  <div
+                    key={plinthesData.piece}
+                    className={`${statutConfig.bgColor} border-2 ${statutConfig.color.replace('bg-', 'border-')} rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow`}
+                    onClick={onOpenPlinthesModal}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className={`${statutConfig.badgeColor} p-2 rounded-lg`}>
+                          <StatutIcon className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-base font-semibold text-gray-900">{plinthesData.piece}</h4>
+                          <p className={`text-sm ${statutConfig.textColor}`}>
+                            {statutConfig.label}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-base font-semibold text-gray-900">Plinthes</h4>
-                      <p className={`text-sm ${statutConfig.textColor}`}>
-                        {statutConfig.label}
-                      </p>
+
+                    {/* Informations détaillées */}
+                    <div className="space-y-1 text-sm">
+                      {plinthesData.quantite_ml && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Quantité:</span>
+                          <span className="font-medium text-gray-900">{plinthesData.quantite_ml} ML</span>
+                        </div>
+                      )}
+
+                      {plinthesData.fournisseur && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Fournisseur:</span>
+                          <span className="font-medium text-gray-900 truncate ml-2">{plinthesData.fournisseur}</span>
+                        </div>
+                      )}
+
+                      {plinthesData.reference && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Référence:</span>
+                          <span className="font-medium text-gray-900 truncate ml-2">{plinthesData.reference}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
+                )
+              })}
+            </div>
 
-                {/* Informations détaillées */}
-                <div className="space-y-1 mb-3 text-sm">
-                  {plinthes.quantite_ml && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Quantité:</span>
-                      <span className="font-medium text-gray-900">{plinthes.quantite_ml} ML</span>
-                    </div>
-                  )}
-
-                  {plinthes.fournisseur && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Fournisseur:</span>
-                      <span className="font-medium text-gray-900">{plinthes.fournisseur}</span>
-                    </div>
-                  )}
-
-                  {plinthes.reference && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Référence:</span>
-                      <span className="font-medium text-gray-900">{plinthes.reference}</span>
-                    </div>
-                  )}
-
-                  {plinthes.date_commande && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Date commande:</span>
-                      <span className="font-medium text-gray-900">
-                        {formatDatePlinthes(plinthes.date_commande)}
-                      </span>
-                    </div>
-                  )}
-
-                  {plinthes.date_livraison_prevue && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Livraison prévue:</span>
-                      <span className="font-medium text-gray-900">
-                        {formatDatePlinthes(plinthes.date_livraison_prevue)}
-                      </span>
-                    </div>
-                  )}
-
-                  {plinthes.date_reception && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Date réception:</span>
-                      <span className="font-medium text-gray-900">
-                        {formatDatePlinthes(plinthes.date_reception)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Bouton gérer */}
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={onOpenPlinthesModal}
-                  disabled={plinthesLoading}
-                  className="w-full flex items-center justify-center gap-2 min-h-[44px]"
-                >
-                  <Edit className="w-4 h-4" />
-                  <span>Modifier</span>
-                </Button>
-              </div>
-            )
-          })()
+            {/* Bouton pour ajouter une nouvelle pièce */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenPlinthesModal}
+              disabled={plinthesLoading}
+              className="w-full flex items-center justify-center gap-2 min-h-[44px]"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Ajouter une pièce</span>
+            </Button>
+          </>
         ) : (
           <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
             <Ruler className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-600">Aucune information sur les plinthes</p>
-            <p className="text-sm text-gray-500 mt-2">Utilisez le bouton dans la barre en haut pour ajouter les plinthes</p>
+            <p className="text-gray-600">Aucune configuration de plinthes définie</p>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onOpenPlinthesModal}
+              disabled={plinthesLoading}
+              className="mt-3 flex items-center justify-center gap-2 mx-auto min-h-[44px]"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Configurer les plinthes</span>
+            </Button>
           </div>
         )}
       </div>

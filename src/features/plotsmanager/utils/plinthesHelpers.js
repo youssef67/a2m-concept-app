@@ -34,6 +34,21 @@ export const STATUTS_OPTIONS = [
   { value: STATUTS_PLINTHES.SUR_SITE, label: 'Sur site' }
 ]
 
+/**
+ * Options pour le select de pièce
+ */
+export const PIECES_OPTIONS = [
+  { value: 'Général', label: 'Général' },
+  { value: 'Séjour', label: 'Séjour' },
+  { value: 'Cuisine', label: 'Cuisine' },
+  { value: 'Salle de bains', label: 'Salle de bains' },
+  { value: 'Chambre 1', label: 'Chambre 1' },
+  { value: 'Chambre 2', label: 'Chambre 2' },
+  { value: 'Chambre 3', label: 'Chambre 3' },
+  { value: 'Couloir', label: 'Couloir' },
+  { value: 'custom', label: 'Autre (saisir le nom)' }
+]
+
 // ============================================
 // CONFIGURATION VISUELLE DES BADGES
 // ============================================
@@ -47,12 +62,12 @@ export function getPlinthesStatutConfig(statut) {
   const configs = {
     [STATUTS_PLINTHES.NON_COMMANDE]: {
       label: 'Non commandé',
-      color: 'bg-gray-100 text-gray-800 border-gray-200',
-      bgColor: 'bg-gray-50',
-      textColor: 'text-gray-800',
-      badgeColor: 'bg-gray-500',
+      color: 'bg-orange-100 text-orange-800 border-orange-200',
+      bgColor: 'bg-orange-50',
+      textColor: 'text-orange-800',
+      badgeColor: 'bg-orange-500',
       icon: ShoppingCart,
-      iconColor: 'text-gray-600'
+      iconColor: 'text-orange-600'
     },
     [STATUTS_PLINTHES.COMMANDE_EFFECTUEE]: {
       label: 'Commandé',

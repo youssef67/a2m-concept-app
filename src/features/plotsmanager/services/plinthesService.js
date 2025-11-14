@@ -1,6 +1,6 @@
 /**
  * plinthesService.js
- * Service pour gérer les plinthes des appartements
+ * Service pour gérer les plinthes des appartements (multi-pièces)
  */
 
 import { supabase } from '../../../lib/supabaseClient'
@@ -11,9 +11,9 @@ import { createLivraison, updateLivraisonStatut } from './appartementLivraisonSe
 // ============================================
 
 /**
- * Récupérer les informations plinthes d'un appartement
+ * Récupérer toutes les configurations de plinthes d'un appartement
  * @param {string} appartementId - UUID de l'appartement
- * @returns {Promise<{data: Object|null, error: Error|null}>}
+ * @returns {Promise<{data: Array|null, error: Error|null}>}
  */
 export async function getPlinthes(appartementId) {
   try {
@@ -21,6 +21,34 @@ export async function getPlinthes(appartementId) {
       .from('appartement_plinthes')
       .select('*')
       .eq('appartement_id', appartementId)
+      .order('piece', { ascending: true })
+
+    if (error) {
+      console.error('[getPlinthes] Error:', error)
+      return { data: null, error }
+    }
+
+    // Retourner un array (vide si aucune donnée)
+    return { data: data || [], error: null }
+  } catch (err) {
+    console.error('[getPlinthes] Unexpected error:', err)
+    return { data: null, error: err }
+  }
+}
+
+/**
+ * Récupérer une configuration de plinthes spécifique (appartement + pièce)
+ * @param {string} appartementId - UUID de l'appartement
+ * @param {string} piece - Nom de la pièce
+ * @returns {Promise<{data: Object|null, error: Error|null}>}
+ */
+export async function getPlinthesParPiece(appartementId, piece) {
+  try {
+    const { data, error } = await supabase
+      .from('appartement_plinthes')
+      .select('*')
+      .eq('appartement_id', appartementId)
+      .eq('piece', piece)
       .single()
 
     // Si aucune donnée trouvée, on retourne null (pas d'erreur)
@@ -30,7 +58,7 @@ export async function getPlinthes(appartementId) {
 
     return { data, error }
   } catch (err) {
-    console.error('[getPlinthes] Error:', err)
+    console.error('[getPlinthesParPiece] Error:', err)
     return { data: null, error: err }
   }
 }
@@ -40,8 +68,9 @@ export async function getPlinthes(appartementId) {
 // ============================================
 
 /**
- * Créer ou mettre à jour les informations plinthes d'un appartement
+ * Créer ou mettre à jour les informations plinthes d'un appartement pour une pièce donnée
  * @param {string} appartementId - UUID de l'appartement
+ * @param {string} piece - Nom de la pièce
  * @param {Object} plinthesData - Données plinthes
  * @param {number} plinthesData.quantite_ml - Quantité en mètres linéaires
  * @param {string} plinthesData.reference - Référence produit
@@ -50,7 +79,7 @@ export async function getPlinthes(appartementId) {
  * @param {string} plinthesData.date_commande - Date de commande (ISO format)
  * @returns {Promise<{success: boolean, data: Object|null, error: Error|null}>}
  */
-export async function upsertPlinthes(appartementId, plinthesData) {
+export async function upsertPlinthes(appartementId, piece, plinthesData) {
   try {
     // Récupérer l'utilisateur courant
     const {
@@ -68,6 +97,7 @@ export async function upsertPlinthes(appartementId, plinthesData) {
     // Préparer les données
     const dataToUpsert = {
       appartement_id: appartementId,
+      piece: piece,
       quantite_ml: plinthesData.quantite_ml || null,
       reference: plinthesData.reference || null,
       fournisseur: plinthesData.fournisseur || null,
@@ -79,8 +109,8 @@ export async function upsertPlinthes(appartementId, plinthesData) {
       updated_at: new Date().toISOString()
     }
 
-    // Vérifier si un enregistrement existe déjà
-    const { data: existing } = await getPlinthes(appartementId)
+    // Vérifier si un enregistrement existe déjà pour cette pièce
+    const { data: existing } = await getPlinthesParPiece(appartementId, piece)
 
     let plinthesResult
 
@@ -90,6 +120,7 @@ export async function upsertPlinthes(appartementId, plinthesData) {
         .from('appartement_plinthes')
         .update(dataToUpsert)
         .eq('appartement_id', appartementId)
+        .eq('piece', piece)
         .select()
         .single()
 
@@ -124,7 +155,7 @@ export async function upsertPlinthes(appartementId, plinthesData) {
       if (plinthesData.fournisseur) extraData.fournisseur = plinthesData.fournisseur
       if (plinthesData.date_commande) extraData.date_commande = plinthesData.date_commande
 
-      // Vérifier si une livraison plinthes existe déjà
+      // Vérifier si une livraison plinthes existe déjà pour cette pièce
       if (existing && existing.livraison_id) {
         // Mettre à jour la livraison existante
         await updateLivraisonStatut(existing.livraison_id, {
@@ -135,7 +166,7 @@ export async function upsertPlinthes(appartementId, plinthesData) {
         // Créer une nouvelle livraison de type plinthes
         const livraisonResult = await createLivraison(
           appartementId,
-          'Plinthes',
+          `Plinthes - ${piece}`,
           'commande_effectuee',
           'plinthes',
           extraData
@@ -147,6 +178,7 @@ export async function upsertPlinthes(appartementId, plinthesData) {
             .from('appartement_plinthes')
             .update({ livraison_id: livraisonResult.data.id })
             .eq('appartement_id', appartementId)
+            .eq('piece', piece)
 
           plinthesResult.livraison_id = livraisonResult.data.id
         }
@@ -157,5 +189,35 @@ export async function upsertPlinthes(appartementId, plinthesData) {
   } catch (err) {
     console.error('[upsertPlinthes] Unexpected error:', err)
     return { success: false, data: null, error: err }
+  }
+}
+
+// ============================================
+// SUPPRESSION
+// ============================================
+
+/**
+ * Supprimer une configuration de plinthes pour une pièce donnée
+ * @param {string} appartementId - UUID de l'appartement
+ * @param {string} piece - Nom de la pièce
+ * @returns {Promise<{success: boolean, error: Error|null}>}
+ */
+export async function deletePlinthes(appartementId, piece) {
+  try {
+    const { error } = await supabase
+      .from('appartement_plinthes')
+      .delete()
+      .eq('appartement_id', appartementId)
+      .eq('piece', piece)
+
+    if (error) {
+      console.error('[deletePlinthes] Error:', error)
+      return { success: false, error }
+    }
+
+    return { success: true, error: null }
+  } catch (err) {
+    console.error('[deletePlinthes] Unexpected error:', err)
+    return { success: false, error: err }
   }
 }

@@ -110,7 +110,7 @@ export default function AppartementDetailPage() {
   } = useAppartementLivraison(appartementId)
 
   // Plinthes hook
-  const { plinthes, loading: plinthesLoading, loadPlinthes, savePlinthes } = useAppartementPlinthes(appartementId)
+  const { plinthes, loading: plinthesLoading, loadPlinthes, savePlinthes, removePlinthes } = useAppartementPlinthes(appartementId)
   const [isPlinthesModalOpen, setIsPlinthesModalOpen] = useState(false)
 
   // Modal states managed at page level
@@ -590,6 +590,7 @@ export default function AppartementDetailPage() {
               onClose={() => setIsPlinthesModalOpen(false)}
               plinthes={plinthes}
               onSave={savePlinthes}
+              onDelete={removePlinthes}
               loading={plinthesLoading}
             />
 
