@@ -328,7 +328,7 @@ export default function AppartementDetailPage() {
             <StickyPageHeader onBack={handleBack}>
               {/* Left: Appartement name */}
               <div className="flex-1 min-w-0">
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">{appartement.nom}</h1>
+                <h1 className="text-xl md:text-2xl font-bold text-gray-900">{appartement.nom}</h1>
               </div>
 
               {/* Right: Action buttons */}
@@ -337,33 +337,33 @@ export default function AppartementDetailPage() {
                 <Button
                   variant="primary"
                   onClick={handleOpenNoteModal}
-                  className="min-h-[44px]"
+                  className="h-[48px] px-3"
                   title="Ajouter une note"
                 >
                   <StickyNote className="w-5 h-5" />
-                  <span className="hidden md:inline">Ajouter une note</span>
+                  <span className="hidden md:inline ml-2">Ajouter une note</span>
                 </Button>
 
                 {/* Nouvelle livraison */}
                 <Button
                   variant="primary"
                   onClick={handleOpenLivraisonModal}
-                  className="min-h-[44px]"
+                  className="h-[48px] px-3"
                   title="Nouvelle livraison"
                 >
                   <Plus className="w-5 h-5" />
-                  <span className="hidden md:inline">Nouvelle livraison</span>
+                  <span className="hidden md:inline ml-2">Nouvelle livraison</span>
                 </Button>
 
                 {/* Plinthes */}
                 <Button
                   variant="primary"
                   onClick={handleOpenPlinthesModal}
-                  className="min-h-[44px]"
+                  className="h-[48px] px-3"
                   title="Plinthes"
                 >
                   <Ruler className="w-5 h-5" />
-                  <span className="hidden md:inline">Plinthes</span>
+                  <span className="hidden md:inline ml-2">Plinthes</span>
                 </Button>
               </div>
             </StickyPageHeader>

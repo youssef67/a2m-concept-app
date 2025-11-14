@@ -194,13 +194,8 @@ export default function ChantierDetailPage() {
           <>
             {/* Fixed Header */}
             <StickyPageHeader onBack={handleBack}>
-              {/* Left: Title */}
-              <div className="flex-1 min-w-0">
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">{chantier.titre}</h1>
-              </div>
-
               {/* Right: Action buttons */}
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
                 <Button
                   onClick={handleOpenCreatePlotModal}
                   disabled={!hasTaches || !hasDocuments}
@@ -239,8 +234,13 @@ export default function ChantierDetailPage() {
               </div>
             </StickyPageHeader>
 
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{chantier.titre}</h1>
+            </div>
+
             {/* Plots grid */}
-            <div className="mt-6">
+            <div>
               {plotsLoading && (
                 <div className="flex items-center justify-center py-8">
                   <Spinner size="md" />
