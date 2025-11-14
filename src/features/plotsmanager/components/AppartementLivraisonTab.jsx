@@ -22,7 +22,9 @@ export default function AppartementLivraisonTab({
   appartement,
   plinthes,
   loading: plinthesLoading,
-  onOpenPlinthesModal
+  onOpenPlinthesModal,
+  triggerOpenModal = false,
+  onLivraisonCreated
 }) {
   const {
     livraisons,
@@ -48,6 +50,13 @@ export default function AppartementLivraisonTab({
   useEffect(() => {
     loadLivraisons()
   }, [loadLivraisons])
+
+  // Trigger open modal from parent
+  useEffect(() => {
+    if (triggerOpenModal) {
+      handleCreateClick()
+    }
+  }, [triggerOpenModal])
 
   // Handle création nouvelle livraison
   const handleCreateClick = () => {
@@ -131,34 +140,19 @@ export default function AppartementLivraisonTab({
           <h3 className="text-lg font-semibold text-gray-900">Livraisons principales</h3>
         </div>
 
-        {/* Header avec bouton nouvelle livraison */}
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
             {livraisons.length > 0 ? `${livraisons.length} livraison(s)` : 'Aucune livraison'}
           </div>
-          <Button
-            variant="primary"
-            onClick={handleCreateClick}
-            className="flex items-center gap-2 min-h-[44px]"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Nouvelle livraison</span>
-          </Button>
         </div>
 
         {/* Liste des livraisons */}
         {livraisons.length === 0 ? (
           <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
             <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-600 mb-4">Aucune livraison pour ce lot</p>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleCreateClick}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Créer la première livraison
-            </Button>
+            <p className="text-gray-600">Aucune livraison pour ce lot</p>
+            <p className="text-sm text-gray-500 mt-2">Utilisez le bouton dans la barre en haut pour ajouter une livraison</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -381,17 +375,8 @@ export default function AppartementLivraisonTab({
         ) : (
           <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
             <Ruler className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-600 mb-3">Aucune information sur les plinthes</p>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={onOpenPlinthesModal}
-              disabled={plinthesLoading}
-              className="flex items-center gap-2 min-h-[44px]"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Ajouter</span>
-            </Button>
+            <p className="text-gray-600">Aucune information sur les plinthes</p>
+            <p className="text-sm text-gray-500 mt-2">Utilisez le bouton dans la barre en haut pour ajouter les plinthes</p>
           </div>
         )}
       </div>
@@ -410,9 +395,15 @@ export default function AppartementLivraisonTab({
         onDeletePhoto={deletePhoto}
         onCreate={createLivraison}
         onSuccess={() => {
+          const wasCreating = !selectedLivraison
           setIsFormModalOpen(false)
           setSelectedLivraison(null)
           loadLivraisons()
+
+          // Notify parent if creation succeeded and callback provided
+          if (wasCreating && onLivraisonCreated) {
+            onLivraisonCreated()
+          }
         }}
       />
 

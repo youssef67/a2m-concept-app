@@ -3,28 +3,24 @@
  * Tab component for displaying and managing notes with photos for an appartement
  */
 
-import React, { useEffect, useState } from 'react'
-import { Plus, Edit2, Trash2, FileText, Image as ImageIcon } from 'lucide-react'
-import { useAppartementNotes } from '../hooks/useAppartementNotes'
+import React, { useState } from 'react'
+import { Edit2, Trash2, FileText, Image as ImageIcon } from 'lucide-react'
 import { formatNoteDate } from '../services/appartementNotesService'
-import Button from '../../../shared/components/ui/Button'
 import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import NoteFormModal from './NoteFormModal'
 import PhotoViewModal from './PhotoViewModal'
 import { useToast } from '../../../shared/hooks/useToast'
 
-export default function AppartementNotesTab({ appartement }) {
-  const {
-    notes,
-    loading,
-    error,
-    loadNotes,
-    createNote,
-    updateNote,
-    deleteNote,
-    addPhotos,
-    deletePhoto
-  } = useAppartementNotes(appartement.id)
+export default function AppartementNotesTab({
+  appartement,
+  notes,
+  loading,
+  error,
+  updateNote,
+  deleteNote,
+  addPhotos,
+  deletePhoto
+}) {
 
   const { showToast } = useToast()
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
@@ -34,34 +30,17 @@ export default function AppartementNotesTab({ appartement }) {
   const [viewingPhoto, setViewingPhoto] = useState(null)
   const [viewingPhotoNumber, setViewingPhotoNumber] = useState(null)
 
-  // Load notes on mount
-  useEffect(() => {
-    loadNotes()
-  }, [loadNotes])
-
-  // Handle create note
-  const handleCreateNote = () => {
-    setEditingNote(null)
-    setIsFormModalOpen(true)
-  }
-
   // Handle edit note
   const handleEditNote = (note) => {
     setEditingNote(note)
     setIsFormModalOpen(true)
   }
 
-  // Handle save note (create or update)
+  // Handle save note (update only, creation is handled by parent)
   const handleSaveNote = async (contenu, photoFiles = []) => {
-    if (editingNote) {
-      // Update existing note (content only, photos handled separately)
-      const result = await updateNote(editingNote.id, contenu)
-      return result
-    } else {
-      // Create new note with photos
-      const result = await createNote(contenu, photoFiles)
-      return result
-    }
+    // Update existing note (content only, photos handled separately)
+    const result = await updateNote(editingNote.id, contenu)
+    return result
   }
 
   // Handle delete note (open confirmation modal)
@@ -125,36 +104,19 @@ export default function AppartementNotesTab({ appartement }) {
 
   return (
     <div className="space-y-4">
-      {/* Header with Add button */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">
           Notes ({notes.length})
         </h3>
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={handleCreateNote}
-          className="flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Ajouter une note</span>
-        </Button>
       </div>
 
       {/* Notes list */}
       {notes.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
           <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 mb-4">Aucune note pour ce lot</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCreateNote}
-            className="flex items-center gap-2 mx-auto"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Ajouter la première note</span>
-          </Button>
+          <p className="text-gray-600">Aucune note pour ce lot</p>
+          <p className="text-sm text-gray-500 mt-2">Utilisez le bouton dans la barre en haut pour ajouter une note</p>
         </div>
       ) : (
         <div className="space-y-3">

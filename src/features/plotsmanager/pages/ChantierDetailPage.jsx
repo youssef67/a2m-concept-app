@@ -5,8 +5,9 @@
 
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Building2, FileText, FolderOpen } from 'lucide-react'
+import { Building2, FileText, FolderOpen } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
+import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
 import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
@@ -183,7 +184,6 @@ export default function ChantierDetailPage() {
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-red-800">{error}</p>
             <Button onClick={handleBack} variant="outline" className="mt-4">
-              <ArrowLeft className="w-4 h-4" />
               <span className="ml-2">Retour</span>
             </Button>
           </div>
@@ -192,65 +192,52 @@ export default function ChantierDetailPage() {
         {/* Success State */}
         {!loading && !error && chantier && (
           <>
-            {/* Header with title and action buttons */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              {/* Left: Back button + Title */}
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleBack}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Retour"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <h1 className="text-2xl font-bold text-gray-900">{chantier.titre}</h1>
+            {/* Fixed Header */}
+            <StickyPageHeader onBack={handleBack}>
+              {/* Left: Title */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">{chantier.titre}</h1>
               </div>
 
               {/* Right: Action buttons */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full sm:w-auto items-start">
-                <div className="flex flex-col gap-1">
-                  <Button
-                    onClick={handleOpenCreatePlotModal}
-                    disabled={!hasTaches || !hasDocuments}
-                    className="flex items-center justify-center gap-2 h-[52px] sm:h-[56px] w-full text-xs leading-tight"
-                  >
-                    <Building2 className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-center">Créer un plot</span>
-                  </Button>
-                  {(!hasTaches || !hasDocuments) && (
-                    <p className="text-xs text-orange-600 text-center sm:text-left">
-                      {!hasTaches && !hasDocuments
-                        ? 'Créez des tâches et documents d\'abord'
-                        : !hasTaches
-                        ? 'Créez des tâches d\'abord'
-                        : 'Définissez des documents d\'abord'}
-                    </p>
-                  )}
-                </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button
+                  onClick={handleOpenCreatePlotModal}
+                  disabled={!hasTaches || !hasDocuments}
+                  className="flex items-center justify-center gap-2 h-[48px] w-auto px-3 md:px-4 text-xs md:text-sm"
+                  title={!hasTaches || !hasDocuments
+                    ? (!hasTaches && !hasDocuments
+                      ? 'Créez des tâches et documents d\'abord'
+                      : !hasTaches
+                      ? 'Créez des tâches d\'abord'
+                      : 'Définissez des documents d\'abord')
+                    : 'Créer un plot'}
+                >
+                  <Building2 className="w-4 h-4 flex-shrink-0" />
+                  <span className="hidden sm:inline">Créer un plot</span>
+                </Button>
 
-                <div className="flex flex-col gap-1">
-                  <Button
-                    onClick={handleOpenTachesModal}
-                    variant={hasTaches ? 'secondary' : 'primary'}
-                    className="flex items-center justify-center gap-2 h-[52px] sm:h-[56px] w-full text-xs leading-tight"
-                  >
-                    <FileText className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-center">{tachesButtonLabel}</span>
-                  </Button>
-                </div>
+                <Button
+                  onClick={handleOpenTachesModal}
+                  variant={hasTaches ? 'secondary' : 'primary'}
+                  className="flex items-center justify-center gap-2 h-[48px] w-auto px-3 md:px-4 text-xs md:text-sm"
+                  title={tachesButtonLabel}
+                >
+                  <FileText className="w-4 h-4 flex-shrink-0" />
+                  <span className="hidden sm:inline">{tachesButtonLabel}</span>
+                </Button>
 
-                <div className="flex flex-col gap-1">
-                  <Button
-                    onClick={handleOpenDocumentsModal}
-                    variant={hasDocuments ? 'secondary' : 'primary'}
-                    className="flex items-center justify-center gap-2 h-[52px] sm:h-[56px] w-full text-xs leading-tight"
-                  >
-                    <FolderOpen className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-center">{documentsButtonLabel}</span>
-                  </Button>
-                </div>
+                <Button
+                  onClick={handleOpenDocumentsModal}
+                  variant={hasDocuments ? 'secondary' : 'primary'}
+                  className="flex items-center justify-center gap-2 h-[48px] w-auto px-3 md:px-4 text-xs md:text-sm"
+                  title={documentsButtonLabel}
+                >
+                  <FolderOpen className="w-4 h-4 flex-shrink-0" />
+                  <span className="hidden sm:inline">{documentsButtonLabel}</span>
+                </Button>
               </div>
-            </div>
+            </StickyPageHeader>
 
             {/* Plots grid */}
             <div className="mt-6">

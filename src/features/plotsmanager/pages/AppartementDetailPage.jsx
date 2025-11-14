@@ -5,8 +5,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, Circle, Clock, FileText, Plus, Ruler } from 'lucide-react'
+import { CheckCircle2, Circle, Clock, FileText, Plus, Ruler, StickyNote, Package } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
+import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
 import Select from '../../../shared/components/ui/Select'
@@ -20,7 +21,11 @@ import AppartementDocumentUploadModal from '../components/AppartementDocumentUpl
 import AppartementNotesTab from '../components/AppartementNotesTab'
 import AppartementLivraisonTab from '../components/AppartementLivraisonTab'
 import PlinthesModal from '../components/PlinthesModal'
+import NoteFormModal from '../components/NoteFormModal'
+import LivraisonFormModal from '../components/LivraisonFormModal'
 import DocumentFilesList from '../components/DocumentFilesList'
+import { useAppartementLivraison } from '../hooks/useAppartementLivraison'
+import { useToast } from '../../../shared/hooks/useToast'
 
 // Status options
 const STATUS_OPTIONS = [
@@ -55,6 +60,7 @@ export default function AppartementDetailPage() {
   const { chantierId, plotId, appartementId } = useParams()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { showToast } = useToast()
 
   const [appartement, setAppartement] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -82,11 +88,34 @@ export default function AppartementDetailPage() {
   } = useAppartementDocuments(appartementId, chantierId)
 
   // Notes hook
-  const { notes, loadNotes } = useAppartementNotes(appartementId)
+  const {
+    notes,
+    loadNotes,
+    createNote,
+    updateNote,
+    deleteNote,
+    addPhotos,
+    deletePhoto
+  } = useAppartementNotes(appartementId)
+
+  // Livraisons hook
+  const {
+    livraisons,
+    loading: livraisonsLoading,
+    loadLivraisons,
+    createLivraison,
+    updateStatut,
+    uploadPhoto,
+    deletePhoto: deleteLivraisonPhoto
+  } = useAppartementLivraison(appartementId)
 
   // Plinthes hook
   const { plinthes, loading: plinthesLoading, loadPlinthes, savePlinthes } = useAppartementPlinthes(appartementId)
   const [isPlinthesModalOpen, setIsPlinthesModalOpen] = useState(false)
+
+  // Modal states managed at page level
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
+  const [isLivraisonModalOpen, setIsLivraisonModalOpen] = useState(false)
 
   // Load appartement data
   useEffect(() => {
@@ -135,6 +164,13 @@ export default function AppartementDetailPage() {
       loadNotes()
     }
   }, [appartementId, loadNotes])
+
+  // Load livraisons data
+  useEffect(() => {
+    if (appartementId) {
+      loadLivraisons()
+    }
+  }, [appartementId, loadLivraisons])
 
   // Load plinthes data
   useEffect(() => {
@@ -200,6 +236,46 @@ export default function AppartementDetailPage() {
     return result
   }
 
+  // Navbar action handlers - ouvrent les modals sans changer d'onglet
+  const handleOpenNoteModal = () => {
+    setIsNoteModalOpen(true)
+  }
+
+  const handleOpenLivraisonModal = () => {
+    setIsLivraisonModalOpen(true)
+  }
+
+  const handleOpenPlinthesModal = () => {
+    setIsPlinthesModalOpen(true)
+  }
+
+  // Note handlers
+  const handleSaveNote = async (contenu, photoFiles = []) => {
+    const result = await createNote(contenu, photoFiles)
+    if (result.success) {
+      setIsNoteModalOpen(false)
+      setActiveTab('notes') // Basculer sur l'onglet notes après création
+      // createNote() recharge déjà les notes automatiquement
+      showToast('Note créée avec succès', 'success')
+    } else {
+      showToast('Erreur lors de la création de la note', 'error')
+    }
+    return result
+  }
+
+  // Livraison handlers
+  const handleSaveLivraison = async (nomLivraison, statut, type, extraData) => {
+    const result = await createLivraison(nomLivraison, statut, type, extraData)
+    if (result.success) {
+      setIsLivraisonModalOpen(false)
+      setActiveTab('livraison') // Basculer sur l'onglet livraison après création
+      showToast('Livraison créée avec succès', 'success')
+    } else {
+      showToast('Erreur lors de la création de la livraison', 'error')
+    }
+    return result
+  }
+
 
   // Calculate stats
   const tachesStats = {
@@ -248,29 +324,49 @@ export default function AppartementDetailPage() {
         {/* Success State */}
         {!loading && !error && appartement && (
           <>
-            {/* Header */}
-            <div className="flex items-center justify-between gap-3 mb-6">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleBack}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Retour"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <h1 className="text-2xl font-bold text-gray-900">{appartement.nom}</h1>
+            {/* Fixed Action Navbar */}
+            <StickyPageHeader onBack={handleBack}>
+              {/* Left: Appartement name */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">{appartement.nom}</h1>
               </div>
 
-              {/* Plinthes button */}
-              <Button
-                variant="primary"
-                onClick={() => setIsPlinthesModalOpen(true)}
-                className="min-h-[44px]"
-              >
-                <Ruler className="w-5 h-5" />
-                <span>Plinthes</span>
-              </Button>
-            </div>
+              {/* Right: Action buttons */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Ajouter une note */}
+                <Button
+                  variant="primary"
+                  onClick={handleOpenNoteModal}
+                  className="min-h-[44px]"
+                  title="Ajouter une note"
+                >
+                  <StickyNote className="w-5 h-5" />
+                  <span className="hidden md:inline">Ajouter une note</span>
+                </Button>
+
+                {/* Nouvelle livraison */}
+                <Button
+                  variant="primary"
+                  onClick={handleOpenLivraisonModal}
+                  className="min-h-[44px]"
+                  title="Nouvelle livraison"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span className="hidden md:inline">Nouvelle livraison</span>
+                </Button>
+
+                {/* Plinthes */}
+                <Button
+                  variant="primary"
+                  onClick={handleOpenPlinthesModal}
+                  className="min-h-[44px]"
+                  title="Plinthes"
+                >
+                  <Ruler className="w-5 h-5" />
+                  <span className="hidden md:inline">Plinthes</span>
+                </Button>
+              </div>
+            </StickyPageHeader>
 
             {/* Tabs */}
             <div className="mb-6">
@@ -457,6 +553,13 @@ export default function AppartementDetailPage() {
               {activeTab === 'notes' && (
                 <AppartementNotesTab
                   appartement={appartement}
+                  notes={notes}
+                  loading={false}
+                  error={null}
+                  updateNote={updateNote}
+                  deleteNote={deleteNote}
+                  addPhotos={addPhotos}
+                  deletePhoto={deletePhoto}
                 />
               )}
 
@@ -488,6 +591,32 @@ export default function AppartementDetailPage() {
               plinthes={plinthes}
               onSave={savePlinthes}
               loading={plinthesLoading}
+            />
+
+            {/* Note Form Modal */}
+            <NoteFormModal
+              isOpen={isNoteModalOpen}
+              onClose={() => setIsNoteModalOpen(false)}
+              onSave={handleSaveNote}
+              onDeletePhoto={deletePhoto}
+              onAddPhotos={addPhotos}
+              initialNote={null}
+              appartementNom={appartement.nom}
+            />
+
+            {/* Livraison Form Modal */}
+            <LivraisonFormModal
+              isOpen={isLivraisonModalOpen}
+              onClose={() => setIsLivraisonModalOpen(false)}
+              livraison={null}
+              appartement={appartement}
+              onUpdate={updateStatut}
+              onUploadPhoto={uploadPhoto}
+              onCreate={handleSaveLivraison}
+              onSuccess={() => {
+                setIsLivraisonModalOpen(false)
+                setActiveTab('livraison')
+              }}
             />
           </>
         )}

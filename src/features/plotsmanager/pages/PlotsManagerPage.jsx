@@ -7,6 +7,7 @@ import React, { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
+import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
 import Spinner from '../../../shared/components/ui/Spinner'
 import PlotCard from '../components/PlotCard'
 import { useChantiers } from '../../chantiers/hooks/useChantiers'
@@ -34,28 +35,36 @@ export default function PlotsManagerPage() {
     navigate(`/admin/plotsmanager/${chantier.id}`)
   }
 
+  // Handle back button
+  const handleBack = () => {
+    navigate('/dashboard/tools')
+  }
+
   return (
     <AppLayout>
       <div className="p-4 md:p-6">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Plots Manager</h1>
-          <p className="text-sm text-gray-600 mt-1">Chantiers en cours</p>
-        </div>
-
-        {/* Search Bar */}
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher par nom de chantier, client ou ville..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[44px] text-base"
-            />
+        {/* Fixed Header */}
+        <StickyPageHeader onBack={handleBack}>
+          {/* Left: Title */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Plots Manager</h1>
+            <p className="text-xs md:text-sm text-gray-600">Chantiers en cours</p>
           </div>
-        </div>
+
+          {/* Right: Search */}
+          <div className="flex-shrink-0 w-full sm:w-80">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+              />
+            </div>
+          </div>
+        </StickyPageHeader>
 
         {/* Error State */}
         {error && (

@@ -4,9 +4,10 @@
  */
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings, AlertCircle, XCircle, Building2, StickyNote, CheckCircle } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
+import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
 import SubTabs from '../../../shared/components/ui/SubTabs'
@@ -68,9 +69,12 @@ const DEDUCTION_TYPES = [
 ]
 
 export default function FacturesPage() {
+  const navigate = useNavigate()
+
   // State
   const [activeTab, setActiveTab] = useState('en_attente') // Renamed from activeStatut to handle both factures and chantiers
   const [activeType, setActiveType] = useState('client')
+
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedContactFilter, setSelectedContactFilter] = useState('')
   const [showOverdueOnly, setShowOverdueOnly] = useState(false)
@@ -1113,32 +1117,33 @@ export default function FacturesPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Euro className="w-8 h-8 text-primary-600" />
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Finances</h1>
+      <div className="p-4 md:p-6">
+        {/* Fixed Header */}
+        <StickyPageHeader showBackButton={false}>
+          {/* Left: Title */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Finances</h1>
           </div>
 
-          <div className="flex gap-3 w-full sm:w-auto">
+          {/* Right: Action buttons */}
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Button
               onClick={handleCreate}
-              className="flex-1 sm:flex-none"
+              className="h-[48px]"
             >
               <Plus className="w-5 h-5" />
-              <span className="ml-2">Nouvelle facture</span>
+              <span className="hidden sm:inline ml-2">Nouvelle facture</span>
             </Button>
 
             {/* Bulk Actions Menu */}
-            <div className="relative flex-1 sm:flex-none">
+            <div className="relative">
               <Button
                 variant="outline"
                 onClick={() => setShowBulkMenu(!showBulkMenu)}
-                className="w-full"
+                className="h-[48px]"
               >
                 <Settings className="w-5 h-5" />
-                <span className="ml-2">Actions multiples</span>
+                <span className="hidden sm:inline ml-2">Actions multiples</span>
                 <ChevronDown className="w-4 h-4 ml-1" />
               </Button>
 
@@ -1177,18 +1182,22 @@ export default function FacturesPage() {
               )}
             </div>
           </div>
-        </div>
+        </StickyPageHeader>
 
         {/* Tabs - Niveau 1 : Statut */}
-        <Tabs tabs={statutTabs} activeTab={activeTab} onChange={setActiveTab} />
+        <div className="mb-6">
+          <Tabs tabs={statutTabs} activeTab={activeTab} onChange={setActiveTab} />
+        </div>
 
         {/* Tabs - Niveau 2 : Type (masqué pour Fin de chantier) */}
         {activeTab !== 'fin_chantier' && (
-          <SubTabs tabs={typeTabs} activeTab={activeType} onChange={setActiveType} />
+          <div className="mb-6">
+            <SubTabs tabs={typeTabs} activeTab={activeType} onChange={setActiveType} />
+          </div>
         )}
 
         {/* Search Bar and Filters */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 mb-6">
           {/* Search Bar - Full width on all screens */}
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />

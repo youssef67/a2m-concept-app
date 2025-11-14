@@ -4,8 +4,10 @@
  */
 
 import React, { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Search } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
+import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
 import Pagination from '../../../shared/components/ui/Pagination'
@@ -17,6 +19,7 @@ import { useToast } from '../../../shared/hooks/useToast'
 import { searchWorkers } from '../utils/workerHelpers'
 
 export default function WorkersPage() {
+  const navigate = useNavigate()
   const { showToast } = useToast()
   const {
     workers,
@@ -36,6 +39,11 @@ export default function WorkersPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [selectedWorker, setSelectedWorker] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Handle back button
+  const handleBack = () => {
+    navigate('/dashboard/tools')
+  }
 
   // Filtrer les workers par recherche (côté client)
   const filteredWorkers = useMemo(() => {
@@ -122,17 +130,24 @@ export default function WorkersPage() {
   return (
     <AppLayout>
       <div className="p-4 md:p-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Liste de contacts</h1>
-          <Button
-            onClick={handleAddWorker}
-            className="flex items-center justify-center gap-2 min-h-[44px]"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Ajouter un contact</span>
-          </Button>
-        </div>
+        {/* Fixed Header */}
+        <StickyPageHeader onBack={handleBack}>
+          {/* Left: Title */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Liste de contacts</h1>
+          </div>
+
+          {/* Right: Add button */}
+          <div className="flex-shrink-0">
+            <Button
+              onClick={handleAddWorker}
+              className="h-[48px]"
+            >
+              <Plus className="w-5 h-5" />
+              <span className="hidden sm:inline ml-2">Ajouter un contact</span>
+            </Button>
+          </div>
+        </StickyPageHeader>
 
         {/* Search Bar */}
         <div className="mb-6">

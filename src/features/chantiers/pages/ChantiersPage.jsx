@@ -4,8 +4,10 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Construction, Plus, Search } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
+import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
 import Spinner from '../../../shared/components/ui/Spinner'
@@ -23,6 +25,8 @@ import { useToast } from '../../../shared/hooks/useToast'
 const ITEMS_PER_PAGE = 9
 
 export default function ChantiersPage() {
+  const navigate = useNavigate()
+
   // State
   const [activeTab, setActiveTab] = useState('en_cours')
   const [searchQuery, setSearchQuery] = useState('')
@@ -170,31 +174,36 @@ export default function ChantiersPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Construction className="w-8 h-8 text-primary-600" />
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Chantiers</h1>
+      <div className="p-4 md:p-6">
+        {/* Fixed Header */}
+        <StickyPageHeader showBackButton={false}>
+          {/* Left: Title */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Chantiers</h1>
           </div>
 
-          <Button
-            onClick={() => {
-              setSelectedChantier(null)
-              setIsCreateModalOpen(true)
-            }}
-            className="w-full sm:w-auto"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="ml-2">Nouveau chantier</span>
-          </Button>
-        </div>
+          {/* Right: Create button */}
+          <div className="flex-shrink-0">
+            <Button
+              onClick={() => {
+                setSelectedChantier(null)
+                setIsCreateModalOpen(true)
+              }}
+              className="h-[48px]"
+            >
+              <Plus className="w-5 h-5" />
+              <span className="hidden sm:inline ml-2">Nouveau chantier</span>
+            </Button>
+          </div>
+        </StickyPageHeader>
 
         {/* Tabs */}
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        <div className="mb-6">
+          <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        </div>
 
         {/* Search Bar */}
-        <div className="relative">
+        <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
           <input
             type="text"

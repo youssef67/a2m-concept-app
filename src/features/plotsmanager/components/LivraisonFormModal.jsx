@@ -24,11 +24,13 @@ export default function LivraisonFormModal({
   appartement,
   onUpdate,
   onUploadPhoto,
+  onCreate,
   onSuccess
 }) {
   const { showToast } = useToast()
 
   const [formData, setFormData] = useState({
+    nom_livraison: '',
     statut: STATUTS_LIVRAISON.NON_COMMANDE,
     date_commande: '',
     fournisseur: '',
@@ -45,18 +47,34 @@ export default function LivraisonFormModal({
   const [validationErrors, setValidationErrors] = useState({})
   const [isCameraOpen, setIsCameraOpen] = useState(false)
 
-  // Initialiser le formulaire avec les données existantes
+  // Initialiser le formulaire avec les données existantes ou vides
   useEffect(() => {
-    if (isOpen && livraison) {
-      setFormData({
-        statut: livraison.statut || STATUTS_LIVRAISON.NON_COMMANDE,
-        date_commande: livraison.date_commande || '',
-        fournisseur: livraison.fournisseur || '',
-        numero_commande: livraison.numero_commande || '',
-        date_livraison_prevue: livraison.date_livraison_prevue || '',
-        date_reception: livraison.date_reception || '',
-        note_incomplete: livraison.note_incomplete || ''
-      })
+    if (isOpen) {
+      if (livraison) {
+        // Mode édition: charger les données existantes
+        setFormData({
+          nom_livraison: livraison.nom_livraison || '',
+          statut: livraison.statut || STATUTS_LIVRAISON.NON_COMMANDE,
+          date_commande: livraison.date_commande || '',
+          fournisseur: livraison.fournisseur || '',
+          numero_commande: livraison.numero_commande || '',
+          date_livraison_prevue: livraison.date_livraison_prevue || '',
+          date_reception: livraison.date_reception || '',
+          note_incomplete: livraison.note_incomplete || ''
+        })
+      } else {
+        // Mode création: formulaire vide
+        setFormData({
+          nom_livraison: '',
+          statut: STATUTS_LIVRAISON.NON_COMMANDE,
+          date_commande: '',
+          fournisseur: '',
+          numero_commande: '',
+          date_livraison_prevue: '',
+          date_reception: '',
+          note_incomplete: ''
+        })
+      }
 
       setNewPhotoFiles([])
       setPhotoPreviews([])
@@ -138,7 +156,14 @@ export default function LivraisonFormModal({
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    // Validation
+    // Validation du nom
+    if (!formData.nom_livraison || formData.nom_livraison.trim() === '') {
+      setValidationErrors({ nom_livraison: 'Le nom de la livraison est obligatoire' })
+      showToast('Le nom de la livraison est obligatoire', 'error')
+      return
+    }
+
+    // Validation des champs du statut
     const validation = validateStatutForm(formData.statut, formData)
     if (!validation.valid) {
       setValidationErrors(validation.errors)
@@ -150,47 +175,93 @@ export default function LivraisonFormModal({
     setValidationErrors({})
 
     try {
-      // Préparer les données de mise à jour
-      const updateData = {
-        statut: formData.statut,
-        date_commande: formData.date_commande || null,
-        fournisseur: formData.fournisseur || null,
-        numero_commande: formData.numero_commande || null,
-        date_livraison_prevue: formData.date_livraison_prevue || null,
-        date_reception: formData.date_reception || null,
-        note_incomplete: formData.note_incomplete || null
-      }
-
-      // Mettre à jour le statut
-      const result = await onUpdate(updateData)
-
-      if (!result.success) {
-        showToast(result.error?.message || 'Erreur lors de la mise à jour du statut', 'error')
-        setIsSubmitting(false)
-        return
-      }
-
-      // Upload des photos si commande incomplète
-      if (formData.statut === STATUTS_LIVRAISON.COMMANDE_INCOMPLETE && newPhotoFiles.length > 0) {
-        let uploadErrors = 0
-
-        for (const file of newPhotoFiles) {
-          const uploadResult = await onUploadPhoto(file)
-          if (!uploadResult.success) {
-            uploadErrors++
-          }
+      if (livraison) {
+        // Mode édition: mettre à jour la livraison existante
+        const updateData = {
+          nom_livraison: formData.nom_livraison.trim(),
+          statut: formData.statut,
+          date_commande: formData.date_commande || null,
+          fournisseur: formData.fournisseur || null,
+          numero_commande: formData.numero_commande || null,
+          date_livraison_prevue: formData.date_livraison_prevue || null,
+          date_reception: formData.date_reception || null,
+          note_incomplete: formData.note_incomplete || null
         }
 
-        if (uploadErrors > 0) {
-          showToast(
-            `Statut mis à jour. ${uploadErrors} photo(s) n'ont pas pu être uploadées`,
-            'warning'
-          )
+        const result = await onUpdate(livraison.id, updateData)
+
+        if (!result.success) {
+          showToast(result.error?.message || 'Erreur lors de la mise à jour', 'error')
+          setIsSubmitting(false)
+          return
+        }
+
+        // Upload des photos si commande incomplète
+        if (formData.statut === STATUTS_LIVRAISON.COMMANDE_INCOMPLETE && newPhotoFiles.length > 0) {
+          let uploadErrors = 0
+
+          for (const file of newPhotoFiles) {
+            const uploadResult = await onUploadPhoto(livraison.id, file)
+            if (!uploadResult.success) {
+              uploadErrors++
+            }
+          }
+
+          if (uploadErrors > 0) {
+            showToast(
+              `Livraison mise à jour. ${uploadErrors} photo(s) n'ont pas pu être uploadées`,
+              'warning'
+            )
+          } else {
+            showToast('Livraison mise à jour avec succès', 'success')
+          }
         } else {
-          showToast('Statut mis à jour avec succès', 'success')
+          showToast('Livraison mise à jour avec succès', 'success')
         }
       } else {
-        showToast('Statut mis à jour avec succès', 'success')
+        // Mode création: créer une nouvelle livraison
+        const extraData = {
+          date_commande: formData.date_commande || null,
+          fournisseur: formData.fournisseur || null,
+          numero_commande: formData.numero_commande || null,
+          date_livraison_prevue: formData.date_livraison_prevue || null,
+          date_reception: formData.date_reception || null,
+          note_incomplete: formData.note_incomplete || null
+        }
+
+        const result = await onCreate(
+          formData.nom_livraison.trim(),
+          formData.statut,
+          'principale',
+          extraData
+        )
+
+        if (!result.success) {
+          showToast(result.error?.message || 'Erreur lors de la création', 'error')
+          setIsSubmitting(false)
+          return
+        }
+
+        // Upload des photos si commande incomplète
+        if (formData.statut === STATUTS_LIVRAISON.COMMANDE_INCOMPLETE && newPhotoFiles.length > 0 && result.data) {
+          let uploadErrors = 0
+
+          for (const file of newPhotoFiles) {
+            const uploadResult = await onUploadPhoto(result.data.id, file)
+            if (!uploadResult.success) {
+              uploadErrors++
+            }
+          }
+
+          // Afficher un warning seulement si erreurs d'upload (le parent gère le toast de succès)
+          if (uploadErrors > 0) {
+            showToast(
+              `Livraison créée. ${uploadErrors} photo(s) n'ont pas pu être uploadées`,
+              'warning'
+            )
+          }
+        }
+        // Le parent gère le toast de succès
       }
 
       // Appeler onSuccess pour fermer et rafraîchir
@@ -199,7 +270,7 @@ export default function LivraisonFormModal({
       }
     } catch (error) {
       console.error('[LivraisonFormModal] Submit error:', error)
-      showToast('Erreur lors de la mise à jour', 'error')
+      showToast('Erreur lors de l\'enregistrement', 'error')
     } finally {
       setIsSubmitting(false)
     }
@@ -217,7 +288,7 @@ export default function LivraisonFormModal({
       <Modal
         isOpen={isOpen}
         onClose={handleClose}
-        title="Mettre à jour la livraison"
+        title={livraison ? "Modifier la livraison" : "Nouvelle livraison"}
         size="xl"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -226,6 +297,23 @@ export default function LivraisonFormModal({
             <p className="text-sm text-blue-800">
               <strong>Lot :</strong> {appartement.nom}
             </p>
+          </div>
+
+          {/* Nom de la livraison */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nom de la livraison <span className="text-red-500">*</span>
+            </label>
+            <Input
+              type="text"
+              value={formData.nom_livraison}
+              onChange={(e) => handleFieldChange('nom_livraison', e.target.value)}
+              placeholder="Ex: Menuiserie extérieure, Carrelage, etc."
+              disabled={isSubmitting}
+            />
+            {validationErrors.nom_livraison && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.nom_livraison}</p>
+            )}
           </div>
 
           {/* Sélection statut */}

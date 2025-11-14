@@ -156,7 +156,7 @@ export default function NoteFormModal({
         const result = await onSave(contenu, newPhotoFiles)
 
         if (result && result.success) {
-          showToast('Note créée avec succès', 'success')
+          // Le parent gère le toast de succès
           handleClose()
         } else {
           const errorMsg = result?.error?.message || 'Erreur lors de la création de la note'

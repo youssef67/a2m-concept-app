@@ -7,6 +7,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Users, MessageCircle, ClipboardList } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
+import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
 import Button from '../../../shared/components/ui/Button'
 
 export default function ToolsPage() {
@@ -43,10 +44,16 @@ export default function ToolsPage() {
   return (
     <AppLayout>
       <div className="p-4 md:p-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Outils</h1>
+        {/* Fixed Header */}
+        <StickyPageHeader showBackButton={false}>
+          {/* Left: Title */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Outils</h1>
+          </div>
+        </StickyPageHeader>
 
-          {/* Grille d'outils */}
+        {/* Grille d'outils */}
+        <div className="mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Plots Manager */}
             <div

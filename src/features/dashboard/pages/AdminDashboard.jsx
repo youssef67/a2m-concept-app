@@ -15,6 +15,7 @@ import {
 } from '../../chantiers/utils/chantierHelpers'
 import { getContactDisplayName } from '../../contacts/utils/contactHelpers'
 import AppLayout from '../../../shared/components/layout/AppLayout'
+import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
 import Card from '../../../shared/components/ui/Card'
 import Spinner from '../../../shared/components/ui/Spinner'
 import Alert from '../../../shared/components/ui/Alert'
@@ -224,41 +225,49 @@ export default function AdminDashboard() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+      <div className="p-4 md:p-6">
+        {/* Fixed Header */}
+        <StickyPageHeader showBackButton={false}>
+          {/* Left: Title */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">
               Dashboard Administrateur
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-xs md:text-sm text-gray-600">
               Bienvenue, {profile?.full_name || profile?.email}
             </p>
           </div>
-          <Button
-            variant="outline"
-            onClick={handleLogout}
-            className="flex items-center justify-center min-h-[44px] min-w-[44px] px-3"
-            title="Déconnexion"
-          >
-            <LogOut className="w-5 h-5" />
-          </Button>
-        </div>
 
-        {/* Error State */}
-        {error && (
-          <Alert variant="error">
-            Erreur lors du chargement des statistiques financières.
-          </Alert>
-        )}
-
-        {/* Loading State */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <Spinner />
+          {/* Right: Logout button */}
+          <div className="flex-shrink-0">
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="h-[48px] px-3"
+              title="Déconnexion"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="hidden sm:inline ml-2">Déconnexion</span>
+            </Button>
           </div>
-        )}
+        </StickyPageHeader>
 
-        {/* Section: Vue d'ensemble financière */}
+        <div className="space-y-6">
+          {/* Error State */}
+          {error && (
+            <Alert variant="error">
+              Erreur lors du chargement des statistiques financières.
+            </Alert>
+          )}
+
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Spinner />
+            </div>
+          )}
+
+          {/* Section: Vue d'ensemble financière */}
         {!loading && !error && (
           <div className="space-y-4">
             <div className="border-t-4 border-blue-600 bg-blue-50 rounded-lg p-4 mb-4">
@@ -654,6 +663,7 @@ export default function AdminDashboard() {
               </div>
             )}
           </Card>
+        </div>
         </div>
       </div>
     </AppLayout>

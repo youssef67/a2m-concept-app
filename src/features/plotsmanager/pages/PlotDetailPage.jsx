@@ -5,8 +5,9 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Home, Building2, Edit, Trash2, Search, ChevronDown, AlertTriangle, X, FileText, BadgeCheck, MoreVertical, Check, CheckCircle } from 'lucide-react'
+import { Home, Building2, Edit, Trash2, Search, ChevronDown, AlertTriangle, X, FileText, BadgeCheck, MoreVertical, Check, CheckCircle } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
+import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
 import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
@@ -441,20 +442,10 @@ export default function PlotDetailPage() {
         {/* Success State */}
         {!loading && !error && plot && (
           <>
-            {/* Header with title and action buttons */}
-            <div className="mb-6">
-              {/* Title row with dropdown navigation */}
-              <div className="flex items-center gap-3 mb-4">
-                <button
-                  onClick={handleBack}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Retour"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-
-                {/* Title-Dropdown Hybrid */}
-                <div className="flex-1 relative" ref={titleDropdownRef}>
+            {/* Fixed Header */}
+            <StickyPageHeader onBack={handleBack}>
+              {/* Title-Dropdown Hybrid */}
+              <div className="flex-1 relative" ref={titleDropdownRef}>
                   {plots.length > 1 ? (
                     <>
                       {/* Clickable title button */}
@@ -524,13 +515,9 @@ export default function PlotDetailPage() {
                     </div>
                   )}
                 </div>
-              </div>
 
-
-              {/* Action buttons row */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Create button with dropdown */}
-                <div className="relative">
+                {/* Create button with dropdown - on same line */}
+                <div className="relative flex-shrink-0">
                   <Button
                     onClick={() => setShowCreateMenu(!showCreateMenu)}
                     className="flex items-center justify-center gap-2 min-h-[44px] min-w-[44px]"
@@ -575,9 +562,7 @@ export default function PlotDetailPage() {
                     </>
                   )}
                 </div>
-
-              </div>
-            </div>
+              </StickyPageHeader>
 
             {/* Description if exists */}
             {plot.description && (

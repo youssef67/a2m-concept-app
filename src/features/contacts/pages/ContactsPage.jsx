@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Users, Plus, Search } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
+import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
 import Pagination from '../../../shared/components/ui/Pagination'
@@ -16,6 +18,8 @@ import { useToast } from '../../../shared/hooks/useToast'
 const ITEMS_PER_PAGE = 9
 
 export default function ContactsPage() {
+  const navigate = useNavigate()
+
   // State
   const [activeTab, setActiveTab] = useState('client')
   const [searchQuery, setSearchQuery] = useState('')
@@ -186,32 +190,36 @@ export default function ContactsPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Users className="w-8 h-8 text-primary-600" />
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Contacts</h1>
-            <p className="text-sm text-gray-600">
+      <div className="p-4 md:p-6">
+        {/* Fixed Header */}
+        <StickyPageHeader showBackButton={false}>
+          {/* Left: Title */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Contacts</h1>
+            <p className="text-xs md:text-sm text-gray-600">
               Gérez vos clients et fournisseurs
             </p>
           </div>
+
+          {/* Right: Create button */}
+          <div className="flex-shrink-0">
+            <Button
+              onClick={handleAddContact}
+              className="h-[48px]"
+            >
+              <Plus className="w-5 h-5" />
+              <span className="hidden sm:inline ml-2">Nouveau {getContactTypeLabel(activeTab).toLowerCase()}</span>
+            </Button>
+          </div>
+        </StickyPageHeader>
+
+        {/* Tabs */}
+        <div className="mb-6">
+          <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
         </div>
-        <Button
-          onClick={handleAddContact}
-          className="flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Nouveau {getContactTypeLabel(activeTab).toLowerCase()}
-        </Button>
-      </div>
 
-      {/* Tabs */}
-      <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
-
-      {/* Search bar and filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+        {/* Search bar and filters */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
         {/* Search bar */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
