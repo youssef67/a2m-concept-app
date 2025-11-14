@@ -26,7 +26,7 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
     return () => {
       stopCamera()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
   const startCamera = async () => {
@@ -155,23 +155,23 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
         </div>
 
         {/* Actions - with safe area padding */}
-        <div className="flex justify-end gap-2 sm:gap-3 pb-safe" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+        <div className="flex gap-3 pb-safe" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
           <Button
             variant="outline"
             onClick={handleClose}
-            className="min-h-[48px] min-w-[48px] px-3 sm:px-6"
+            className="flex-1 min-h-[48px]"
           >
-            <X className="w-5 h-5 sm:mr-2" />
-            <span className="hidden sm:inline">Annuler</span>
+            <X className="w-5 h-5 mr-2" />
+            Annuler
           </Button>
           <Button
             variant="primary"
             onClick={handleCapture}
             disabled={!stream || !!error}
-            className="min-h-[48px] min-w-[48px] px-3 sm:px-6"
+            className="flex-1 min-h-[48px]"
           >
-            <Camera className="w-5 h-5 sm:mr-2" />
-            <span className="hidden sm:inline">Capturer</span>
+            <Camera className="w-5 h-5 mr-2" />
+            Capturer
           </Button>
         </div>
       </div>

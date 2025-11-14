@@ -100,16 +100,20 @@ export async function updateLivraisonStatut(livraisonId, statutData) {
  * @param {string} appartementId - UUID de l'appartement
  * @param {string} nomLivraison - Nom de la livraison
  * @param {string} statut - Statut initial (optionnel, par défaut 'non_commande')
+ * @param {string} type - Type de livraison (optionnel, par défaut 'principale')
+ * @param {Object} extraData - Données supplémentaires (fournisseur, numero_commande, date_commande, etc.)
  * @returns {Promise<{success: boolean, data: Object|null, error: Error|null}>}
  */
-export async function createLivraison(appartementId, nomLivraison, statut = 'non_commande') {
+export async function createLivraison(appartementId, nomLivraison, statut = 'non_commande', type = 'principale', extraData = {}) {
   try {
     const { data, error } = await supabase
       .from('appartement_livraisons')
       .insert({
         appartement_id: appartementId,
         nom_livraison: nomLivraison,
-        statut: statut
+        statut: statut,
+        type: type,
+        ...extraData
       })
       .select()
       .single()

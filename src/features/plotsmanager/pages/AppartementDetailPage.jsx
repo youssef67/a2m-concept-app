@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, Circle, Clock, FileText, Plus } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Circle, Clock, FileText, Plus, Ruler } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
@@ -15,9 +15,11 @@ import { getAppartementById } from '../services/appartementsService'
 import { useAppartementTaches } from '../hooks/useAppartements'
 import { useAppartementDocuments } from '../hooks/useAppartementDocuments'
 import { useAppartementNotes } from '../hooks/useAppartementNotes'
+import { useAppartementPlinthes } from '../hooks/useAppartementPlinthes'
 import AppartementDocumentUploadModal from '../components/AppartementDocumentUploadModal'
 import AppartementNotesTab from '../components/AppartementNotesTab'
 import AppartementLivraisonTab from '../components/AppartementLivraisonTab'
+import PlinthesModal from '../components/PlinthesModal'
 import DocumentFilesList from '../components/DocumentFilesList'
 
 // Status options
@@ -82,6 +84,10 @@ export default function AppartementDetailPage() {
   // Notes hook
   const { notes, loadNotes } = useAppartementNotes(appartementId)
 
+  // Plinthes hook
+  const { plinthes, loading: plinthesLoading, loadPlinthes, savePlinthes } = useAppartementPlinthes(appartementId)
+  const [isPlinthesModalOpen, setIsPlinthesModalOpen] = useState(false)
+
   // Load appartement data
   useEffect(() => {
     async function loadAppartement() {
@@ -129,6 +135,13 @@ export default function AppartementDetailPage() {
       loadNotes()
     }
   }, [appartementId, loadNotes])
+
+  // Load plinthes data
+  useEffect(() => {
+    if (appartementId) {
+      loadPlinthes()
+    }
+  }, [appartementId, loadPlinthes])
 
   // Synchronize activeTab with URL parameter when appartement changes
   useEffect(() => {
@@ -236,15 +249,27 @@ export default function AppartementDetailPage() {
         {!loading && !error && appartement && (
           <>
             {/* Header */}
-            <div className="flex items-center gap-3 mb-6">
-              <button
-                onClick={handleBack}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                title="Retour"
+            <div className="flex items-center justify-between gap-3 mb-6">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleBack}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Retour"
+                >
+                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                <h1 className="text-2xl font-bold text-gray-900">{appartement.nom}</h1>
+              </div>
+
+              {/* Plinthes button */}
+              <Button
+                variant="primary"
+                onClick={() => setIsPlinthesModalOpen(true)}
+                className="min-h-[44px]"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </button>
-              <h1 className="text-2xl font-bold text-gray-900">{appartement.nom}</h1>
+                <Ruler className="w-5 h-5" />
+                <span>Plinthes</span>
+              </Button>
             </div>
 
             {/* Tabs */}
@@ -439,6 +464,9 @@ export default function AppartementDetailPage() {
               {activeTab === 'livraison' && (
                 <AppartementLivraisonTab
                   appartement={appartement}
+                  plinthes={plinthes}
+                  loading={plinthesLoading}
+                  onOpenPlinthesModal={() => setIsPlinthesModalOpen(true)}
                 />
               )}
             </div>
@@ -451,6 +479,15 @@ export default function AppartementDetailPage() {
               uploading={uploading}
               documentsRequis={documentsWithStatus.map(d => d.documentRequis)}
               selectedDocumentRequisId={selectedDocumentRequisId}
+            />
+
+            {/* Plinthes Modal */}
+            <PlinthesModal
+              isOpen={isPlinthesModalOpen}
+              onClose={() => setIsPlinthesModalOpen(false)}
+              plinthes={plinthes}
+              onSave={savePlinthes}
+              loading={plinthesLoading}
             />
           </>
         )}

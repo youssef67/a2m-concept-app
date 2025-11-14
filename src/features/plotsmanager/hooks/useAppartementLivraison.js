@@ -1,6 +1,6 @@
 /**
  * useAppartementLivraison.js
- * Hook personnalisé pour gérer les livraisons d'appartements
+ * Hook personnalisé pour gérer les livraisons d'appartements (support multiple livraisons)
  */
 
 import { useState, useCallback } from 'react'
@@ -11,18 +11,17 @@ import {
   updateLivraisonStatut,
   uploadPhotoIncomplete,
   deletePhotoIncomplete,
-  createLivraison as createLivraisonService,
-  deleteLivraison as deleteLivraisonService
+  createLivraison,
+  deleteLivraison
 } from '../services/appartementLivraisonService'
 
 /**
- * Hook pour gérer les livraisons d'un appartement (supporte plusieurs livraisons)
+ * Hook pour gérer les livraisons d'un appartement
  * @param {string} appartementId - UUID de l'appartement
  * @returns {Object} - État et fonctions de gestion des livraisons
  */
 export function useAppartementLivraison(appartementId) {
   const [livraisons, setLivraisons] = useState([])
-  const [selectedLivraison, setSelectedLivraison] = useState(null)
   const [history, setHistory] = useState([])
   const [photos, setPhotos] = useState([])
   const [loading, setLoading] = useState(false)
@@ -54,12 +53,11 @@ export function useAppartementLivraison(appartementId) {
   }, [appartementId])
 
   /**
-   * Charger l'historique des changements de statut pour une livraison
+   * Charger l'historique des changements d'une livraison spécifique
    * @param {string} livraisonId - UUID de la livraison
    */
   const loadHistory = useCallback(async (livraisonId) => {
     if (!livraisonId) {
-      setHistory([])
       return
     }
 
@@ -102,21 +100,19 @@ export function useAppartementLivraison(appartementId) {
   /**
    * Créer une nouvelle livraison
    * @param {string} nomLivraison - Nom de la livraison
-   * @param {string} statut - Statut initial (optionnel)
+   * @param {string} statut - Statut initial
+   * @param {string} type - Type de livraison (principale, plinthes)
+   * @param {Object} extraData - Données supplémentaires
    * @returns {Promise<{success: boolean, data: Object|null, error: Error|null}>}
    */
-  const createLivraison = async (nomLivraison, statut = 'non_commande') => {
-    if (!appartementId) {
-      return { success: false, data: null, error: new Error('ID appartement manquant') }
-    }
-
+  const handleCreateLivraison = async (nomLivraison, statut, type = 'principale', extraData = {}) => {
     setLoading(true)
     setError(null)
 
-    const result = await createLivraisonService(appartementId, nomLivraison, statut)
+    const result = await createLivraison(appartementId, nomLivraison, statut, type, extraData)
 
     if (result.success) {
-      // Recharger la liste des livraisons
+      // Recharger les livraisons
       await loadLivraisons()
     } else {
       setError('Erreur lors de la création de la livraison')
@@ -160,6 +156,28 @@ export function useAppartementLivraison(appartementId) {
   }
 
   /**
+   * Supprimer une livraison
+   * @param {string} livraisonId - UUID de la livraison
+   * @returns {Promise<{success: boolean, error: Error|null}>}
+   */
+  const handleDeleteLivraison = async (livraisonId) => {
+    setLoading(true)
+    setError(null)
+
+    const result = await deleteLivraison(livraisonId)
+
+    if (result.success) {
+      // Recharger les livraisons
+      await loadLivraisons()
+    } else {
+      setError('Erreur lors de la suppression de la livraison')
+    }
+
+    setLoading(false)
+    return result
+  }
+
+  /**
    * Upload une photo pour commande incomplète
    * @param {string} livraisonId - UUID de la livraison
    * @param {File} file - Fichier photo à uploader
@@ -188,52 +206,22 @@ export function useAppartementLivraison(appartementId) {
    * Supprimer une photo
    * @param {string} photoId - UUID de la photo
    * @param {string} storagePath - Chemin dans Supabase Storage
+   * @param {string} livraisonId - UUID de la livraison (pour recharger les photos)
    * @returns {Promise<{success: boolean, error: Error|null}>}
    */
-  const deletePhoto = async (photoId, storagePath) => {
+  const deletePhoto = async (photoId, storagePath, livraisonId) => {
     const result = await deletePhotoIncomplete(photoId, storagePath)
 
-    // Note: Photos are managed by the modal component, so no reload needed here
-
-    return result
-  }
-
-  /**
-   * Supprimer complètement une livraison (avec photos et historique)
-   * @param {string} livraisonId - UUID de la livraison
-   * @returns {Promise<{success: boolean, error: Error|null}>}
-   */
-  const deleteLivraison = async (livraisonId) => {
-    if (!livraisonId) {
-      return { success: false, error: new Error('ID livraison manquant') }
+    if (result.success && livraisonId) {
+      // Recharger les photos
+      await loadPhotos(livraisonId)
     }
 
-    setLoading(true)
-    setError(null)
-
-    const result = await deleteLivraisonService(livraisonId)
-
-    if (result.success) {
-      // Recharger la liste des livraisons
-      await loadLivraisons()
-      // Réinitialiser la sélection si c'était la livraison sélectionnée
-      if (selectedLivraison?.id === livraisonId) {
-        setSelectedLivraison(null)
-      }
-      setHistory([])
-      setPhotos([])
-    } else {
-      setError('Erreur lors de la suppression de la livraison')
-    }
-
-    setLoading(false)
     return result
   }
 
   return {
     livraisons,
-    selectedLivraison,
-    setSelectedLivraison,
     history,
     photos,
     loading,
@@ -241,10 +229,10 @@ export function useAppartementLivraison(appartementId) {
     loadLivraisons,
     loadHistory,
     loadPhotos,
-    createLivraison,
     updateStatut,
     uploadPhoto,
     deletePhoto,
-    deleteLivraison
+    createLivraison: handleCreateLivraison,
+    deleteLivraison: handleDeleteLivraison
   }
 }

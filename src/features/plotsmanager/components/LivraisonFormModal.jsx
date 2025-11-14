@@ -24,18 +24,11 @@ export default function LivraisonFormModal({
   appartement,
   onUpdate,
   onUploadPhoto,
-  // eslint-disable-next-line no-unused-vars
-  onDeletePhoto,
-  onCreate,
   onSuccess
 }) {
   const { showToast } = useToast()
 
-  // Mode création ou édition
-  const isCreating = !livraison
-
   const [formData, setFormData] = useState({
-    nom_livraison: '',
     statut: STATUTS_LIVRAISON.NON_COMMANDE,
     date_commande: '',
     fournisseur: '',
@@ -54,32 +47,16 @@ export default function LivraisonFormModal({
 
   // Initialiser le formulaire avec les données existantes
   useEffect(() => {
-    if (isOpen) {
-      if (livraison) {
-        // Mode édition
-        setFormData({
-          nom_livraison: livraison.nom_livraison || '',
-          statut: livraison.statut || STATUTS_LIVRAISON.NON_COMMANDE,
-          date_commande: livraison.date_commande || '',
-          fournisseur: livraison.fournisseur || '',
-          numero_commande: livraison.numero_commande || '',
-          date_livraison_prevue: livraison.date_livraison_prevue || '',
-          date_reception: livraison.date_reception || '',
-          note_incomplete: livraison.note_incomplete || ''
-        })
-      } else {
-        // Mode création - réinitialiser
-        setFormData({
-          nom_livraison: '',
-          statut: STATUTS_LIVRAISON.NON_COMMANDE,
-          date_commande: '',
-          fournisseur: '',
-          numero_commande: '',
-          date_livraison_prevue: '',
-          date_reception: '',
-          note_incomplete: ''
-        })
-      }
+    if (isOpen && livraison) {
+      setFormData({
+        statut: livraison.statut || STATUTS_LIVRAISON.NON_COMMANDE,
+        date_commande: livraison.date_commande || '',
+        fournisseur: livraison.fournisseur || '',
+        numero_commande: livraison.numero_commande || '',
+        date_livraison_prevue: livraison.date_livraison_prevue || '',
+        date_reception: livraison.date_reception || '',
+        note_incomplete: livraison.note_incomplete || ''
+      })
 
       setNewPhotoFiles([])
       setPhotoPreviews([])
@@ -161,14 +138,7 @@ export default function LivraisonFormModal({
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    // Validation nom_livraison pour création
-    if (isCreating && !formData.nom_livraison.trim()) {
-      setValidationErrors({ nom_livraison: 'Le nom de la livraison est obligatoire' })
-      showToast('Veuillez remplir tous les champs obligatoires', 'error')
-      return
-    }
-
-    // Validation statut
+    // Validation
     const validation = validateStatutForm(formData.statut, formData)
     if (!validation.valid) {
       setValidationErrors(validation.errors)
@@ -180,79 +150,47 @@ export default function LivraisonFormModal({
     setValidationErrors({})
 
     try {
-      let result
+      // Préparer les données de mise à jour
+      const updateData = {
+        statut: formData.statut,
+        date_commande: formData.date_commande || null,
+        fournisseur: formData.fournisseur || null,
+        numero_commande: formData.numero_commande || null,
+        date_livraison_prevue: formData.date_livraison_prevue || null,
+        date_reception: formData.date_reception || null,
+        note_incomplete: formData.note_incomplete || null
+      }
 
-      if (isCreating) {
-        // Mode création
-        result = await onCreate(formData.nom_livraison, formData.statut)
+      // Mettre à jour le statut
+      const result = await onUpdate(updateData)
 
-        if (!result.success) {
-          showToast(result.error?.message || 'Erreur lors de la création de la livraison', 'error')
-          setIsSubmitting(false)
-          return
-        }
+      if (!result.success) {
+        showToast(result.error?.message || 'Erreur lors de la mise à jour du statut', 'error')
+        setIsSubmitting(false)
+        return
+      }
 
-        showToast('Livraison créée avec succès', 'success')
-      } else {
-        // Mode édition - Préparer les données de mise à jour
-        const updateData = {
-          statut: formData.statut
-        }
+      // Upload des photos si commande incomplète
+      if (formData.statut === STATUTS_LIVRAISON.COMMANDE_INCOMPLETE && newPhotoFiles.length > 0) {
+        let uploadErrors = 0
 
-        // Ne mettre à jour que les champs qui ont une valeur (persister les données)
-        if (formData.nom_livraison) {
-          updateData.nom_livraison = formData.nom_livraison
-        }
-        if (formData.date_commande) {
-          updateData.date_commande = formData.date_commande
-        }
-        if (formData.fournisseur) {
-          updateData.fournisseur = formData.fournisseur
-        }
-        if (formData.numero_commande) {
-          updateData.numero_commande = formData.numero_commande
-        }
-        if (formData.date_livraison_prevue) {
-          updateData.date_livraison_prevue = formData.date_livraison_prevue
-        }
-        if (formData.date_reception) {
-          updateData.date_reception = formData.date_reception
-        }
-        if (formData.note_incomplete) {
-          updateData.note_incomplete = formData.note_incomplete
-        }
-
-        // Mettre à jour le statut
-        result = await onUpdate(livraison.id, updateData)
-
-        if (!result.success) {
-          showToast(result.error?.message || 'Erreur lors de la mise à jour du statut', 'error')
-          setIsSubmitting(false)
-          return
-        }
-
-        // Upload des photos si commande incomplète
-        if (formData.statut === STATUTS_LIVRAISON.COMMANDE_INCOMPLETE && newPhotoFiles.length > 0) {
-          let uploadErrors = 0
-
-          for (const file of newPhotoFiles) {
-            const uploadResult = await onUploadPhoto(livraison.id, file)
-            if (!uploadResult.success) {
-              uploadErrors++
-            }
+        for (const file of newPhotoFiles) {
+          const uploadResult = await onUploadPhoto(file)
+          if (!uploadResult.success) {
+            uploadErrors++
           }
+        }
 
-          if (uploadErrors > 0) {
-            showToast(
-              `Statut mis à jour. ${uploadErrors} photo(s) n'ont pas pu être uploadées`,
-              'warning'
-            )
-          } else {
-            showToast('Statut mis à jour avec succès', 'success')
-          }
+        if (uploadErrors > 0) {
+          showToast(
+            `Statut mis à jour. ${uploadErrors} photo(s) n'ont pas pu être uploadées`,
+            'warning'
+          )
         } else {
           showToast('Statut mis à jour avec succès', 'success')
         }
+      } else {
+        showToast('Statut mis à jour avec succès', 'success')
       }
 
       // Appeler onSuccess pour fermer et rafraîchir
@@ -261,7 +199,7 @@ export default function LivraisonFormModal({
       }
     } catch (error) {
       console.error('[LivraisonFormModal] Submit error:', error)
-      showToast(`Erreur lors de ${isCreating ? 'la création' : 'la mise à jour'}`, 'error')
+      showToast('Erreur lors de la mise à jour', 'error')
     } finally {
       setIsSubmitting(false)
     }
@@ -279,7 +217,7 @@ export default function LivraisonFormModal({
       <Modal
         isOpen={isOpen}
         onClose={handleClose}
-        title={isCreating ? "Créer une nouvelle livraison" : "Mettre à jour la livraison"}
+        title="Mettre à jour la livraison"
         size="xl"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -287,26 +225,6 @@ export default function LivraisonFormModal({
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-800">
               <strong>Lot :</strong> {appartement.nom}
-            </p>
-          </div>
-
-          {/* Nom de la livraison */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nom de la livraison <span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="text"
-              value={formData.nom_livraison}
-              onChange={(e) => handleFieldChange('nom_livraison', e.target.value)}
-              placeholder="Ex: Cuisine IKEA, Carrelage Leroy Merlin..."
-              disabled={isSubmitting}
-            />
-            {validationErrors.nom_livraison && (
-              <p className="mt-1 text-sm text-red-600">{validationErrors.nom_livraison}</p>
-            )}
-            <p className="mt-1 text-xs text-gray-500">
-              Donnez un nom descriptif pour identifier cette livraison
             </p>
           </div>
 
@@ -323,56 +241,53 @@ export default function LivraisonFormModal({
             />
           </div>
 
-          {/* Informations de commande - Toujours visible */}
-          <div className="space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Informations de commande</h3>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date de commande
-                {formData.statut === STATUTS_LIVRAISON.COMMANDE_EFFECTUEE && (
-                  <span className="text-red-500"> *</span>
-                )}
-              </label>
-              <Input
-                type="date"
-                value={formData.date_commande}
-                onChange={(e) => handleFieldChange('date_commande', e.target.value)}
-                disabled={isSubmitting}
-              />
-              {validationErrors.date_commande && (
-                <p className="mt-1 text-sm text-red-600">{validationErrors.date_commande}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fournisseur
-              </label>
-              <Input
-                type="text"
-                value={formData.fournisseur}
-                onChange={(e) => handleFieldChange('fournisseur', e.target.value)}
-                placeholder="Ex: ABC Matériaux"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Numéro de commande
-              </label>
-              <Input
-                type="text"
-                value={formData.numero_commande}
-                onChange={(e) => handleFieldChange('numero_commande', e.target.value)}
-                placeholder="Ex: CMD-12345"
-                disabled={isSubmitting}
-              />
-            </div>
-          </div>
-
           {/* Champs conditionnels selon statut */}
+
+          {/* COMMANDE EFFECTUÉE */}
+          {formData.statut === STATUTS_LIVRAISON.COMMANDE_EFFECTUEE && (
+            <div className="space-y-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date de commande <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="date"
+                  value={formData.date_commande}
+                  onChange={(e) => handleFieldChange('date_commande', e.target.value)}
+                  disabled={isSubmitting}
+                />
+                {validationErrors.date_commande && (
+                  <p className="mt-1 text-sm text-red-600">{validationErrors.date_commande}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fournisseur
+                </label>
+                <Input
+                  type="text"
+                  value={formData.fournisseur}
+                  onChange={(e) => handleFieldChange('fournisseur', e.target.value)}
+                  placeholder="Ex: ABC Matériaux"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Numéro de commande
+                </label>
+                <Input
+                  type="text"
+                  value={formData.numero_commande}
+                  onChange={(e) => handleFieldChange('numero_commande', e.target.value)}
+                  placeholder="Ex: CMD-12345"
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+          )}
 
           {/* EN COURS DE LIVRAISON */}
           {formData.statut === STATUTS_LIVRAISON.EN_COURS_LIVRAISON && (

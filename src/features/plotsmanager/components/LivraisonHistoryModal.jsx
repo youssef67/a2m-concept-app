@@ -3,7 +3,7 @@
  * Modal pour afficher l'historique des changements de statut de livraison
  */
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { Clock, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
