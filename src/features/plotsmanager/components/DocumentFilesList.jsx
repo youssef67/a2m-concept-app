@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react'
 import { FileText, Download, Trash2, Image as ImageIcon, Eye } from 'lucide-react'
-import { getDocumentUrl, deleteDocument, formatFileSize, isImage, isPDF } from '../services/appartementDocumentsService'
+import { getDocumentUrl, deleteDocument, formatFileSize, isImage } from '../services/appartementDocumentsService'
 import ConfirmModal from '../../../shared/components/ui/ConfirmModal'
 import DocumentPreviewModal from './DocumentPreviewModal'
 
@@ -21,7 +21,7 @@ export default function DocumentFilesList({ files, onFileDeleted }) {
 
   // Handle download file (force download)
   const handleDownload = async (file) => {
-    const { data: url, error } = await getDocumentUrl(file.storage_path)
+    const { data: url } = await getDocumentUrl(file.storage_path)
     if (url) {
       // Force download instead of opening in new tab
       const link = document.createElement('a')

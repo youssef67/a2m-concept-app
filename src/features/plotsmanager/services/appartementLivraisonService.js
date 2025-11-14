@@ -10,42 +10,42 @@ import { supabase } from '../../../lib/supabaseClient'
 // ============================================
 
 /**
- * Récupérer la livraison d'un appartement (avec jours retard calculés)
+ * Récupérer TOUTES les livraisons d'un appartement (avec jours retard calculés)
  * @param {string} appartementId - UUID de l'appartement
- * @returns {Promise<{data: Object|null, error: Error|null}>}
+ * @returns {Promise<{data: Array|null, error: Error|null}>}
  */
-export async function getLivraisonByAppartement(appartementId) {
+export async function getLivraisonsByAppartement(appartementId) {
   try {
     const { data, error } = await supabase
       .from('appartement_livraisons_with_retard') // Vue avec calcul retard
       .select('*')
       .eq('appartement_id', appartementId)
-      .single()
+      .order('created_at', { ascending: true }) // Plus anciennes en premier
 
-    return { data, error }
+    return { data: data || [], error }
   } catch (err) {
-    console.error('[getLivraisonByAppartement] Error:', err)
-    return { data: null, error: err }
+    console.error('[getLivraisonsByAppartement] Error:', err)
+    return { data: [], error: err }
   }
 }
 
 /**
- * Récupérer l'historique des changements de statut
- * @param {string} appartementId - UUID de l'appartement
+ * Récupérer l'historique des changements de statut pour une livraison
+ * @param {string} livraisonId - UUID de la livraison
  * @returns {Promise<{data: Array|null, error: Error|null}>}
  */
-export async function getLivraisonHistory(appartementId) {
+export async function getLivraisonHistory(livraisonId) {
   try {
     const { data, error } = await supabase
       .from('appartement_livraison_historique')
       .select('*')
-      .eq('appartement_id', appartementId)
+      .eq('livraison_id', livraisonId)
       .order('created_at', { ascending: false })
 
-    return { data, error }
+    return { data: data || [], error }
   } catch (err) {
     console.error('[getLivraisonHistory] Error:', err)
-    return { data: null, error: err }
+    return { data: [], error: err }
   }
 }
 
@@ -95,6 +95,109 @@ export async function updateLivraisonStatut(livraisonId, statutData) {
   }
 }
 
+/**
+ * Créer une nouvelle livraison pour un appartement
+ * @param {string} appartementId - UUID de l'appartement
+ * @param {string} nomLivraison - Nom de la livraison
+ * @param {string} statut - Statut initial (optionnel, par défaut 'non_commande')
+ * @param {string} type - Type de livraison (optionnel, par défaut 'principale')
+ * @param {Object} extraData - Données supplémentaires (fournisseur, numero_commande, date_commande, etc.)
+ * @returns {Promise<{success: boolean, data: Object|null, error: Error|null}>}
+ */
+export async function createLivraison(appartementId, nomLivraison, statut = 'non_commande', type = 'principale', extraData = {}) {
+  try {
+    const { data, error } = await supabase
+      .from('appartement_livraisons')
+      .insert({
+        appartement_id: appartementId,
+        nom_livraison: nomLivraison,
+        statut: statut,
+        type: type,
+        ...extraData
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[createLivraison] Error:', error)
+      return { success: false, data: null, error }
+    }
+
+    return { success: true, data, error: null }
+  } catch (err) {
+    console.error('[createLivraison] Unexpected error:', err)
+    return { success: false, data: null, error: err }
+  }
+}
+
+// ============================================
+// SUPPRESSION
+// ============================================
+
+/**
+ * Supprimer une livraison complète (avec ses photos et historique)
+ * @param {string} livraisonId - UUID de la livraison
+ * @returns {Promise<{success: boolean, error: Error|null}>}
+ */
+export async function deleteLivraison(livraisonId) {
+  try {
+    // 1. Récupérer les photos pour supprimer les fichiers du storage
+    const { data: photos } = await supabase
+      .from('appartement_livraison_photos')
+      .select('storage_path')
+      .eq('livraison_id', livraisonId)
+
+    // 2. Supprimer les fichiers du storage
+    if (photos && photos.length > 0) {
+      const storagePaths = photos.map(p => p.storage_path)
+      const { error: storageError } = await supabase.storage
+        .from('appartements-livraisons')
+        .remove(storagePaths)
+
+      if (storageError) {
+        console.error('[deleteLivraison] Storage error (non-blocking):', storageError)
+        // Continue même si erreur storage
+      }
+    }
+
+    // 3. Supprimer les photos de la table (CASCADE devrait gérer, mais pour être sûr)
+    const { error: photosError } = await supabase
+      .from('appartement_livraison_photos')
+      .delete()
+      .eq('livraison_id', livraisonId)
+
+    if (photosError) {
+      console.error('[deleteLivraison] Photos delete error:', photosError)
+    }
+
+    // 4. Supprimer l'historique (CASCADE devrait gérer, mais pour être sûr)
+    const { error: historyError } = await supabase
+      .from('appartement_livraison_historique')
+      .delete()
+      .eq('livraison_id', livraisonId)
+
+    if (historyError) {
+      console.error('[deleteLivraison] History delete error:', historyError)
+    }
+
+    // 5. Supprimer la livraison
+    const { error: deleteError } = await supabase
+      .from('appartement_livraisons')
+      .delete()
+      .eq('id', livraisonId)
+
+    if (deleteError) {
+      console.error('[deleteLivraison] Delete error:', deleteError)
+      return { success: false, error: deleteError }
+    }
+
+    return { success: true, error: null }
+  } catch (err) {
+    console.error('[deleteLivraison] Unexpected error:', err)
+    return { success: false, error: err }
+  }
+}
+
 // ============================================
 // PHOTOS
 // ============================================
@@ -119,7 +222,7 @@ export async function uploadPhotoIncomplete(livraisonId, appartementId, file) {
     const fileName = `${appartementId}_${timestamp}_${file.name}`
     const storagePath = `livraisons/${appartementId}/${fileName}`
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('appartements-livraisons')
       .upload(storagePath, file)
 

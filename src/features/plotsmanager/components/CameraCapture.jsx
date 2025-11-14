@@ -26,6 +26,7 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
     return () => {
       stopCamera()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
   const startCamera = async () => {
