@@ -71,8 +71,11 @@ export async function upsertPlinthes(appartementId, plinthesData) {
       quantite_ml: plinthesData.quantite_ml || null,
       reference: plinthesData.reference || null,
       fournisseur: plinthesData.fournisseur || null,
+      statut: plinthesData.statut || 'non_commande',
       est_commande: plinthesData.est_commande || false,
       date_commande: plinthesData.date_commande || null,
+      date_livraison_prevue: plinthesData.date_livraison_prevue || null,
+      date_reception: plinthesData.date_reception || null,
       updated_at: new Date().toISOString()
     }
 

@@ -12,6 +12,7 @@ import {
   getJoursRetard,
   formatDateLivraison
 } from '../utils/livraisonHelpers'
+import { getPlinthesStatutConfig, formatDatePlinthes } from '../utils/plinthesHelpers'
 import Button from '../../../shared/components/ui/Button'
 import { useToast } from '../../../shared/hooks/useToast'
 import LivraisonFormModal from './LivraisonFormModal'
@@ -118,181 +119,282 @@ export default function AppartementLivraisonTab({
 
   return (
     <div className="space-y-4">
-      {/* Section Plinthes */}
-      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-lg p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="bg-purple-600 p-2 rounded-lg">
-              <Ruler className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h4 className="text-base font-semibold text-gray-900">Plinthes</h4>
-              {plinthes ? (
-                <p className="text-sm text-gray-600">
-                  {plinthes.quantite_ml ? `${plinthes.quantite_ml} ML` : 'Non renseigné'}
-                  {plinthes.est_commande && ' • Commandé'}
-                </p>
-              ) : (
-                <p className="text-sm text-gray-500">Aucune information</p>
-              )}
-            </div>
+      {/* Titre commun */}
+      <h2 className="text-xl font-bold text-gray-900 border-b-2 border-gray-200 pb-2">
+        Livraisons & Plinthes
+      </h2>
+
+      {/* Section Livraisons principales */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Package className="w-5 h-5 text-blue-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Livraisons principales</h3>
+        </div>
+
+        {/* Header avec bouton nouvelle livraison */}
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            {livraisons.length > 0 ? `${livraisons.length} livraison(s)` : 'Aucune livraison'}
           </div>
           <Button
             variant="primary"
-            size="sm"
-            onClick={onOpenPlinthesModal}
-            disabled={plinthesLoading}
+            onClick={handleCreateClick}
             className="flex items-center gap-2 min-h-[44px]"
           >
-            <Ruler className="w-4 h-4" />
-            <span>Gérer</span>
+            <Plus className="w-5 h-5" />
+            <span>Nouvelle livraison</span>
           </Button>
+        </div>
+
+        {/* Liste des livraisons */}
+        {livraisons.length === 0 ? (
+          <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+            <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-600 mb-4">Aucune livraison pour ce lot</p>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleCreateClick}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Créer la première livraison
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {livraisons.map((livraison) => {
+              const statutConfig = getLivraisonStatutConfig(livraison.statut)
+              const StatutIcon = statutConfig.icon
+              const joursRetard = getJoursRetard(livraison)
+              const isEnRetard = joursRetard > 0
+
+              return (
+                <div
+                  key={livraison.id}
+                  className={`${statutConfig.bgColor} border-2 ${statutConfig.color.replace('bg-', 'border-')} rounded-lg p-4`}
+                >
+                  {/* Nom + Badge statut */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className={`${statutConfig.badgeColor} p-2 rounded-lg`}>
+                        <StatutIcon className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-base font-semibold text-gray-900 truncate">
+                          {livraison.nom_livraison}
+                        </h4>
+                        <p className={`text-sm ${statutConfig.textColor}`}>
+                          {getBadgeLabel(livraison)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Alerte retard */}
+                  {isEnRetard && (
+                    <div className="bg-white border-2 border-red-300 rounded-lg p-2 mb-3">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-red-800">
+                          {joursRetard} jour{joursRetard > 1 ? 's' : ''} de retard
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Informations détaillées */}
+                  <div className="space-y-1 mb-3 text-sm">
+                    {livraison.fournisseur && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Fournisseur:</span>
+                        <span className="font-medium text-gray-900">{livraison.fournisseur}</span>
+                      </div>
+                    )}
+
+                    {livraison.numero_commande && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">N° commande:</span>
+                        <span className="font-medium text-gray-900">{livraison.numero_commande}</span>
+                      </div>
+                    )}
+
+                    {livraison.date_commande && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Date commande:</span>
+                        <span className="font-medium text-gray-900">
+                          {formatDateLivraison(livraison.date_commande, 'short')}
+                        </span>
+                      </div>
+                    )}
+
+                    {livraison.date_livraison_prevue && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Livraison prévue:</span>
+                        <span className={`font-medium ${isEnRetard ? 'text-red-600' : 'text-gray-900'}`}>
+                          {formatDateLivraison(livraison.date_livraison_prevue, 'short')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Boutons actions */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleEditClick(livraison)}
+                      className="w-full flex items-center justify-center gap-1 min-h-[44px]"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span className="text-xs">Modifier</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleHistoryClick(livraison)}
+                      className="w-full flex items-center justify-center gap-1 min-h-[44px]"
+                    >
+                      <History className="w-4 h-4" />
+                      <span className="text-xs">Historique</span>
+                    </Button>
+
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => setLivraisonToDelete(livraison)}
+                      className="w-full flex items-center justify-center gap-1 min-h-[44px]"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span className="text-xs">Supprimer</span>
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Séparateur */}
+      <div className="flex items-center justify-center py-2">
+        <div className="flex items-center gap-3 w-full max-w-xs">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-gray-300"></div>
+          <span className="text-gray-400 text-lg font-bold">•••</span>
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent via-gray-300 to-gray-300"></div>
         </div>
       </div>
 
-      {/* Header avec bouton nouvelle livraison */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Livraisons {livraisons.length > 0 && `(${livraisons.length})`}
-        </h3>
-        <Button
-          variant="primary"
-          onClick={handleCreateClick}
-          className="flex items-center gap-2 min-h-[44px]"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Nouvelle livraison</span>
-        </Button>
-      </div>
-
-      {/* Liste des livraisons */}
-      {livraisons.length === 0 ? (
-        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-          <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600 mb-4">Aucune livraison pour ce lot</p>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleCreateClick}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Créer la première livraison
-          </Button>
+      {/* Section Plinthes */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Ruler className="w-5 h-5 text-amber-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Plinthes</h3>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {livraisons.map((livraison) => {
-            const statutConfig = getLivraisonStatutConfig(livraison.statut)
+
+        {plinthes ? (
+          (() => {
+            const statutConfig = getPlinthesStatutConfig(plinthes.statut)
             const StatutIcon = statutConfig.icon
-            const joursRetard = getJoursRetard(livraison)
-            const isEnRetard = joursRetard > 0
 
             return (
-              <div
-                key={livraison.id}
-                className={`${statutConfig.bgColor} border-2 ${statutConfig.color.replace('bg-', 'border-')} rounded-lg p-4`}
-              >
-                {/* Nom + Badge statut */}
+              <div className={`${statutConfig.bgColor} border-2 ${statutConfig.color.replace('bg-', 'border-')} rounded-lg p-4`}>
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3 flex-1">
                     <div className={`${statutConfig.badgeColor} p-2 rounded-lg`}>
                       <StatutIcon className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-base font-semibold text-gray-900 truncate">
-                        {livraison.nom_livraison}
-                      </h4>
+                      <h4 className="text-base font-semibold text-gray-900">Plinthes</h4>
                       <p className={`text-sm ${statutConfig.textColor}`}>
-                        {getBadgeLabel(livraison)}
+                        {statutConfig.label}
                       </p>
                     </div>
                   </div>
                 </div>
-
-                {/* Alerte retard */}
-                {isEnRetard && (
-                  <div className="bg-white border-2 border-red-300 rounded-lg p-2 mb-3">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-red-800">
-                        {joursRetard} jour{joursRetard > 1 ? 's' : ''} de retard
-                      </p>
-                    </div>
-                  </div>
-                )}
 
                 {/* Informations détaillées */}
                 <div className="space-y-1 mb-3 text-sm">
-                  {livraison.fournisseur && (
+                  {plinthes.quantite_ml && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Quantité:</span>
+                      <span className="font-medium text-gray-900">{plinthes.quantite_ml} ML</span>
+                    </div>
+                  )}
+
+                  {plinthes.fournisseur && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Fournisseur:</span>
-                      <span className="font-medium text-gray-900">{livraison.fournisseur}</span>
+                      <span className="font-medium text-gray-900">{plinthes.fournisseur}</span>
                     </div>
                   )}
 
-                  {livraison.numero_commande && (
+                  {plinthes.reference && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600">N° commande:</span>
-                      <span className="font-medium text-gray-900">{livraison.numero_commande}</span>
+                      <span className="text-gray-600">Référence:</span>
+                      <span className="font-medium text-gray-900">{plinthes.reference}</span>
                     </div>
                   )}
 
-                  {livraison.date_commande && (
+                  {plinthes.date_commande && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Date commande:</span>
                       <span className="font-medium text-gray-900">
-                        {formatDateLivraison(livraison.date_commande, 'short')}
+                        {formatDatePlinthes(plinthes.date_commande)}
                       </span>
                     </div>
                   )}
 
-                  {livraison.date_livraison_prevue && (
+                  {plinthes.date_livraison_prevue && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Livraison prévue:</span>
-                      <span className={`font-medium ${isEnRetard ? 'text-red-600' : 'text-gray-900'}`}>
-                        {formatDateLivraison(livraison.date_livraison_prevue, 'short')}
+                      <span className="font-medium text-gray-900">
+                        {formatDatePlinthes(plinthes.date_livraison_prevue)}
+                      </span>
+                    </div>
+                  )}
+
+                  {plinthes.date_reception && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Date réception:</span>
+                      <span className="font-medium text-gray-900">
+                        {formatDatePlinthes(plinthes.date_reception)}
                       </span>
                     </div>
                   )}
                 </div>
 
-                {/* Boutons actions */}
-                <div className="grid grid-cols-3 gap-2">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleEditClick(livraison)}
-                    className="w-full flex items-center justify-center gap-1 min-h-[44px]"
-                  >
-                    <Edit className="w-4 h-4" />
-                    <span className="text-xs">Modifier</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleHistoryClick(livraison)}
-                    className="w-full flex items-center justify-center gap-1 min-h-[44px]"
-                  >
-                    <History className="w-4 h-4" />
-                    <span className="text-xs">Historique</span>
-                  </Button>
-
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => setLivraisonToDelete(livraison)}
-                    className="w-full flex items-center justify-center gap-1 min-h-[44px]"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="text-xs">Supprimer</span>
-                  </Button>
-                </div>
+                {/* Bouton gérer */}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={onOpenPlinthesModal}
+                  disabled={plinthesLoading}
+                  className="w-full flex items-center justify-center gap-2 min-h-[44px]"
+                >
+                  <Edit className="w-4 h-4" />
+                  <span>Modifier</span>
+                </Button>
               </div>
             )
-          })}
-        </div>
-      )}
+          })()
+        ) : (
+          <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+            <Ruler className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+            <p className="text-gray-600 mb-3">Aucune information sur les plinthes</p>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onOpenPlinthesModal}
+              disabled={plinthesLoading}
+              className="flex items-center gap-2 min-h-[44px]"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Ajouter</span>
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Modal formulaire création/édition */}
       <LivraisonFormModal

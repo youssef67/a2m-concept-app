@@ -8,6 +8,7 @@ import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Input from '../../../shared/components/ui/Input'
 import { useToast } from '../../../shared/hooks/useToast'
+import { STATUTS_OPTIONS, STATUTS_PLINTHES } from '../utils/plinthesHelpers'
 
 export default function PlinthesModal({
   isOpen,
@@ -23,8 +24,11 @@ export default function PlinthesModal({
     quantite_ml: '',
     reference: '',
     fournisseur: '',
+    statut: STATUTS_PLINTHES.NON_COMMANDE,
     est_commande: false,
-    date_commande: ''
+    date_commande: '',
+    date_livraison_prevue: '',
+    date_reception: ''
   })
 
   // Initialiser le formulaire avec les données existantes
@@ -35,8 +39,11 @@ export default function PlinthesModal({
           quantite_ml: plinthes.quantite_ml || '',
           reference: plinthes.reference || '',
           fournisseur: plinthes.fournisseur || '',
+          statut: plinthes.statut || STATUTS_PLINTHES.NON_COMMANDE,
           est_commande: plinthes.est_commande || false,
-          date_commande: plinthes.date_commande || ''
+          date_commande: plinthes.date_commande || '',
+          date_livraison_prevue: plinthes.date_livraison_prevue || '',
+          date_reception: plinthes.date_reception || ''
         })
       } else {
         // Réinitialiser si pas de données
@@ -44,8 +51,11 @@ export default function PlinthesModal({
           quantite_ml: '',
           reference: '',
           fournisseur: '',
+          statut: STATUTS_PLINTHES.NON_COMMANDE,
           est_commande: false,
-          date_commande: ''
+          date_commande: '',
+          date_livraison_prevue: '',
+          date_reception: ''
         })
       }
     }
@@ -68,8 +78,11 @@ export default function PlinthesModal({
       quantite_ml: formData.quantite_ml ? parseFloat(formData.quantite_ml) : null,
       reference: formData.reference || null,
       fournisseur: formData.fournisseur || null,
+      statut: formData.statut,
       est_commande: formData.est_commande,
-      date_commande: formData.date_commande || null
+      date_commande: formData.date_commande || null,
+      date_livraison_prevue: formData.date_livraison_prevue || null,
+      date_reception: formData.date_reception || null
     }
 
     const result = await onSave(dataToSave)
@@ -103,23 +116,28 @@ export default function PlinthesModal({
           placeholder="Ex: 25.50"
         />
 
-        {/* Checkbox Commandé */}
-        <div className="flex items-center gap-3">
-          <input
-            id="est_commande"
-            name="est_commande"
-            type="checkbox"
-            checked={formData.est_commande}
-            onChange={handleInputChange}
-            className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-          />
-          <label htmlFor="est_commande" className="text-sm font-medium text-gray-700">
-            Commandé
+        {/* Statut */}
+        <div>
+          <label htmlFor="statut" className="block text-sm font-medium text-gray-700 mb-1">
+            Statut de la commande
           </label>
+          <select
+            id="statut"
+            name="statut"
+            value={formData.statut}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          >
+            {STATUTS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
 
-        {/* Référence, fournisseur et date commande (si commandé) */}
-        {formData.est_commande && (
+        {/* Référence et fournisseur (si commandé) */}
+        {formData.statut !== STATUTS_PLINTHES.NON_COMMANDE && (
           <>
             <Input
               label="Référence"
@@ -147,6 +165,28 @@ export default function PlinthesModal({
               onChange={handleInputChange}
             />
           </>
+        )}
+
+        {/* Date livraison prévue (si en cours de livraison) */}
+        {formData.statut === STATUTS_PLINTHES.EN_COURS_LIVRAISON && (
+          <Input
+            label="Date de livraison prévue"
+            name="date_livraison_prevue"
+            type="date"
+            value={formData.date_livraison_prevue}
+            onChange={handleInputChange}
+          />
+        )}
+
+        {/* Date réception (si sur site) */}
+        {formData.statut === STATUTS_PLINTHES.SUR_SITE && (
+          <Input
+            label="Date de réception"
+            name="date_reception"
+            type="date"
+            value={formData.date_reception}
+            onChange={handleInputChange}
+          />
         )}
 
         {/* Boutons actions */}
