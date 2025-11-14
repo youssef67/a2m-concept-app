@@ -326,18 +326,13 @@ export default function AppartementDetailPage() {
           <>
             {/* Fixed Action Navbar */}
             <StickyPageHeader onBack={handleBack}>
-              {/* Left: Appartement name */}
-              <div className="flex-1 min-w-0">
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900">{appartement.nom}</h1>
-              </div>
-
               {/* Right: Action buttons */}
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
                 {/* Ajouter une note */}
                 <Button
                   variant="primary"
                   onClick={handleOpenNoteModal}
-                  className="h-[48px] px-3"
+                  className="h-[48px] px-2.5 md:px-3"
                   title="Ajouter une note"
                 >
                   <StickyNote className="w-5 h-5" />
@@ -348,7 +343,7 @@ export default function AppartementDetailPage() {
                 <Button
                   variant="primary"
                   onClick={handleOpenLivraisonModal}
-                  className="h-[48px] px-3"
+                  className="h-[48px] px-2.5 md:px-3"
                   title="Nouvelle livraison"
                 >
                   <Plus className="w-5 h-5" />
@@ -359,7 +354,7 @@ export default function AppartementDetailPage() {
                 <Button
                   variant="primary"
                   onClick={handleOpenPlinthesModal}
-                  className="h-[48px] px-3"
+                  className="h-[48px] px-2.5 md:px-3"
                   title="Plinthes"
                 >
                   <Ruler className="w-5 h-5" />
@@ -368,8 +363,13 @@ export default function AppartementDetailPage() {
               </div>
             </StickyPageHeader>
 
+            {/* Page Title */}
+            <div className="mb-2 -mt-2">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{appartement.nom}</h1>
+            </div>
+
             {/* Tabs */}
-            <div className="mb-6">
+            <div className="mb-3">
               <Tabs
                 tabs={availableTabs}
                 activeTab={activeTab}
