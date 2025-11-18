@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { MessageCircle, Search, X } from 'lucide-react'
+import { MessageCircle, Search, X, Clipboard } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
@@ -12,7 +12,7 @@ import Select from '../../../shared/components/ui/Select'
 import { useToast } from '../../../shared/hooks/useToast'
 import { getAllWorkers } from '../../workers/services/workersService'
 import { getAppartementDocumentsWithStatus, getDocumentUrl } from '../services/appartementDocumentsService'
-import { buildWhatsAppMessage, openWhatsApp } from '../utils/whatsappHelpers'
+import { buildWhatsAppMessage, openWhatsApp, copyMessageToClipboard } from '../utils/whatsappHelpers'
 
 export default function SendWhatsAppModal({
   isOpen,
@@ -164,6 +164,58 @@ export default function SendWhatsAppModal({
         }
       }
     })
+  }
+
+  // Handle copy message button click
+  const handleCopyMessage = async () => {
+    // Validate appartement selection
+    if (selectedAppartements.length === 0) {
+      setError('Veuillez sélectionner au moins un lot')
+      return
+    }
+
+    setError(null)
+
+    try {
+      // Build documents map with URLs
+      const documentsDataMap = {}
+      await Promise.all(
+        selectedAppartements.map(async (appt) => {
+          const selectedDocIds = selectedDocuments[appt.id] || []
+          if (selectedDocIds.length > 0) {
+            const docs = documentsMap[appt.id] || []
+            const selectedDocs = docs.filter(d => selectedDocIds.includes(d.id))
+
+            const docsWithUrls = await Promise.all(
+              selectedDocs.map(async (doc) => {
+                const { data: url } = await getDocumentUrl(doc.storage_path)
+                return {
+                  intitule: doc.nom_document,
+                  url: url
+                }
+              })
+            )
+
+            documentsDataMap[appt.id] = docsWithUrls
+          }
+        })
+      )
+
+      // Build message (without tasks)
+      const message = buildWhatsAppMessage(selectedAppartements, documentsDataMap)
+
+      // Copy to clipboard
+      const success = await copyMessageToClipboard(message)
+
+      if (success) {
+        showToast('Message copié dans le presse-papier', 'success')
+      } else {
+        throw new Error('Échec de la copie')
+      }
+    } catch (err) {
+      console.error('Error copying message:', err)
+      setError('Erreur lors de la copie du message')
+    }
   }
 
   // Handle send button click
@@ -453,6 +505,17 @@ export default function SendWhatsAppModal({
             className="w-full sm:w-auto"
           >
             Annuler
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCopyMessage}
+            disabled={loading || selectedAppartements.length === 0}
+            className="w-full sm:w-auto flex items-center justify-center gap-2"
+          >
+            <Clipboard className="w-5 h-5" />
+            <span className="hidden sm:inline">Copier le message</span>
+            <span className="sm:hidden">Copier</span>
           </Button>
           <Button
             type="button"

@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { Home, Building2, Edit, Trash2, Search, ChevronDown, AlertTriangle, X, FileText, BadgeCheck, MoreVertical, Check, CheckCircle } from 'lucide-react'
+import { Home, Building2, Edit, Trash2, Search, ChevronDown, AlertTriangle, X, FileText, BadgeCheck, MoreVertical, Check, CheckCircle, MessageCircle, ArrowLeft } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
 import Button from '../../../shared/components/ui/Button'
@@ -19,6 +19,7 @@ import Pagination from '../../../shared/components/ui/Pagination'
 import Tooltip from '../../../shared/components/ui/Tooltip'
 import CreateAppartementModal from '../components/CreateAppartementModal'
 import CreateMultipleAppartementsModal from '../components/CreateMultipleAppartementsModal'
+import SendWhatsAppModal from '../components/SendWhatsAppModal'
 import { getPlotById } from '../services/plotsService'
 import { useAppartements } from '../hooks/useAppartements'
 import { usePlots } from '../hooks/usePlots'
@@ -53,6 +54,7 @@ export default function PlotDetailPage() {
   const [isCreateAppartementModalOpen, setIsCreateAppartementModalOpen] = useState(false)
   const [isCreateMultipleModalOpen, setIsCreateMultipleModalOpen] = useState(false)
   const [showCreateMenu, setShowCreateMenu] = useState(false)
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false)
   const [appartementToEdit, setAppartementToEdit] = useState(null)
   const [appartementToDelete, setAppartementToDelete] = useState(null)
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
@@ -388,6 +390,13 @@ export default function PlotDetailPage() {
     }
   }
 
+  // Handle WhatsApp success
+  const handleWhatsAppSuccess = () => {
+    // Reload appartements to reflect updated task statuses
+    loadAppartements()
+    // Stay on current page and tab (no navigation)
+  }
+
 
   // Reset selection modes when changing tabs
   useEffect(() => {
@@ -562,6 +571,18 @@ export default function PlotDetailPage() {
                     </>
                   )}
                 </div>
+
+                {/* WhatsApp button - only visible if appartements exist */}
+                {appartements.length > 0 && (
+                  <Button
+                    onClick={() => setIsWhatsAppModalOpen(true)}
+                    className="flex items-center justify-center gap-2 min-h-[44px] min-w-[44px] bg-green-600 hover:bg-green-700 active:bg-green-800"
+                    title="Envoyer WhatsApp"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    <span className="hidden sm:inline">WhatsApp</span>
+                  </Button>
+                )}
               </StickyPageHeader>
 
             {/* Description if exists */}
@@ -1027,6 +1048,14 @@ export default function PlotDetailPage() {
               )}
             </Modal>
 
+            {/* WhatsApp Modal */}
+            <SendWhatsAppModal
+              isOpen={isWhatsAppModalOpen}
+              onClose={() => setIsWhatsAppModalOpen(false)}
+              appartements={appartements}
+              chantierId={chantierId}
+              onSuccess={handleWhatsAppSuccess}
+            />
 
           </>
         )}

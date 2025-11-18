@@ -31,23 +31,14 @@ export function formatPhoneForWhatsApp(phone) {
  * Build WhatsApp message for apartments
  * @param {Array} appartements - Array of apartments with their data
  * @param {Object} documentsDataMap - Map of appartementId -> [{intitule, url}, ...]
- * @param {Object} tachesMap - Map of appartementId -> task intitule
  * @returns {string} - Formatted WhatsApp message
  */
-export function buildWhatsAppMessage(appartements, documentsDataMap = {}, tachesMap = {}) {
+export function buildWhatsAppMessage(appartements, documentsDataMap = {}) {
   let message = 'Bonjour,\n\n'
-  message += 'Voici les détails des appartements prêts :\n\n'
+  message += 'Voici les détails des appartements :\n\n'
 
   appartements.forEach((appt, index) => {
     message += `Appartement concerné : ${appt.nom}\n`
-
-    // Add task info
-    const tacheIntitule = tachesMap[appt.id]
-    if (tacheIntitule) {
-      message += `📋 Prochaine tâche : ${tacheIntitule}\n`
-    } else {
-      message += `📋 Prochaine tâche : Aucune tâche à faire\n`
-    }
 
     // Add documents info (multiple documents)
     const documents = documentsDataMap[appt.id]
@@ -81,6 +72,34 @@ export function openWhatsApp(phone, message) {
   const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodedMessage}`
 
   window.open(whatsappUrl, '_blank')
+}
+
+/**
+ * Copy message to clipboard
+ * @param {string} message - Message to copy
+ * @returns {Promise<boolean>} - True if successful, false otherwise
+ */
+export async function copyMessageToClipboard(message) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(message)
+      return true
+    } else {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea')
+      textarea.value = message
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      const success = document.execCommand('copy')
+      document.body.removeChild(textarea)
+      return success
+    }
+  } catch (err) {
+    console.error('Error copying to clipboard:', err)
+    return false
+  }
 }
 
 /**
