@@ -8,7 +8,8 @@ import {
   getContactEntityTypeBadgeColor,
   formatPhoneNumber,
   formatAddress,
-  getPersonFullName
+  getPersonFullName,
+  formatNumeroContact
 } from '../utils/contactHelpers'
 
 /**
@@ -52,6 +53,11 @@ export default function ContactCard({ contact, onView, onEdit, onDelete }) {
               >
                 {entityTypeLabel}
               </span>
+              {contact.numero_contact && (
+                <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                  {formatNumeroContact(contact.numero_contact)}
+                </span>
+              )}
               {contact.type === 'fournisseur' && contact.is_sous_traitant && (
                 <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   Sous-traitant

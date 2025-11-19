@@ -46,6 +46,7 @@ import {
   calculateTotalDeductions,
   calculateDeductionMontant
 } from '../utils/factureHelpers'
+import { formatNumeroContact } from '../../contacts/utils/contactHelpers'
 import {
   getClientDisplayName as getChantierClientName,
   getStatutLabel as getChantierStatutLabel,
@@ -1365,7 +1366,18 @@ export default function FacturesPage() {
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="text-lg font-semibold text-gray-900">
-                              {facture.type === 'client' ? facture.numero_facture : getContactDisplayName(facture.contact)}
+                              {facture.type === 'client' ? (
+                                facture.numero_facture
+                              ) : (
+                                <>
+                                  {getContactDisplayName(facture.contact)}
+                                  {facture.contact?.numero_contact && (
+                                    <span className="ml-2 text-sm font-normal text-gray-500">
+                                      ({formatNumeroContact(facture.contact.numero_contact)})
+                                    </span>
+                                  )}
+                                </>
+                              )}
                             </h3>
                             {/* Badge indicateur de notes */}
                             {facture.notes && facture.notes.trim() !== '' && (
@@ -1384,7 +1396,14 @@ export default function FacturesPage() {
                           {facture.type === 'client' && (
                             <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                               <User className="w-4 h-4" />
-                              <span>{getContactDisplayName(facture.contact)}</span>
+                              <span>
+                                {getContactDisplayName(facture.contact)}
+                                {facture.contact?.numero_contact && (
+                                  <span className="ml-2 text-xs text-gray-500">
+                                    ({formatNumeroContact(facture.contact.numero_contact)})
+                                  </span>
+                                )}
+                              </span>
                             </div>
                           )}
                           {facture.chantier && (

@@ -10,7 +10,8 @@ import {
   formatPhoneNumber,
   formatAddress,
   getPersonFullName,
-  getPaymentTermLabel
+  getPaymentTermLabel,
+  formatNumeroContact
 } from '../utils/contactHelpers'
 
 /**
@@ -70,6 +71,11 @@ export default function ContactDetailModal({
               <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
                 {typeLabel}
               </span>
+              {contact.numero_contact && (
+                <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
+                  {formatNumeroContact(contact.numero_contact)}
+                </span>
+              )}
               {contact.type === 'fournisseur' && contact.is_sous_traitant && (
                 <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                   Sous-traitant

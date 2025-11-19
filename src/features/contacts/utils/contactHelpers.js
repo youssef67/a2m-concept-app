@@ -111,6 +111,20 @@ export function getPaymentTermLabel(delaiPaiement) {
 }
 
 // ============================================
+// Contact number helpers
+// ============================================
+
+/**
+ * Format contact number for display
+ * @param {string} numeroContact - Contact number (C-XXXXXX or F-XXXXXX)
+ * @returns {string} Formatted contact number
+ */
+export function formatNumeroContact(numeroContact) {
+  if (!numeroContact) return '-'
+  return numeroContact
+}
+
+// ============================================
 // Phone number helpers
 // ============================================
 
