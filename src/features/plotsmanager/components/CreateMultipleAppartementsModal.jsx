@@ -4,7 +4,7 @@
  * Les tâches sont automatiquement héritées du chantier pour chaque lot
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Input from '../../../shared/components/ui/Input'
@@ -32,12 +32,20 @@ export default function CreateMultipleAppartementsModal({
   const [appartements, setAppartements] = useState([{ nom: '', etage: null }])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const inputRefs = useRef([])
 
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
       setAppartements([{ nom: '', etage: null }])
       setError(null)
+
+      // Auto-focus on first nom input when modal opens
+      setTimeout(() => {
+        if (inputRefs.current[0]) {
+          inputRefs.current[0].focus()
+        }
+      }, 100)
     }
   }, [isOpen])
 
@@ -47,8 +55,20 @@ export default function CreateMultipleAppartementsModal({
       setError(`Vous ne pouvez pas créer plus de ${MAX_APPARTEMENTS} lots à la fois`)
       return
     }
+    const newIndex = appartements.length
     setAppartements([...appartements, { nom: '', etage: null }])
     setError(null)
+
+    // Scroll to and focus the new lot's input field
+    setTimeout(() => {
+      if (inputRefs.current[newIndex]) {
+        inputRefs.current[newIndex].scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        })
+        inputRefs.current[newIndex].focus()
+      }
+    }, 100)
   }
 
   // Remove appartement field
@@ -235,6 +255,7 @@ export default function CreateMultipleAppartementsModal({
                     Nom
                   </label>
                   <Input
+                    ref={(el) => (inputRefs.current[index] = el)}
                     type="text"
                     value={appt.nom}
                     onChange={(e) => handleNomChange(index, e.target.value)}

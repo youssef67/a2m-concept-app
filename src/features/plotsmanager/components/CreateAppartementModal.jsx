@@ -4,7 +4,7 @@
  * Les tâches sont automatiquement héritées du chantier (création uniquement)
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Input from '../../../shared/components/ui/Input'
@@ -34,6 +34,7 @@ export default function CreateAppartementModal({
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationError, setValidationError] = useState(null)
+  const nomInputRef = useRef(null)
 
   // Initialize form data when modal opens (create or edit mode)
   useEffect(() => {
@@ -54,6 +55,13 @@ export default function CreateAppartementModal({
           has_tma: false
         })
       }
+
+      // Auto-focus on nom input when modal opens
+      setTimeout(() => {
+        if (nomInputRef.current) {
+          nomInputRef.current.focus()
+        }
+      }, 100)
     }
   }, [isOpen, isEditMode, appartementToEdit])
 
@@ -170,6 +178,7 @@ export default function CreateAppartementModal({
               Nom de l&apos;appartement <span className="text-red-500">*</span>
             </label>
             <Input
+              ref={nomInputRef}
               id="nom"
               name="nom"
               type="text"

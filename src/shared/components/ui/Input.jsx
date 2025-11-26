@@ -1,5 +1,6 @@
 import React from 'react'
-export default function Input({
+
+const Input = React.forwardRef(({
   type = 'text',
   name,
   value,
@@ -11,7 +12,7 @@ export default function Input({
   className = '',
   label,
   ...rest
-}) {
+}, ref) => {
   const baseClasses = 'w-full min-h-[48px] px-4 py-3 text-base border rounded-lg transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed'
   const errorClasses = error
     ? 'border-red-500 focus:border-red-600 focus:ring-2 focus:ring-red-200'
@@ -25,6 +26,7 @@ export default function Input({
         </label>
       )}
       <input
+        ref={ref}
         type={type}
         name={name}
         value={value ?? ''}
@@ -40,4 +42,8 @@ export default function Input({
       )}
     </div>
   )
-}
+})
+
+Input.displayName = 'Input'
+
+export default Input
