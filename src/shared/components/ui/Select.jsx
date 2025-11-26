@@ -39,7 +39,7 @@ export default function Select({ value, onChange, options, placeholder, classNam
       setTimeout(() => {
         selectRef.current?.scrollIntoView({
           behavior: 'smooth',
-          block: 'center'
+          block: 'start'
         })
       }, 100)
     }

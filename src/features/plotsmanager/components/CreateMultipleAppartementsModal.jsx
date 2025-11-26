@@ -33,6 +33,7 @@ export default function CreateMultipleAppartementsModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const inputRefs = useRef([])
+  const lotContainerRefs = useRef([])
 
   // Reset form when modal opens
   useEffect(() => {
@@ -59,16 +60,23 @@ export default function CreateMultipleAppartementsModal({
     setAppartements([...appartements, { nom: '', etage: null }])
     setError(null)
 
-    // Scroll to and focus the new lot's input field
+    // Scroll to the new lot container and focus the input field
     setTimeout(() => {
-      if (inputRefs.current[newIndex]) {
-        inputRefs.current[newIndex].scrollIntoView({
+      // Scroll to the lot container to show the entire lot (nom + dropdown)
+      if (lotContainerRefs.current[newIndex]) {
+        lotContainerRefs.current[newIndex].scrollIntoView({
           behavior: 'smooth',
-          block: 'center'
+          block: 'center',
+          inline: 'nearest'
         })
-        inputRefs.current[newIndex].focus()
       }
-    }, 100)
+      // Then focus the input after a small delay
+      setTimeout(() => {
+        if (inputRefs.current[newIndex]) {
+          inputRefs.current[newIndex].focus()
+        }
+      }, 100)
+    }, 200)
   }
 
   // Remove appartement field
@@ -230,7 +238,11 @@ export default function CreateMultipleAppartementsModal({
           {/* Appartements list */}
           <div className="space-y-4 max-h-[400px] overflow-y-auto">
             {appartements.map((appt, index) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-3 bg-white">
+              <div
+                key={index}
+                ref={(el) => (lotContainerRefs.current[index] = el)}
+                className="border border-gray-200 rounded-lg p-3 bg-white"
+              >
                 {/* Header with appartement number and delete button */}
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-medium text-gray-700">
