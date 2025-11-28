@@ -73,7 +73,7 @@ export default function FacturesPage() {
   const navigate = useNavigate()
 
   // State
-  const [activeTab, setActiveTab] = useState('en_attente') // Renamed from activeStatut to handle both factures and chantiers
+  const [activeTab, setActiveTab] = useState('tous') // Renamed from activeStatut to handle both factures and chantiers
   const [activeType, setActiveType] = useState('client')
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -346,6 +346,11 @@ export default function FacturesPage() {
   const statutTabs = useMemo(() => {
     const allTabs = [
       {
+        id: 'tous',
+        label: 'Tous',
+        count: factures.filter(f => f.statut !== 'annulee').length
+      },
+      {
         id: 'en_attente',
         label: 'En attente',
         count: factures.filter(f => f.statut === 'en_attente').length
@@ -386,7 +391,10 @@ export default function FacturesPage() {
 
   // Tabs configuration with counts - Niveau 2 : Type (basé sur statut actif)
   const typeTabs = useMemo(() => {
-    const statutFiltered = factures.filter(f => f.statut === activeTab)
+    // Pour l'onglet "Tous", on exclut les factures annulées
+    const statutFiltered = activeTab === 'tous'
+      ? factures.filter(f => f.statut !== 'annulee')
+      : factures.filter(f => f.statut === activeTab)
 
     return [
       {
@@ -424,15 +432,20 @@ export default function FacturesPage() {
 
   // Calculate overdue count (for button badge)
   const overdueCount = useMemo(() => {
-    const statutFiltered = factures.filter(f => f.statut === activeTab)
+    // Pour l'onglet "Tous", on exclut les factures annulées
+    const statutFiltered = activeTab === 'tous'
+      ? factures.filter(f => f.statut !== 'annulee')
+      : factures.filter(f => f.statut === activeTab)
     const typeFiltered = statutFiltered.filter(f => f.type === activeType)
     return typeFiltered.filter(f => isFactureOverdue(f)).length
   }, [factures, activeTab, activeType])
 
   // Filter and search factures
   const filteredFactures = useMemo(() => {
-    // 1. Filtrer par statut
-    const statutFiltered = factures.filter(facture => facture.statut === activeTab)
+    // 1. Filtrer par statut (pour "Tous", exclure les annulées)
+    const statutFiltered = activeTab === 'tous'
+      ? factures.filter(facture => facture.statut !== 'annulee')
+      : factures.filter(facture => facture.statut === activeTab)
 
     // 2. Filtrer par type
     const typeFiltered = statutFiltered.filter(facture => facture.type === activeType)
