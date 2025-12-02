@@ -94,7 +94,8 @@ export async function getAllFactures(type = null) {
           created_at
         ),
         notes:facture_notes(
-          id
+          id,
+          is_important
         )
       `)
       .order('date_emission', { ascending: false })
@@ -129,15 +130,17 @@ export async function getAllFactures(type = null) {
         ? facture.documents[0]
         : null
 
-      // Count notes
+      // Count notes and check for important ones
       const notesCount = facture.notes?.length || 0
+      const hasImportantNotes = facture.notes?.some(n => n.is_important) || false
 
       return {
         ...facture,
         montant_paye: montantPaye,
         montant_restant: Math.max(0, montantRestant), // Ensure not negative
         document, // Single document (or null)
-        notes_count: notesCount
+        notes_count: notesCount,
+        has_important_notes: hasImportantNotes
       }
     })
 

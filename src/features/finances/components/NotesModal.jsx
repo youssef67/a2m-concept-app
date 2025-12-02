@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { StickyNote, Plus, Edit2, Trash2, X, Check, Calendar } from 'lucide-react'
+import { StickyNote, Plus, Edit2, Trash2, X, Check, Calendar, Flag } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Spinner from '../../../shared/components/ui/Spinner'
-import { getNotes, createNote, updateNote, deleteNote } from '../services/notesService'
+import { getNotes, createNote, updateNote, deleteNote, toggleNoteImportance } from '../services/notesService'
 import { formatDate } from '../utils/factureHelpers'
 
 /**
@@ -24,6 +24,7 @@ export default function NotesModal({
   const [saving, setSaving] = useState(false)
   const [isAddingNote, setIsAddingNote] = useState(false)
   const [newNoteContent, setNewNoteContent] = useState('')
+  const [newNoteImportant, setNewNoteImportant] = useState(false)
   const [editingNoteId, setEditingNoteId] = useState(null)
   const [editingContent, setEditingContent] = useState('')
   const [error, setError] = useState(null)
@@ -52,6 +53,7 @@ export default function NotesModal({
     if (!isOpen) {
       setIsAddingNote(false)
       setNewNoteContent('')
+      setNewNoteImportant(false)
       setEditingNoteId(null)
       setEditingContent('')
       setError(null)
@@ -62,11 +64,24 @@ export default function NotesModal({
     if (!newNoteContent.trim()) return
 
     setSaving(true)
-    const result = await createNote(facture.id, newNoteContent)
+    const result = await createNote(facture.id, newNoteContent, newNoteImportant)
     if (result.success) {
       setNotes([result.data, ...notes])
       setNewNoteContent('')
+      setNewNoteImportant(false)
       setIsAddingNote(false)
+      onNotesChange?.()
+    } else {
+      setError(result.error)
+    }
+    setSaving(false)
+  }
+
+  const handleToggleImportance = async (note) => {
+    setSaving(true)
+    const result = await toggleNoteImportance(note.id, !note.is_important)
+    if (result.success) {
+      setNotes(notes.map(n => n.id === note.id ? result.data : n))
       onNotesChange?.()
     } else {
       setError(result.error)
@@ -142,12 +157,23 @@ export default function NotesModal({
               rows={3}
               autoFocus
             />
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={newNoteImportant}
+                onChange={(e) => setNewNoteImportant(e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+              />
+              <Flag className={`w-4 h-4 ${newNoteImportant ? 'text-red-600' : 'text-gray-400'}`} />
+              <span className="text-sm text-gray-700">Action requise</span>
+            </label>
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={() => {
                   setIsAddingNote(false)
                   setNewNoteContent('')
+                  setNewNoteImportant(false)
                 }}
                 disabled={saving}
               >
@@ -187,7 +213,11 @@ export default function NotesModal({
             {notes.map((note) => (
               <div
                 key={note.id}
-                className="p-4 bg-amber-50 border border-amber-200 rounded-lg"
+                className={`p-4 rounded-lg ${
+                  note.is_important
+                    ? 'bg-red-50 border border-red-200'
+                    : 'bg-amber-50 border border-amber-200'
+                }`}
               >
                 {editingNoteId === note.id ? (
                   /* Editing mode */
@@ -222,13 +252,35 @@ export default function NotesModal({
                   /* View mode */
                   <>
                     <div className="flex items-start justify-between gap-3">
-                      <p className="text-gray-800 whitespace-pre-wrap flex-1">
-                        {note.contenu}
-                      </p>
+                      <div className="flex-1">
+                        {note.is_important && (
+                          <div className="flex items-center gap-1 text-red-600 text-xs font-medium mb-1">
+                            <Flag className="w-3 h-3" />
+                            <span>Action requise</span>
+                          </div>
+                        )}
+                        <p className="text-gray-800 whitespace-pre-wrap">
+                          {note.contenu}
+                        </p>
+                      </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <button
+                          onClick={() => handleToggleImportance(note)}
+                          disabled={saving}
+                          className={`p-2 rounded-lg transition-colors ${
+                            note.is_important
+                              ? 'text-red-600 hover:bg-red-100'
+                              : 'text-gray-400 hover:bg-gray-100 hover:text-red-500'
+                          }`}
+                          title={note.is_important ? 'Retirer le flag' : 'Marquer comme action requise'}
+                        >
+                          <Flag className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleStartEdit(note)}
-                          className="p-2 text-gray-500 hover:bg-amber-100 rounded-lg transition-colors"
+                          className={`p-2 text-gray-500 rounded-lg transition-colors ${
+                            note.is_important ? 'hover:bg-red-100' : 'hover:bg-amber-100'
+                          }`}
                           title="Modifier"
                         >
                           <Edit2 className="w-4 h-4" />

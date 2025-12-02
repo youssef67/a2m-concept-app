@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings, AlertCircle, XCircle, Building2, StickyNote, CheckCircle } from 'lucide-react'
+import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings, AlertCircle, XCircle, Building2, StickyNote, CheckCircle, Flag } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
 import Button from '../../../shared/components/ui/Button'
@@ -83,6 +83,7 @@ export default function FacturesPage() {
   const [selectedContactFilter, setSelectedContactFilter] = useState('')
   const [selectedChantierFilter, setSelectedChantierFilter] = useState('')
   const [showOverdueOnly, setShowOverdueOnly] = useState(false)
+  const [showImportantNotesOnly, setShowImportantNotesOnly] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingFacture, setEditingFacture] = useState(null)
   const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false)
@@ -464,6 +465,16 @@ export default function FacturesPage() {
     return typeFiltered.filter(f => isFactureOverdue(f)).length
   }, [factures, activeTab, activeType])
 
+  // Calculate important notes count (for button badge)
+  const importantNotesCount = useMemo(() => {
+    // Pour l'onglet "Tous", on exclut les factures annulées
+    const statutFiltered = activeTab === 'tous'
+      ? factures.filter(f => f.statut !== 'annulee')
+      : factures.filter(f => f.statut === activeTab)
+    const typeFiltered = statutFiltered.filter(f => f.type === activeType)
+    return typeFiltered.filter(f => f.has_important_notes).length
+  }, [factures, activeTab, activeType])
+
   // Filter and search factures
   const filteredFactures = useMemo(() => {
     // 1. Filtrer par statut (pour "Tous", exclure les annulées)
@@ -489,16 +500,21 @@ export default function FacturesPage() {
       ? contactFiltered.filter(facture => facture.chantier?.id === selectedChantierFilter)
       : contactFiltered
 
-    // 6. Appliquer la recherche
-    const searched = searchFactures(chantierFiltered, searchQuery)
+    // 6. Filtrer par notes importantes (si activé)
+    const importantNotesFiltered = showImportantNotesOnly
+      ? chantierFiltered.filter(facture => facture.has_important_notes)
+      : chantierFiltered
 
-    // 7. Trier par numéro de facture (du plus élevé au plus bas)
+    // 7. Appliquer la recherche
+    const searched = searchFactures(importantNotesFiltered, searchQuery)
+
+    // 8. Trier par numéro de facture (du plus élevé au plus bas)
     return searched.sort((a, b) => {
       const numA = a.numero_facture ? parseInt(a.numero_facture.split('-').pop(), 10) || 0 : 0
       const numB = b.numero_facture ? parseInt(b.numero_facture.split('-').pop(), 10) || 0 : 0
       return numB - numA // Tri décroissant
     })
-  }, [factures, activeTab, activeType, showOverdueOnly, selectedContactFilter, selectedChantierFilter, searchQuery])
+  }, [factures, activeTab, activeType, showOverdueOnly, selectedContactFilter, selectedChantierFilter, showImportantNotesOnly, searchQuery])
 
   // Filter and search chantiers (for "Fin de chantier" tab)
   const filteredChantiers = useMemo(() => {
@@ -656,6 +672,7 @@ export default function FacturesPage() {
     setSelectedContactFilter('')
     setSelectedChantierFilter('')
     setShowOverdueOnly(false)
+    setShowImportantNotesOnly(false)
   }
 
   // Reset contact and chantier filters when type changes
@@ -667,7 +684,7 @@ export default function FacturesPage() {
   // Reset page when filter or search changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [activeTab, activeType, selectedContactFilter, selectedChantierFilter, searchQuery, showOverdueOnly])
+  }, [activeTab, activeType, selectedContactFilter, selectedChantierFilter, searchQuery, showOverdueOnly, showImportantNotesOnly])
 
   // Redirect if on "fin_chantier" tab with type "fournisseur"
   useEffect(() => {
@@ -1422,13 +1439,36 @@ export default function FacturesPage() {
                   )}
                 </button>
 
+                {/* Important Notes Filter Button */}
+                <button
+                  onClick={() => setShowImportantNotesOnly(!showImportantNotesOnly)}
+                  className={`
+                    h-12 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
+                    ${showImportantNotesOnly
+                      ? 'bg-orange-600 text-white hover:bg-orange-700'
+                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }
+                  `}
+                >
+                  <Flag className="w-5 h-5" />
+                  <span>Action</span>
+                  {importantNotesCount > 0 && (
+                    <span className={`
+                      px-2 py-0.5 rounded-full text-xs font-semibold
+                      ${showImportantNotesOnly ? 'bg-orange-800 text-white' : 'bg-orange-100 text-orange-800'}
+                    `}>
+                      {importantNotesCount}
+                    </span>
+                  )}
+                </button>
+
                 {/* Clear Filters Button */}
                 <button
                   onClick={handleClearFilters}
-                  disabled={!searchQuery && !selectedContactFilter && !selectedChantierFilter && !showOverdueOnly}
+                  disabled={!searchQuery && !selectedContactFilter && !selectedChantierFilter && !showOverdueOnly && !showImportantNotesOnly}
                   className={`
                     h-12 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
-                    ${(!searchQuery && !selectedContactFilter && !selectedChantierFilter && !showOverdueOnly)
+                    ${(!searchQuery && !selectedContactFilter && !selectedChantierFilter && !showOverdueOnly && !showImportantNotesOnly)
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                     }
@@ -1530,16 +1570,20 @@ export default function FacturesPage() {
                   }}
                   className={`
                     absolute top-3 right-3 p-2 rounded-lg transition-colors
-                    ${facture.notes_count > 0
-                      ? 'text-amber-600 bg-amber-50 hover:bg-amber-100'
-                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                    ${facture.has_important_notes
+                      ? 'text-red-600 bg-red-50 hover:bg-red-100'
+                      : facture.notes_count > 0
+                        ? 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                     }
                   `}
-                  title={facture.notes_count > 0 ? `${facture.notes_count} note(s)` : 'Ajouter une note'}
+                  title={facture.has_important_notes ? 'Notes avec action requise' : facture.notes_count > 0 ? `${facture.notes_count} note(s)` : 'Ajouter une note'}
                 >
                   <StickyNote className="w-5 h-5" />
                   {facture.notes_count > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-amber-600 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-medium">
+                    <span className={`absolute -top-1 -right-1 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-medium ${
+                      facture.has_important_notes ? 'bg-red-600' : 'bg-amber-600'
+                    }`}>
                       {facture.notes_count}
                     </span>
                   )}

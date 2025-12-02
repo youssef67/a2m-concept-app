@@ -31,9 +31,10 @@ export async function getNotes(factureId) {
  * Create a new note for a facture
  * @param {string} factureId - UUID of the facture
  * @param {string} contenu - Note content
+ * @param {boolean} isImportant - Whether the note requires action
  * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
  */
-export async function createNote(factureId, contenu) {
+export async function createNote(factureId, contenu, isImportant = false) {
   try {
     if (!contenu || !contenu.trim()) {
       return { success: false, error: 'Le contenu de la note est requis' }
@@ -43,7 +44,8 @@ export async function createNote(factureId, contenu) {
       .from('facture_notes')
       .insert({
         facture_id: factureId,
-        contenu: contenu.trim()
+        contenu: contenu.trim(),
+        is_important: isImportant
       })
       .select()
       .single()
@@ -103,5 +105,29 @@ export async function deleteNote(noteId) {
   } catch (error) {
     console.error('Error deleting note:', error)
     return { success: false, error: 'Erreur lors de la suppression de la note' }
+  }
+}
+
+/**
+ * Toggle the importance of a note
+ * @param {string} noteId - UUID of the note
+ * @param {boolean} isImportant - New importance value
+ * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
+ */
+export async function toggleNoteImportance(noteId, isImportant) {
+  try {
+    const { data, error } = await supabase
+      .from('facture_notes')
+      .update({ is_important: isImportant })
+      .eq('id', noteId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return { success: true, data }
+  } catch (error) {
+    console.error('Error toggling note importance:', error)
+    return { success: false, error: 'Erreur lors de la modification de la note' }
   }
 }
