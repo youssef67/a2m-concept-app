@@ -409,49 +409,67 @@ export default function FacturesPage() {
     return contacts.filter(c => c.type === activeType)
   }, [contacts, activeType])
 
-  // Contact filter options for SearchableSelect component
+  // Contact filter options for SearchableSelect component - filtered by active tab
   const contactFilterOptions = useMemo(() => {
+    // Filtrer les factures par onglet actif et type
+    const facturesForTab = activeTab === 'tous'
+      ? factures.filter(f => f.statut !== 'annulee' && f.type === activeType)
+      : activeTab === 'en_attente'
+        ? factures.filter(f => (f.statut === 'en_attente' || f.statut === 'partiellement_payee') && f.type === activeType)
+        : factures.filter(f => f.statut === activeTab && f.type === activeType)
+
+    // Extraire les contact_ids uniques
+    const contactIdsWithFactures = new Set(facturesForTab.map(f => f.contact_id))
+
+    // Filtrer les contacts disponibles
+    const filteredContacts = availableContacts.filter(c => contactIdsWithFactures.has(c.id))
+
     const allOption = {
       value: '',
       label: activeType === 'client' ? 'Tous les clients' : 'Tous les fournisseurs'
     }
 
-    const contactOptions = availableContacts.map(contact => ({
+    const contactOptions = filteredContacts.map(contact => ({
       value: contact.id,
       label: getContactDisplayName(contact)
     }))
 
     return [allOption, ...contactOptions]
-  }, [availableContacts, activeType])
+  }, [availableContacts, activeType, activeTab, factures])
 
-  // Chantier filter options for SearchableSelect component
+  // Chantier filter options for SearchableSelect component - filtered by active tab
   const chantierFilterOptions = useMemo(() => {
     const allOption = {
       value: '',
       label: 'Tous les chantiers'
     }
 
-    // Get unique chantiers from factures of the current type
+    // Filtrer les factures par onglet actif et type
+    const facturesForTab = activeTab === 'tous'
+      ? factures.filter(f => f.statut !== 'annulee' && f.type === activeType && f.chantier)
+      : activeTab === 'en_attente'
+        ? factures.filter(f => (f.statut === 'en_attente' || f.statut === 'partiellement_payee') && f.type === activeType && f.chantier)
+        : factures.filter(f => f.statut === activeTab && f.type === activeType && f.chantier)
+
+    // Get unique chantiers
     const uniqueChantierIds = new Set()
     const chantierOptions = []
 
-    factures
-      .filter(f => f.type === activeType && f.chantier)
-      .forEach(f => {
-        if (!uniqueChantierIds.has(f.chantier.id)) {
-          uniqueChantierIds.add(f.chantier.id)
-          chantierOptions.push({
-            value: f.chantier.id,
-            label: f.chantier.titre
-          })
-        }
-      })
+    facturesForTab.forEach(f => {
+      if (!uniqueChantierIds.has(f.chantier.id)) {
+        uniqueChantierIds.add(f.chantier.id)
+        chantierOptions.push({
+          value: f.chantier.id,
+          label: f.chantier.titre
+        })
+      }
+    })
 
     // Sort by label
     chantierOptions.sort((a, b) => a.label.localeCompare(b.label, 'fr'))
 
     return [allOption, ...chantierOptions]
-  }, [factures, activeType])
+  }, [factures, activeType, activeTab])
 
   // Calculate overdue count (for button badge)
   const overdueCount = useMemo(() => {
@@ -682,11 +700,11 @@ export default function FacturesPage() {
     setShowImportantNotesOnly(false)
   }
 
-  // Reset contact and chantier filters when type changes
+  // Reset contact and chantier filters when type or tab changes
   useEffect(() => {
     setSelectedContactFilter('')
     setSelectedChantierFilter('')
-  }, [activeType])
+  }, [activeType, activeTab])
 
   // Reset page when filter or search changes
   useEffect(() => {
