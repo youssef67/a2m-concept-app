@@ -211,7 +211,7 @@ export default function FacturesPage() {
     const type = searchParams.get('type')
     const overdue = searchParams.get('overdue')
 
-    if (tab && ['en_attente', 'partiellement_payee', 'payee', 'annulee', 'fin_chantier'].includes(tab)) {
+    if (tab && ['en_attente', 'payee', 'annulee', 'fin_chantier'].includes(tab)) {
       setActiveTab(tab)
     }
     if (type && ['client', 'fournisseur'].includes(type)) {
@@ -349,12 +349,7 @@ export default function FacturesPage() {
       {
         id: 'en_attente',
         label: 'En attente',
-        count: factures.filter(f => f.statut === 'en_attente').length
-      },
-      {
-        id: 'partiellement_payee',
-        label: 'Partiellement payées',
-        count: factures.filter(f => f.statut === 'partiellement_payee').length
+        count: factures.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee').length
       },
       {
         id: 'payee',
@@ -388,9 +383,12 @@ export default function FacturesPage() {
   // Tabs configuration with counts - Niveau 2 : Type (basé sur statut actif)
   const typeTabs = useMemo(() => {
     // Pour l'onglet "Tous", on exclut les factures annulées
+    // Pour l'onglet "En attente", on inclut en_attente ET partiellement_payee
     const statutFiltered = activeTab === 'tous'
       ? factures.filter(f => f.statut !== 'annulee')
-      : factures.filter(f => f.statut === activeTab)
+      : activeTab === 'en_attente'
+        ? factures.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee')
+        : factures.filter(f => f.statut === activeTab)
 
     return [
       {
@@ -458,9 +456,12 @@ export default function FacturesPage() {
   // Calculate overdue count (for button badge)
   const overdueCount = useMemo(() => {
     // Pour l'onglet "Tous", on exclut les factures annulées
+    // Pour l'onglet "En attente", on inclut en_attente ET partiellement_payee
     const statutFiltered = activeTab === 'tous'
       ? factures.filter(f => f.statut !== 'annulee')
-      : factures.filter(f => f.statut === activeTab)
+      : activeTab === 'en_attente'
+        ? factures.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee')
+        : factures.filter(f => f.statut === activeTab)
     const typeFiltered = statutFiltered.filter(f => f.type === activeType)
     return typeFiltered.filter(f => isFactureOverdue(f)).length
   }, [factures, activeTab, activeType])
@@ -468,9 +469,12 @@ export default function FacturesPage() {
   // Calculate important notes count (for button badge)
   const importantNotesCount = useMemo(() => {
     // Pour l'onglet "Tous", on exclut les factures annulées
+    // Pour l'onglet "En attente", on inclut en_attente ET partiellement_payee
     const statutFiltered = activeTab === 'tous'
       ? factures.filter(f => f.statut !== 'annulee')
-      : factures.filter(f => f.statut === activeTab)
+      : activeTab === 'en_attente'
+        ? factures.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee')
+        : factures.filter(f => f.statut === activeTab)
     const typeFiltered = statutFiltered.filter(f => f.type === activeType)
     return typeFiltered.filter(f => f.has_important_notes).length
   }, [factures, activeTab, activeType])
@@ -478,9 +482,12 @@ export default function FacturesPage() {
   // Filter and search factures
   const filteredFactures = useMemo(() => {
     // 1. Filtrer par statut (pour "Tous", exclure les annulées)
+    // Pour l'onglet "En attente", on inclut en_attente ET partiellement_payee
     const statutFiltered = activeTab === 'tous'
       ? factures.filter(facture => facture.statut !== 'annulee')
-      : factures.filter(facture => facture.statut === activeTab)
+      : activeTab === 'en_attente'
+        ? factures.filter(facture => facture.statut === 'en_attente' || facture.statut === 'partiellement_payee')
+        : factures.filter(facture => facture.statut === activeTab)
 
     // 2. Filtrer par type
     const typeFiltered = statutFiltered.filter(facture => facture.type === activeType)
@@ -1286,8 +1293,7 @@ export default function FacturesPage() {
 
     // Messages pour les factures selon le statut
     const statutMessages = {
-      'en_attente': 'Aucune facture en attente',
-      'partiellement_payee': 'Aucune facture partiellement payée',
+      'en_attente': 'Aucune facture en attente de paiement',
       'payee': 'Aucune facture payée',
       'annulee': 'Aucune facture annulée'
     }
