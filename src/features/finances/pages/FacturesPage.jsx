@@ -47,7 +47,7 @@ import {
   calculateTotalDeductions,
   calculateDeductionMontant
 } from '../utils/factureHelpers'
-import { formatNumeroContact } from '../../contacts/utils/contactHelpers'
+import { formatNumeroContact, getPaymentTermLabel } from '../../contacts/utils/contactHelpers'
 import {
   getClientDisplayName as getChantierClientName,
   getStatutLabel as getChantierStatutLabel,
@@ -224,31 +224,6 @@ export default function FacturesPage() {
       initialDateEmissionRef.current = null
     }
   }, [editingFacture, isModalOpen])
-
-  // Auto-calculate date échéance when contact or date émission changes
-  React.useEffect(() => {
-    // Mode création : calcul automatique
-    if (selectedContactId && dateEmission && isModalOpen && !editingFacture) {
-      const contact = contacts.find(c => c.id === selectedContactId)
-      if (contact?.delai_paiement) {
-        const calculatedDate = calculateDateEcheance(dateEmission, contact.delai_paiement)
-        setDateEcheance(calculatedDate)
-      }
-    }
-
-    // Mode édition : recalculer UNIQUEMENT si dateEmission a changé manuellement
-    if (editingFacture && isModalOpen && selectedContactId && dateEmission) {
-      const hasDateEmissionChanged = initialDateEmissionRef.current !== dateEmission
-
-      if (hasDateEmissionChanged) {
-        const contact = contacts.find(c => c.id === selectedContactId)
-        if (contact?.delai_paiement) {
-          const calculatedDate = calculateDateEcheance(dateEmission, contact.delai_paiement)
-          setDateEcheance(calculatedDate)
-        }
-      }
-    }
-  }, [selectedContactId, dateEmission, contacts, isModalOpen, editingFacture])
 
   // Reset chantier when contact changes (except during edit initialization)
   React.useEffect(() => {
@@ -2295,6 +2270,18 @@ export default function FacturesPage() {
                 onChange={(e) => setDateEcheance(e.target.value)}
                 className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
+              {/* Indication du délai de paiement du contact */}
+              {selectedContactId && (() => {
+                const contact = contacts.find(c => c.id === selectedContactId)
+                if (contact?.delai_paiement) {
+                  return (
+                    <p className="mt-1 text-sm text-gray-500">
+                      Délai de paiement du contact : <span className="font-medium text-primary-600">{getPaymentTermLabel(contact.delai_paiement)}</span>
+                    </p>
+                  )
+                }
+                return null
+              })()}
             </div>
 
             {/* Statut */}
