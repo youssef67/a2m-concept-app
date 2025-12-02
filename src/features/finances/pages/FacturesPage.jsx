@@ -23,6 +23,7 @@ import MultiPaiementModal from '../components/MultiPaiementModal'
 import DeleteMultipleModal from '../components/DeleteMultipleModal'
 import DeleteFactureModal from '../components/DeleteFactureModal'
 import MarquerPayeModal from '../components/MarquerPayeModal'
+import FactureDetailModal from '../components/FactureDetailModal'
 import { useFactures } from '../hooks/useFactures'
 import { useContacts } from '../hooks/useContacts'
 import { useDocuments } from '../hooks/useDocuments'
@@ -104,6 +105,10 @@ export default function FacturesPage() {
   // Marquer comme payé modal (Fin de chantier)
   const [isMarquerPayeModalOpen, setIsMarquerPayeModalOpen] = useState(false)
   const [selectedChantierForPaiement, setSelectedChantierForPaiement] = useState(null)
+
+  // Detail modal state
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [selectedDetailFacture, setSelectedDetailFacture] = useState(null)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -992,6 +997,34 @@ export default function FacturesPage() {
   }
 
   /**
+   * Open detail modal
+   */
+  const handleOpenDetail = (facture) => {
+    setSelectedDetailFacture(facture)
+    setIsDetailModalOpen(true)
+  }
+
+  /**
+   * Close detail modal and open edit form
+   */
+  const handleDetailToEdit = () => {
+    const facture = selectedDetailFacture
+    setIsDetailModalOpen(false)
+    setSelectedDetailFacture(null)
+    handleEdit(facture)
+  }
+
+  /**
+   * Close detail modal and open payment modal
+   */
+  const handleDetailToPaiement = () => {
+    const facture = selectedDetailFacture
+    setIsDetailModalOpen(false)
+    setSelectedDetailFacture(null)
+    handleOpenPaiement(facture)
+  }
+
+  /**
    * Handle payment change (refresh factures to update status and amounts)
    */
   const handlePaiementChange = () => {
@@ -1356,12 +1389,13 @@ export default function FacturesPage() {
             {paginatedFactures.map(facture => (
               <div
                 key={facture.id}
-                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => handleOpenDetail(facture)}
               >
                 <div className="flex gap-3">
                   {/* Checkbox in selection mode */}
                   {selectionMode && (
-                    <div className="flex items-start pt-1">
+                    <div className="flex items-start pt-1" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selectedFactureIds.has(facture.id)}
@@ -1501,7 +1535,7 @@ export default function FacturesPage() {
                   </div>
 
                   {/* Right: Actions */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="outline"
                       onClick={() => handleViewDocuments(facture)}
@@ -2381,6 +2415,18 @@ export default function FacturesPage() {
           hasFinalisation95={selectedChantierForPaiement?.finalisation_95 || false}
           hasRetenueGarantie={selectedChantierForPaiement ? chantierHasRetenueGarantie(selectedChantierForPaiement.id, factures) : false}
           onConfirm={handleConfirmMarquerPaye}
+        />
+
+        {/* Modal Détail Facture */}
+        <FactureDetailModal
+          isOpen={isDetailModalOpen}
+          onClose={() => {
+            setIsDetailModalOpen(false)
+            setSelectedDetailFacture(null)
+          }}
+          facture={selectedDetailFacture}
+          onEdit={handleDetailToEdit}
+          onPaiement={handleDetailToPaiement}
         />
       </div>
     </AppLayout>
