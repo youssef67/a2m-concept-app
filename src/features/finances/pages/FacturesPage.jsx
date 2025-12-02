@@ -24,6 +24,7 @@ import DeleteMultipleModal from '../components/DeleteMultipleModal'
 import DeleteFactureModal from '../components/DeleteFactureModal'
 import MarquerPayeModal from '../components/MarquerPayeModal'
 import FactureDetailModal from '../components/FactureDetailModal'
+import NotesModal from '../components/NotesModal'
 import { useFactures } from '../hooks/useFactures'
 import { useContacts } from '../hooks/useContacts'
 import { useDocuments } from '../hooks/useDocuments'
@@ -119,6 +120,10 @@ export default function FacturesPage() {
   const [openPdfMenuId, setOpenPdfMenuId] = useState(null)
   const pdfInputRef = useRef(null)
   const [pdfUploadFactureId, setPdfUploadFactureId] = useState(null)
+
+  // Notes modal state
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false)
+  const [selectedNotesFacture, setSelectedNotesFacture] = useState(null)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -778,7 +783,6 @@ export default function FacturesPage() {
       date_emission: formData.get('date_emission'),
       date_echeance: formData.get('date_echeance'),
       statut: formData.get('statut') || 'en_attente',
-      notes: formData.get('notes') || null,
       // Champs TVA
       montant_ht: null,
       montant_ttc: null,
@@ -1119,6 +1123,21 @@ export default function FacturesPage() {
     } else {
       showToast(error || 'Erreur lors de la suppression du PDF', 'error')
     }
+  }
+
+  /**
+   * Open notes modal for a facture
+   */
+  const handleOpenNotes = (facture) => {
+    setSelectedNotesFacture(facture)
+    setIsNotesModalOpen(true)
+  }
+
+  /**
+   * Handle notes change (refresh factures to update notes count)
+   */
+  const handleNotesChange = () => {
+    refreshFactures()
   }
 
   /**
@@ -1703,6 +1722,26 @@ export default function FacturesPage() {
                         <span className="hidden md:inline">Ajouter PDF</span>
                       </Button>
                     )}
+
+                    {/* Notes button */}
+                    <button
+                      onClick={() => handleOpenNotes(facture)}
+                      className={`
+                        flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors
+                        ${facture.notes_count > 0
+                          ? 'text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200'
+                          : 'text-gray-600 bg-white hover:bg-gray-50 border border-gray-300'
+                        }
+                      `}
+                      title={facture.notes_count > 0 ? `${facture.notes_count} note(s)` : 'Ajouter une note'}
+                    >
+                      <StickyNote className="w-4 h-4" />
+                      {facture.notes_count > 0 && (
+                        <span className="bg-amber-600 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                          {facture.notes_count}
+                        </span>
+                      )}
+                    </button>
 
                     {/* Paiement button - Only shown if en_attente or partiellement_payee */}
                     {(facture.statut === 'en_attente' || facture.statut === 'partiellement_payee') && (
@@ -2353,20 +2392,6 @@ export default function FacturesPage() {
               <input type="hidden" name="statut" value={factureStatut} />
             </div>
 
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notes
-              </label>
-              <textarea
-                name="notes"
-                rows="3"
-                defaultValue={editingFacture?.notes || ''}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-                placeholder="Notes additionnelles..."
-              />
-            </div>
-
             {/* Exclusion des calculs */}
             <div className="space-y-4 pt-4 border-t border-gray-200">
               <div className="flex items-start">
@@ -2630,6 +2655,17 @@ export default function FacturesPage() {
             )}
           </div>
         </Modal>
+
+        {/* Notes Modal */}
+        <NotesModal
+          isOpen={isNotesModalOpen}
+          onClose={() => {
+            setIsNotesModalOpen(false)
+            setSelectedNotesFacture(null)
+          }}
+          facture={selectedNotesFacture}
+          onNotesChange={handleNotesChange}
+        />
       </div>
     </AppLayout>
   )

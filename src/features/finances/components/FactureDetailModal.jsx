@@ -1,5 +1,5 @@
 import React from 'react'
-import { FileText, User, Calendar, CreditCard, AlertTriangle, Edit2, StickyNote } from 'lucide-react'
+import { FileText, User, Calendar, CreditCard, AlertTriangle, Edit2 } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import {
@@ -160,19 +160,6 @@ export default function FactureDetailModal({
             </div>
           )}
         </div>
-
-        {/* Notes */}
-        {facture.notes && (
-          <div className="space-y-3 pt-4 border-t border-gray-200">
-            <div className="flex items-center gap-2">
-              <StickyNote className="w-5 h-5 text-gray-400" />
-              <h3 className="text-lg font-semibold text-gray-900">Notes</h3>
-            </div>
-            <p className="text-base text-gray-700 italic bg-gray-50 rounded-lg p-3">
-              {facture.notes}
-            </p>
-          </div>
-        )}
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-6 border-t border-gray-200">
