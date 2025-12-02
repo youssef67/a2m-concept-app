@@ -24,7 +24,8 @@ export default function AppartementLivraisonTab({
   loading: plinthesLoading,
   onOpenPlinthesModal,
   triggerOpenModal = false,
-  onLivraisonCreated
+  onLivraisonCreated,
+  refreshKey = 0
 }) {
   const {
     livraisons,
@@ -57,6 +58,13 @@ export default function AppartementLivraisonTab({
       handleCreateClick()
     }
   }, [triggerOpenModal])
+
+  // Reload livraisons when refreshKey changes (triggered by parent after creation from navbar)
+  useEffect(() => {
+    if (refreshKey > 0) {
+      loadLivraisons()
+    }
+  }, [refreshKey, loadLivraisons])
 
   // Handle création nouvelle livraison
   const handleCreateClick = () => {

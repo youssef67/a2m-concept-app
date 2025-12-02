@@ -117,6 +117,9 @@ export default function AppartementDetailPage() {
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isLivraisonModalOpen, setIsLivraisonModalOpen] = useState(false)
 
+  // Refresh key to force AppartementLivraisonTab to reload after creation from navbar
+  const [livraisonRefreshKey, setLivraisonRefreshKey] = useState(0)
+
   // Load appartement data
   useEffect(() => {
     async function loadAppartement() {
@@ -269,6 +272,7 @@ export default function AppartementDetailPage() {
     if (result.success) {
       setIsLivraisonModalOpen(false)
       setActiveTab('livraison') // Basculer sur l'onglet livraison après création
+      setLivraisonRefreshKey(prev => prev + 1) // Force refresh du tab
       showToast('Livraison créée avec succès', 'success')
     } else {
       showToast('Erreur lors de la création de la livraison', 'error')
@@ -570,6 +574,7 @@ export default function AppartementDetailPage() {
                   plinthes={plinthes}
                   loading={plinthesLoading}
                   onOpenPlinthesModal={() => setIsPlinthesModalOpen(true)}
+                  refreshKey={livraisonRefreshKey}
                 />
               )}
             </div>
