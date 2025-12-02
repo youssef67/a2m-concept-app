@@ -76,7 +76,7 @@ export default function FacturesPage() {
   const navigate = useNavigate()
 
   // State
-  const [activeTab, setActiveTab] = useState('tous') // Renamed from activeStatut to handle both factures and chantiers
+  const [activeTab, setActiveTab] = useState('en_attente') // Renamed from activeStatut to handle both factures and chantiers
   const [activeType, setActiveType] = useState('client')
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -211,7 +211,7 @@ export default function FacturesPage() {
     const type = searchParams.get('type')
     const overdue = searchParams.get('overdue')
 
-    if (tab && ['en_attente', 'payee', 'annulee', 'fin_chantier'].includes(tab)) {
+    if (tab && ['en_attente', 'payee', 'tous', 'annulee', 'fin_chantier'].includes(tab)) {
       setActiveTab(tab)
     }
     if (type && ['client', 'fournisseur'].includes(type)) {
@@ -342,11 +342,6 @@ export default function FacturesPage() {
   const statutTabs = useMemo(() => {
     const allTabs = [
       {
-        id: 'tous',
-        label: 'Tous',
-        count: factures.filter(f => f.statut !== 'annulee').length
-      },
-      {
         id: 'en_attente',
         label: 'En attente',
         count: factures.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee').length
@@ -355,6 +350,11 @@ export default function FacturesPage() {
         id: 'payee',
         label: 'Payées',
         count: factures.filter(f => f.statut === 'payee').length
+      },
+      {
+        id: 'tous',
+        label: 'Tous',
+        count: factures.filter(f => f.statut !== 'annulee').length
       },
       {
         id: 'annulee',
