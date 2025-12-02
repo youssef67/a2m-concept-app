@@ -83,8 +83,11 @@ export function searchFactures(factures, query) {
     // Search in montant (as string)
     if (facture.montant?.toString().includes(lowerQuery)) return true
 
-    // Search in notes
-    if (facture.notes?.toLowerCase().includes(lowerQuery)) return true
+    // Search in lot
+    if (facture.lot?.toLowerCase().includes(lowerQuery)) return true
+
+    // Search in chantier titre
+    if (facture.chantier?.titre?.toLowerCase().includes(lowerQuery)) return true
 
     return false
   })
