@@ -80,6 +80,7 @@ export default function FacturesPage() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedContactFilter, setSelectedContactFilter] = useState('')
+  const [selectedChantierFilter, setSelectedChantierFilter] = useState('')
   const [showOverdueOnly, setShowOverdueOnly] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingFacture, setEditingFacture] = useState(null)
@@ -404,7 +405,7 @@ export default function FacturesPage() {
     return contacts.filter(c => c.type === activeType)
   }, [contacts, activeType])
 
-  // Contact filter options for Select component
+  // Contact filter options for SearchableSelect component
   const contactFilterOptions = useMemo(() => {
     const allOption = {
       value: '',
@@ -418,6 +419,35 @@ export default function FacturesPage() {
 
     return [allOption, ...contactOptions]
   }, [availableContacts, activeType])
+
+  // Chantier filter options for SearchableSelect component
+  const chantierFilterOptions = useMemo(() => {
+    const allOption = {
+      value: '',
+      label: 'Tous les chantiers'
+    }
+
+    // Get unique chantiers from factures of the current type
+    const uniqueChantierIds = new Set()
+    const chantierOptions = []
+
+    factures
+      .filter(f => f.type === activeType && f.chantier)
+      .forEach(f => {
+        if (!uniqueChantierIds.has(f.chantier.id)) {
+          uniqueChantierIds.add(f.chantier.id)
+          chantierOptions.push({
+            value: f.chantier.id,
+            label: f.chantier.titre
+          })
+        }
+      })
+
+    // Sort by label
+    chantierOptions.sort((a, b) => a.label.localeCompare(b.label, 'fr'))
+
+    return [allOption, ...chantierOptions]
+  }, [factures, activeType])
 
   // Calculate overdue count (for button badge)
   const overdueCount = useMemo(() => {
@@ -449,16 +479,21 @@ export default function FacturesPage() {
       ? overdueFiltered.filter(facture => facture.contact_id === selectedContactFilter)
       : overdueFiltered
 
-    // 5. Appliquer la recherche
-    const searched = searchFactures(contactFiltered, searchQuery)
+    // 5. Filtrer par chantier (si un chantier est sélectionné)
+    const chantierFiltered = selectedChantierFilter
+      ? contactFiltered.filter(facture => facture.chantier?.id === selectedChantierFilter)
+      : contactFiltered
 
-    // 6. Trier par numéro de facture (du plus élevé au plus bas)
+    // 6. Appliquer la recherche
+    const searched = searchFactures(chantierFiltered, searchQuery)
+
+    // 7. Trier par numéro de facture (du plus élevé au plus bas)
     return searched.sort((a, b) => {
       const numA = a.numero_facture ? parseInt(a.numero_facture.split('-').pop(), 10) || 0 : 0
       const numB = b.numero_facture ? parseInt(b.numero_facture.split('-').pop(), 10) || 0 : 0
       return numB - numA // Tri décroissant
     })
-  }, [factures, activeTab, activeType, showOverdueOnly, selectedContactFilter, searchQuery])
+  }, [factures, activeTab, activeType, showOverdueOnly, selectedContactFilter, selectedChantierFilter, searchQuery])
 
   // Filter and search chantiers (for "Fin de chantier" tab)
   const filteredChantiers = useMemo(() => {
@@ -614,18 +649,20 @@ export default function FacturesPage() {
   const handleClearFilters = () => {
     setSearchQuery('')
     setSelectedContactFilter('')
+    setSelectedChantierFilter('')
     setShowOverdueOnly(false)
   }
 
-  // Reset contact filter when type changes
+  // Reset contact and chantier filters when type changes
   useEffect(() => {
     setSelectedContactFilter('')
+    setSelectedChantierFilter('')
   }, [activeType])
 
   // Reset page when filter or search changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [activeTab, activeType, selectedContactFilter, searchQuery, showOverdueOnly])
+  }, [activeTab, activeType, selectedContactFilter, selectedChantierFilter, searchQuery, showOverdueOnly])
 
   // Redirect if on "fin_chantier" tab with type "fournisseur"
   useEffect(() => {
@@ -1317,57 +1354,71 @@ export default function FacturesPage() {
             />
           </div>
 
-          {/* Filters Row - Contact Filter, Overdue Button, Clear Button (masqué pour Fin de chantier) */}
+          {/* Filters Row - Contact Filter, Chantier Filter, Overdue Button, Clear Button (masqué pour Fin de chantier) */}
           {activeTab !== 'fin_chantier' ? (
-            <div className="flex flex-col md:flex-row gap-3 md:items-center">
-              {/* Contact Filter */}
-              <div className="flex-1">
-                <Select
+            <div className="flex flex-col gap-3">
+              {/* First row: Contact and Chantier filters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Contact Filter with search */}
+                <SearchableSelect
                   value={selectedContactFilter}
                   onChange={setSelectedContactFilter}
                   options={contactFilterOptions}
                   placeholder={activeType === 'client' ? 'Tous les clients' : 'Tous les fournisseurs'}
+                  searchPlaceholder="Rechercher un contact..."
+                />
+
+                {/* Chantier Filter with search */}
+                <SearchableSelect
+                  value={selectedChantierFilter}
+                  onChange={setSelectedChantierFilter}
+                  options={chantierFilterOptions}
+                  placeholder="Tous les chantiers"
+                  searchPlaceholder="Rechercher un chantier..."
                 />
               </div>
 
-              {/* Overdue Filter Button */}
-              <button
-                onClick={() => setShowOverdueOnly(!showOverdueOnly)}
-                className={`
-                  h-12 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
-                  ${showOverdueOnly
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }
-                `}
-              >
-                <AlertCircle className="w-5 h-5" />
-                <span>En retard</span>
-                {overdueCount > 0 && (
-                  <span className={`
-                    px-2 py-0.5 rounded-full text-xs font-semibold
-                    ${showOverdueOnly ? 'bg-red-800 text-white' : 'bg-red-100 text-red-800'}
-                  `}>
-                    {overdueCount}
-                  </span>
-                )}
-              </button>
+              {/* Second row: Overdue and Clear buttons */}
+              <div className="flex flex-row gap-3 md:justify-start">
+                {/* Overdue Filter Button */}
+                <button
+                  onClick={() => setShowOverdueOnly(!showOverdueOnly)}
+                  className={`
+                    h-12 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
+                    ${showOverdueOnly
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }
+                  `}
+                >
+                  <AlertCircle className="w-5 h-5" />
+                  <span>En retard</span>
+                  {overdueCount > 0 && (
+                    <span className={`
+                      px-2 py-0.5 rounded-full text-xs font-semibold
+                      ${showOverdueOnly ? 'bg-red-800 text-white' : 'bg-red-100 text-red-800'}
+                    `}>
+                      {overdueCount}
+                    </span>
+                  )}
+                </button>
 
-              {/* Clear Filters Button */}
-              <button
-                onClick={handleClearFilters}
-                disabled={!searchQuery && !selectedContactFilter && !showOverdueOnly}
-                className={`
-                  h-12 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
-                  ${(!searchQuery && !selectedContactFilter && !showOverdueOnly)
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }
-                `}
-              >
-                <XCircle className="w-5 h-5" />
-                <span>Effacer</span>
-              </button>
+                {/* Clear Filters Button */}
+                <button
+                  onClick={handleClearFilters}
+                  disabled={!searchQuery && !selectedContactFilter && !selectedChantierFilter && !showOverdueOnly}
+                  className={`
+                    h-12 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
+                    ${(!searchQuery && !selectedContactFilter && !selectedChantierFilter && !showOverdueOnly)
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }
+                  `}
+                >
+                  <XCircle className="w-5 h-5" />
+                  <span>Effacer</span>
+                </button>
+              </div>
             </div>
           ) : (
             /* Clear Search Button for Fin de chantier tab */
