@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Pencil, MapPin, Calendar, Euro, User, FileText, TrendingUp, TrendingDown } from 'lucide-react'
+import { Pencil, MapPin, Calendar, Euro, User, Users, FileText, TrendingUp, TrendingDown } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import Select from '../../../shared/components/ui/Select'
@@ -205,6 +205,30 @@ export default function ChantierDetailModal({ isOpen, onClose, chantier, onEdit,
             </div>
           </div>
         </div>
+
+        {/* Responsables */}
+        {chantier.responsables && chantier.responsables.length > 0 && (
+          <div className="border-t border-gray-200 pt-6">
+            <div className="flex items-start gap-3">
+              <Users className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-gray-500">
+                  Responsable{chantier.responsables.length > 1 ? 's' : ''} du chantier
+                </p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {chantier.responsables.map(responsable => (
+                    <span
+                      key={responsable.id}
+                      className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium"
+                    >
+                      {getClientDisplayName(responsable)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Adresse du chantier */}
         <div className="border-t border-gray-200 pt-6">

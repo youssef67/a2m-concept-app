@@ -36,11 +36,12 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
     ville: '',
     code_postal: '',
     pays: 'France',
-    notes: ''
+    notes: '',
+    responsable_ids: []
   }
 
   /**
-   * Load clients (type='client' only)
+   * Load clients (type='client' only) - utilisé pour clients ET responsables
    */
   useEffect(() => {
     async function loadClients() {
@@ -152,6 +153,40 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
     onChange({ ...formData, client_ids: currentIds.filter(id => id !== clientId) })
   }
 
+  // Options for Responsables select (contacts clients, filtered by already selected)
+  const responsableOptions = useMemo(() => {
+    const selectedIds = formData.responsable_ids || []
+    const availableContacts = clients.filter(c => !selectedIds.includes(c.id))
+
+    return availableContacts.map(contact => ({
+      value: contact.id,
+      label: getClientDisplayName(contact)
+    }))
+  }, [clients, formData.responsable_ids])
+
+  // Get selected responsables details
+  const selectedResponsables = useMemo(() => {
+    const selectedIds = formData.responsable_ids || []
+    return selectedIds
+      .map(id => clients.find(c => c.id === id))
+      .filter(Boolean)
+  }, [formData.responsable_ids, clients])
+
+  // Handle adding a responsable
+  const handleAddResponsable = (responsableId) => {
+    if (!responsableId) return
+    const currentIds = formData.responsable_ids || []
+    if (!currentIds.includes(responsableId)) {
+      onChange({ ...formData, responsable_ids: [...currentIds, responsableId] })
+    }
+  }
+
+  // Handle removing a responsable
+  const handleRemoveResponsable = (responsableId) => {
+    const currentIds = formData.responsable_ids || []
+    onChange({ ...formData, responsable_ids: currentIds.filter(id => id !== responsableId) })
+  }
+
   return (
     <div className="space-y-6">
       {/* Informations principales */}
@@ -238,6 +273,54 @@ export default function ChantierForm({ chantier, onChange, errors = {}, onFileCh
             searchPlaceholder="Rechercher un client..."
           />
           {errors.client_ids && <p className="mt-1 text-sm text-red-600">{errors.client_ids}</p>}
+        </div>
+
+        {/* Responsables */}
+        <div>
+          <label htmlFor="responsable_ids" className="block text-sm font-medium text-gray-700 mb-1">
+            Responsables du chantier {selectedResponsables.length > 0 && `(${selectedResponsables.length} sélectionné${selectedResponsables.length > 1 ? 's' : ''})`}
+          </label>
+
+          {/* Selected responsables tags */}
+          {selectedResponsables.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {selectedResponsables.map(responsable => (
+                <div
+                  key={responsable.id}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg text-sm"
+                >
+                  <span className="font-medium">{getClientDisplayName(responsable)}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveResponsable(responsable.id)}
+                    className="hover:bg-blue-200 rounded p-0.5 transition-colors"
+                    title="Retirer ce responsable"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add responsable select or empty message */}
+          {loadingClients ? (
+            <p className="text-sm text-gray-500">Chargement des contacts...</p>
+          ) : clients.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">Aucun contact enregistré</p>
+          ) : (
+            <SearchableSelect
+              value=""
+              onChange={handleAddResponsable}
+              options={responsableOptions}
+              disabled={loadingClients}
+              placeholder="Ajouter un responsable..."
+              searchPlaceholder="Rechercher un contact..."
+            />
+          )}
+          <p className="mt-1 text-xs text-gray-500">
+            Sélectionnez une ou plusieurs personnes en charge de ce chantier (optionnel)
+          </p>
         </div>
       </div>
 

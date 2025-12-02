@@ -29,12 +29,15 @@ export default function ChantierModal({ isOpen, onClose, chantier, onSubmit }) {
         // Edit mode: pre-fill with chantier data
         // Extract client IDs from clients array
         const clientIds = chantier.clients?.map(c => c.id) || []
+        // Extract responsable IDs from responsables array
+        const responsableIds = chantier.responsables?.map(r => r.id) || []
 
         setFormData({
           titre: chantier.titre || '',
           description: chantier.description || '',
           statut: chantier.statut || 'devis',
           client_ids: clientIds,
+          responsable_ids: responsableIds,
           date_debut: chantier.date_debut || '',
           date_fin_prevue: chantier.date_fin_prevue || '',
           date_fin_reelle: chantier.date_fin_reelle || '',
@@ -56,6 +59,7 @@ export default function ChantierModal({ isOpen, onClose, chantier, onSubmit }) {
           description: '',
           statut: 'devis',
           client_ids: [],
+          responsable_ids: [],
           date_debut: '',
           date_fin_prevue: '',
           date_fin_reelle: '',

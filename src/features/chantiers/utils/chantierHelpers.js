@@ -269,9 +269,9 @@ export function prepareChantierData(formData) {
   if (data.code_postal) data.code_postal = data.code_postal.trim()
   if (data.notes) data.notes = data.notes.trim()
 
-  // Convert empty strings to null
+  // Convert empty strings to null (but keep arrays as arrays)
   Object.keys(data).forEach(key => {
-    if (data[key] === '') data[key] = null
+    if (data[key] === '' && !Array.isArray(data[key])) data[key] = null
   })
 
   // Convert budget to number

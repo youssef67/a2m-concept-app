@@ -28,6 +28,18 @@ export async function getAllChantiers(statut = null) {
             email
           )
         ),
+        chantier_responsables(
+          contact:contacts(
+            id,
+            type,
+            contact_type,
+            company_name,
+            first_name,
+            last_name,
+            phone,
+            email
+          )
+        ),
         factures(
           id,
           type,
@@ -50,12 +62,14 @@ export async function getAllChantiers(statut = null) {
 
     if (error) throw error
 
-    // Transform chantier_clients array to clients array
+    // Transform chantier_clients and chantier_responsables arrays
     const transformedData = data?.map(chantier => ({
       ...chantier,
       clients: chantier.chantier_clients?.map(cc => cc.contact) || [],
       client: chantier.chantier_clients?.[0]?.contact || null, // First client for backward compatibility
-      chantier_clients: undefined // Remove to clean up response
+      responsables: chantier.chantier_responsables?.map(cr => cr.contact) || [],
+      chantier_clients: undefined, // Remove to clean up response
+      chantier_responsables: undefined // Remove to clean up response
     }))
 
     return { data: transformedData, error: null }
@@ -88,6 +102,18 @@ export async function getChantierById(chantierId) {
             email
           )
         ),
+        chantier_responsables(
+          contact:contacts(
+            id,
+            type,
+            contact_type,
+            company_name,
+            first_name,
+            last_name,
+            phone,
+            email
+          )
+        ),
         factures(
           id,
           type,
@@ -105,12 +131,14 @@ export async function getChantierById(chantierId) {
 
     if (error) throw error
 
-    // Transform chantier_clients array to clients array
+    // Transform chantier_clients and chantier_responsables arrays
     const transformedData = {
       ...data,
       clients: data.chantier_clients?.map(cc => cc.contact) || [],
       client: data.chantier_clients?.[0]?.contact || null, // First client for backward compatibility
-      chantier_clients: undefined // Remove to clean up response
+      responsables: data.chantier_responsables?.map(cr => cr.contact) || [],
+      chantier_clients: undefined, // Remove to clean up response
+      chantier_responsables: undefined // Remove to clean up response
     }
 
     return { data: transformedData, error: null }
@@ -122,13 +150,13 @@ export async function getChantierById(chantierId) {
 
 /**
  * Create a new chantier
- * @param {Object} chantierData - Chantier data (must include client_ids array)
+ * @param {Object} chantierData - Chantier data (must include client_ids array, may include responsable_ids)
  * @returns {Promise<{data: Object|null, error: any}>}
  */
 export async function createChantier(chantierData) {
   try {
-    // Extract client_ids from chantierData
-    const { client_ids, ...chantierFields } = chantierData
+    // Extract client_ids and responsable_ids from chantierData
+    const { client_ids, responsable_ids, ...chantierFields } = chantierData
 
     if (!client_ids || !Array.isArray(client_ids) || client_ids.length === 0) {
       throw new Error('Au moins un client est requis')
@@ -155,7 +183,21 @@ export async function createChantier(chantierData) {
 
     if (clientsError) throw clientsError
 
-    // Fetch complete chantier with clients
+    // Create chantier_responsables relationships (if any)
+    if (responsable_ids && Array.isArray(responsable_ids) && responsable_ids.length > 0) {
+      const chantierResponsablesData = responsable_ids.map(responsable_id => ({
+        chantier_id: chantier.id,
+        contact_id: responsable_id
+      }))
+
+      const { error: responsablesError } = await supabase
+        .from('chantier_responsables')
+        .insert(chantierResponsablesData)
+
+      if (responsablesError) throw responsablesError
+    }
+
+    // Fetch complete chantier with clients and responsables
     return await getChantierById(chantier.id)
   } catch (error) {
     console.error('Error creating chantier:', error)
@@ -166,13 +208,13 @@ export async function createChantier(chantierData) {
 /**
  * Update an existing chantier
  * @param {string} chantierId - UUID of the chantier
- * @param {Object} chantierData - Updated chantier data (may include client_ids array)
+ * @param {Object} chantierData - Updated chantier data (may include client_ids and responsable_ids arrays)
  * @returns {Promise<{data: Object|null, error: any}>}
  */
 export async function updateChantier(chantierId, chantierData) {
   try {
-    // Extract client_ids from chantierData
-    const { client_ids, ...chantierFields } = chantierData
+    // Extract client_ids and responsable_ids from chantierData
+    const { client_ids, responsable_ids, ...chantierFields } = chantierData
 
     // Update chantier fields
     const { error: chantierError } = await supabase
@@ -209,7 +251,32 @@ export async function updateChantier(chantierId, chantierData) {
       if (insertError) throw insertError
     }
 
-    // Fetch complete chantier with clients
+    // Update responsables if responsable_ids provided
+    if (responsable_ids !== undefined && Array.isArray(responsable_ids)) {
+      // Delete existing responsable relationships
+      const { error: deleteResponsablesError } = await supabase
+        .from('chantier_responsables')
+        .delete()
+        .eq('chantier_id', chantierId)
+
+      if (deleteResponsablesError) throw deleteResponsablesError
+
+      // Insert new responsable relationships (if any)
+      if (responsable_ids.length > 0) {
+        const chantierResponsablesData = responsable_ids.map(responsable_id => ({
+          chantier_id: chantierId,
+          contact_id: responsable_id
+        }))
+
+        const { error: insertResponsablesError } = await supabase
+          .from('chantier_responsables')
+          .insert(chantierResponsablesData)
+
+        if (insertResponsablesError) throw insertResponsablesError
+      }
+    }
+
+    // Fetch complete chantier with clients and responsables
     return await getChantierById(chantierId)
   } catch (error) {
     console.error('Error updating chantier:', error)
