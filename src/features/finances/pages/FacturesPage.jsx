@@ -62,6 +62,7 @@ import {
   isEcheancePassee
 } from '../../chantiers/utils/chantierHelpers'
 import { canFactureBePaid, canFactureBeDeleted } from '../utils/factureValidation'
+import { uploadDocument, deleteDocument, downloadDocument } from '../services/documentService'
 
 // Predefined deduction types
 const DEDUCTION_TYPES = [
@@ -109,6 +110,14 @@ export default function FacturesPage() {
   // Detail modal state
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [selectedDetailFacture, setSelectedDetailFacture] = useState(null)
+
+  // PDF viewer modal state
+  const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false)
+  const [pdfViewerUrl, setPdfViewerUrl] = useState(null)
+  const [pdfViewerTitle, setPdfViewerTitle] = useState('')
+  const [openPdfMenuId, setOpenPdfMenuId] = useState(null)
+  const pdfInputRef = useRef(null)
+  const [pdfUploadFactureId, setPdfUploadFactureId] = useState(null)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -1025,6 +1034,82 @@ export default function FacturesPage() {
   }
 
   /**
+   * View PDF in modal
+   */
+  const handleViewPdf = async (facture) => {
+    if (!facture.document) return
+    setOpenPdfMenuId(null)
+
+    const { success, url, error } = await downloadDocument(facture.document.storage_path)
+    if (success && url) {
+      setPdfViewerUrl(url)
+      setPdfViewerTitle(facture.document.nom_original || 'Document PDF')
+      setIsPdfViewerOpen(true)
+    } else {
+      showToast(error || 'Erreur lors de l\'ouverture du PDF', 'error')
+    }
+  }
+
+  /**
+   * Trigger PDF upload for a facture
+   */
+  const handleAddPdf = (factureId) => {
+    setPdfUploadFactureId(factureId)
+    setOpenPdfMenuId(null)
+    pdfInputRef.current?.click()
+  }
+
+  /**
+   * Handle PDF file selection (add or replace)
+   */
+  const handlePdfFileChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !pdfUploadFactureId) return
+
+    // Find the facture
+    const facture = factures.find(f => f.id === pdfUploadFactureId)
+
+    // If there's an existing document, delete it first
+    if (facture?.document) {
+      const { success: deleteSuccess, error: deleteError } = await deleteDocument(facture.document.id, facture.document.storage_path)
+      if (!deleteSuccess) {
+        showToast(deleteError || 'Erreur lors du remplacement du PDF', 'error')
+        e.target.value = ''
+        setPdfUploadFactureId(null)
+        return
+      }
+    }
+
+    // Upload the new PDF
+    const { success, error } = await uploadDocument(pdfUploadFactureId, file)
+    if (success) {
+      showToast(facture?.document ? 'PDF remplacé avec succès' : 'PDF ajouté avec succès', 'success')
+      refreshFactures()
+    } else {
+      showToast(error || 'Erreur lors de l\'upload du PDF', 'error')
+    }
+
+    e.target.value = ''
+    setPdfUploadFactureId(null)
+  }
+
+  /**
+   * Delete PDF from facture
+   */
+  const handleDeletePdf = async (facture) => {
+    if (!facture.document) return
+    setOpenPdfMenuId(null)
+
+    const { success, error } = await deleteDocument(facture.document.id, facture.document.storage_path)
+    if (success) {
+      showToast('PDF supprimé avec succès', 'success')
+      refreshFactures()
+    } else {
+      showToast(error || 'Erreur lors de la suppression du PDF', 'error')
+    }
+  }
+
+  /**
    * Handle payment change (refresh factures to update status and amounts)
    */
   const handlePaiementChange = () => {
@@ -1536,14 +1621,62 @@ export default function FacturesPage() {
 
                   {/* Right: Actions */}
                   <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleViewDocuments(facture)}
-                      className="flex-1 md:flex-none"
-                    >
-                      <Paperclip className="w-4 h-4 md:mr-2" />
-                      <span className="hidden md:inline">Documents</span>
-                    </Button>
+                    {/* PDF Button with dropdown menu */}
+                    {facture.document ? (
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenPdfMenuId(openPdfMenuId === facture.id ? null : facture.id)}
+                          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 rounded-lg transition-colors"
+                          title="PDF attaché"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span className="hidden md:inline">PDF</span>
+                        </button>
+
+                        {/* PDF Dropdown menu */}
+                        {openPdfMenuId === facture.id && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-10"
+                              onClick={() => setOpenPdfMenuId(null)}
+                            />
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                              <button
+                                onClick={() => handleViewPdf(facture)}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                              >
+                                <Eye className="w-4 h-4" />
+                                <span>Voir</span>
+                              </button>
+                              <button
+                                onClick={() => handleAddPdf(facture.id)}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                              >
+                                <Upload className="w-4 h-4" />
+                                <span>Remplacer</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeletePdf(facture)}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                <span>Supprimer</span>
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => handleAddPdf(facture.id)}
+                        className="flex-1 md:flex-none"
+                        title="Ajouter un PDF"
+                      >
+                        <Upload className="w-4 h-4 md:mr-2" />
+                        <span className="hidden md:inline">Ajouter PDF</span>
+                      </Button>
+                    )}
 
                     {/* Paiement button - Only shown if en_attente or partiellement_payee */}
                     {(facture.statut === 'en_attente' || facture.statut === 'partiellement_payee') && (
@@ -2428,6 +2561,37 @@ export default function FacturesPage() {
           onEdit={handleDetailToEdit}
           onPaiement={handleDetailToPaiement}
         />
+
+        {/* Hidden PDF input for upload */}
+        <input
+          type="file"
+          ref={pdfInputRef}
+          onChange={handlePdfFileChange}
+          accept="application/pdf"
+          className="hidden"
+        />
+
+        {/* PDF Viewer Modal */}
+        <Modal
+          isOpen={isPdfViewerOpen}
+          onClose={() => {
+            setIsPdfViewerOpen(false)
+            setPdfViewerUrl(null)
+            setPdfViewerTitle('')
+          }}
+          title={pdfViewerTitle}
+          size="xl"
+        >
+          <div className="w-full h-[70vh]">
+            {pdfViewerUrl && (
+              <iframe
+                src={pdfViewerUrl}
+                title={pdfViewerTitle}
+                className="w-full h-full border-0 rounded-lg"
+              />
+            )}
+          </div>
+        </Modal>
       </div>
     </AppLayout>
   )

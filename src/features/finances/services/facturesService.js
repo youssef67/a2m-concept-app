@@ -84,6 +84,14 @@ export async function getAllFactures(type = null) {
           pourcentage,
           montant,
           ordre
+        ),
+        documents:facture_documents(
+          id,
+          nom_fichier,
+          nom_original,
+          storage_path,
+          taille_fichier,
+          created_at
         )
       `)
       .order('date_emission', { ascending: false })
@@ -106,17 +114,23 @@ export async function getAllFactures(type = null) {
       // Continue without payment data
     }
 
-    // Calculate montant_paye for each facture
+    // Calculate montant_paye for each facture and extract first document
     const facturesWithPaiements = factures.map(facture => {
       const facturePaiements = paiements?.filter(p => p.facture_id === facture.id) || []
       const montantPaye = facturePaiements.reduce((sum, p) => sum + parseFloat(p.montant), 0)
       const montantAPayer = getMontantAPayer(facture)
       const montantRestant = montantAPayer - montantPaye
 
+      // Extract first document (limit 1 PDF per facture)
+      const document = facture.documents && facture.documents.length > 0
+        ? facture.documents[0]
+        : null
+
       return {
         ...facture,
         montant_paye: montantPaye,
-        montant_restant: Math.max(0, montantRestant) // Ensure not negative
+        montant_restant: Math.max(0, montantRestant), // Ensure not negative
+        document // Single document (or null)
       }
     })
 
