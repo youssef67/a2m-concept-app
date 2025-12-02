@@ -306,15 +306,13 @@ export function prepareContactPersonsData(persons) {
   return persons
     .filter(person =>
       person.first_name &&
-      person.last_name &&
-      person.phone &&
-      person.email
+      person.last_name
     )
     .map(person => ({
       first_name: person.first_name,
       last_name: person.last_name,
-      phone: normalizePhoneNumber(person.phone),
-      email: person.email,
+      phone: person.phone ? normalizePhoneNumber(person.phone) : null,
+      email: person.email || null,
       position: person.position || null
     }))
 }
