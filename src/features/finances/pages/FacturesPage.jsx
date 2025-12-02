@@ -1519,10 +1519,33 @@ export default function FacturesPage() {
             {paginatedFactures.map(facture => (
               <div
                 key={facture.id}
-                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer relative"
                 onClick={() => handleOpenDetail(facture)}
               >
-                <div className="flex gap-3">
+                {/* Notes indicator - top right */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleOpenNotes(facture)
+                  }}
+                  className={`
+                    absolute top-3 right-3 p-2 rounded-lg transition-colors
+                    ${facture.notes_count > 0
+                      ? 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                    }
+                  `}
+                  title={facture.notes_count > 0 ? `${facture.notes_count} note(s)` : 'Ajouter une note'}
+                >
+                  <StickyNote className="w-5 h-5" />
+                  {facture.notes_count > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-amber-600 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-medium">
+                      {facture.notes_count}
+                    </span>
+                  )}
+                </button>
+
+                <div className="flex gap-3 pr-12">
                   {/* Checkbox in selection mode */}
                   {selectionMode && (
                     <div className="flex items-start pt-1" onClick={(e) => e.stopPropagation()}>
@@ -1716,26 +1739,6 @@ export default function FacturesPage() {
                         <span className="hidden md:inline">Ajouter PDF</span>
                       </Button>
                     )}
-
-                    {/* Notes button */}
-                    <button
-                      onClick={() => handleOpenNotes(facture)}
-                      className={`
-                        flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors
-                        ${facture.notes_count > 0
-                          ? 'text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200'
-                          : 'text-gray-600 bg-white hover:bg-gray-50 border border-gray-300'
-                        }
-                      `}
-                      title={facture.notes_count > 0 ? `${facture.notes_count} note(s)` : 'Ajouter une note'}
-                    >
-                      <StickyNote className="w-4 h-4" />
-                      {facture.notes_count > 0 && (
-                        <span className="bg-amber-600 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-                          {facture.notes_count}
-                        </span>
-                      )}
-                    </button>
 
                     {/* Paiement button - Only shown if en_attente or partiellement_payee */}
                     {(facture.statut === 'en_attente' || facture.statut === 'partiellement_payee') && (
