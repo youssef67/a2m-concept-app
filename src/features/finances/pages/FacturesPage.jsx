@@ -1556,12 +1556,6 @@ export default function FacturesPage() {
                                 </>
                               )}
                             </h3>
-                            {/* Badge indicateur de notes */}
-                            {facture.notes && facture.notes.trim() !== '' && (
-                              <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0" title="A des notes">
-                                <StickyNote className="w-4 h-4 text-amber-600" />
-                              </div>
-                            )}
                             {/* Badge facture exclue */}
                             {facture.exclue_calculs && (
                               <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium" title="Exclue des calculs">
