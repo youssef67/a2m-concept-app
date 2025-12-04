@@ -1,10 +1,9 @@
 import React, { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Clock, CheckCircle, AlertTriangle, CheckCircle2, TrendingUp, FileText, LogOut, ArrowRight } from 'lucide-react'
+import { Clock, CheckCircle, AlertTriangle, CheckCircle2, TrendingUp, LogOut, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { useFactures } from '../../finances/hooks/useFactures'
 import { formatCurrency, filterFacturesNonExclues } from '../../finances/utils/factureHelpers'
-import { getContactDisplayName } from '../../contacts/utils/contactHelpers'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
 import Card from '../../../shared/components/ui/Card'
@@ -196,26 +195,6 @@ export default function AdminDashboard() {
       .sort((a, b) => {
         return new Date(a.date_echeance) - new Date(b.date_echeance)
       })
-  }, [factures])
-
-  // Calcul des 3 dernières factures (triées par numéro décroissant)
-  const dernieresFactures = useMemo(() => {
-    if (!factures || factures.length === 0) return []
-
-    // Filtrer les factures exclues des calculs
-    const facturesNonExclues = filterFacturesNonExclues(factures)
-
-    // Filtrer les factures clients et trier par numéro décroissant
-    return facturesNonExclues
-      .filter(f => f.type === 'client')
-      .sort((a, b) => {
-        // Extraire le numéro séquentiel (partie après le dernier tiret)
-        // FAC/C-2025-00123 -> 123
-        const numA = parseInt(a.numero_facture.split('-').pop(), 10) || 0
-        const numB = parseInt(b.numero_facture.split('-').pop(), 10) || 0
-        return numB - numA // Tri décroissant (plus grand en premier)
-      })
-      .slice(0, 3)
   }, [factures])
 
   return (
@@ -475,60 +454,6 @@ export default function AdminDashboard() {
           </Card>
         )}
 
-        {/* Section: Dernières factures */}
-        <div className="space-y-4">
-          <div className="border-t-4 border-blue-600 bg-blue-50 rounded-lg p-4 mb-4">
-            <div className="flex items-center gap-3">
-              <FileText className="w-6 h-6 text-blue-600" />
-              <h2 className="text-2xl font-bold text-gray-900">
-                Dernières factures clients
-              </h2>
-            </div>
-          </div>
-
-          <Card>
-            {/* Empty State */}
-            {dernieresFactures.length === 0 && !loading && (
-              <div className="text-center py-8 text-gray-500">
-                Aucune facture disponible
-              </div>
-            )}
-
-            {/* Liste des dernières factures */}
-            {dernieresFactures.length > 0 && (
-              <div className="space-y-3">
-                {dernieresFactures.map(facture => (
-                  <div
-                    key={facture.id}
-                    className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    {/* Numéro de facture - mis en avant */}
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-bold text-gray-900">
-                        {facture.numero_facture}
-                      </h3>
-                      <span className="text-lg font-semibold text-blue-600">
-                        {formatCurrency(facture.montant)}
-                      </span>
-                    </div>
-
-                    {/* Informations facture */}
-                    <div className="space-y-1 text-sm text-gray-600">
-                      <p>
-                        <span className="font-medium">Client :</span>{' '}
-                        {getContactDisplayName(facture.contact)}
-                      </p>
-                      <p>
-                        <span className="font-medium">Chantier :</span>{' '}
-                        {facture.chantier?.titre || 'Aucun chantier'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-        </div>
         </div>
       </div>
     </AppLayout>
