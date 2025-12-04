@@ -346,9 +346,20 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Section: Factures clients en retard */}
+        {/* Section: Factures en retard */}
         {!loading && !error && (
-          <Card
+          <div className="space-y-4">
+            <div className="border-t-4 border-red-600 bg-red-50 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Factures en retard
+                </h2>
+              </div>
+            </div>
+
+            {/* Card: Factures clients en retard */}
+            <Card
             onClick={() => facturesClientsEnRetard.length > 0 && navigate('/dashboard/finances?tab=en_attente&type=client&overdue=true')}
             className={`${facturesClientsEnRetard.length > 0 ? 'cursor-pointer hover:shadow-lg' : ''} transition-shadow border-l-4 ${facturesClientsEnRetard.length > 0 ? 'border-l-red-600' : 'border-l-green-600'}`}
           >
@@ -380,11 +391,9 @@ export default function AdminDashboard() {
               )}
             </div>
           </Card>
-        )}
 
-        {/* Section: Factures fournisseurs en retard */}
-        {!loading && !error && (
-          <Card
+            {/* Card: Factures fournisseurs en retard */}
+            <Card
             onClick={() => facturesFournisseursEnRetard.length > 0 && navigate('/dashboard/finances?tab=en_attente&type=fournisseur&overdue=true')}
             className={`${facturesFournisseursEnRetard.length > 0 ? 'cursor-pointer hover:shadow-lg' : ''} transition-shadow border-l-4 ${facturesFournisseursEnRetard.length > 0 ? 'border-l-orange-600' : 'border-l-green-600'}`}
           >
@@ -416,11 +425,9 @@ export default function AdminDashboard() {
               )}
             </div>
           </Card>
-        )}
 
-        {/* Section: Factures sous-traitants en retard */}
-        {!loading && !error && (
-          <Card
+            {/* Card: Factures sous-traitants en retard */}
+            <Card
             onClick={() => facturesSousTraitantsEnRetard.length > 0 && navigate('/dashboard/finances?tab=en_attente&type=sous_traitant&overdue=true')}
             className={`${facturesSousTraitantsEnRetard.length > 0 ? 'cursor-pointer hover:shadow-lg' : ''} transition-shadow border-l-4 ${facturesSousTraitantsEnRetard.length > 0 ? 'border-l-purple-600' : 'border-l-green-600'}`}
           >
@@ -452,6 +459,7 @@ export default function AdminDashboard() {
               )}
             </div>
           </Card>
+          </div>
         )}
 
         </div>
