@@ -784,6 +784,16 @@ export default function FacturesPage() {
     }
   }, [activeType, activeTab])
 
+  // Close dropdowns on scroll (prevents overlap with navbar)
+  useEffect(() => {
+    const handleScroll = () => {
+      if (openMenuId) setOpenMenuId(null)
+      if (openPdfMenuId) setOpenPdfMenuId(null)
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [openMenuId, openPdfMenuId])
+
   // Page change handler
   const handlePageChange = (page) => {
     setCurrentPage(page)
