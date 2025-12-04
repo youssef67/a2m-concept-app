@@ -39,7 +39,7 @@ export default function AdminDashboard() {
         clientsEnAttente: { montant: 0, count: 0 },
         clientsPayes: { montant: 0, count: 0 },
         fournisseursEnAttente: { montant: 0, count: 0 },
-        fournisseursPayes: { montant: 0, count: 0 }
+        sousTraitantsEnAttente: { montant: 0, count: 0 }
       }
     }
 
@@ -52,11 +52,23 @@ export default function AdminDashboard() {
     const clientsARecevoir = facturesClients.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee')
     const clientsPayees = facturesClients.filter(f => f.statut === 'payee' || f.statut === 'partiellement_payee')
 
-    // Factures FOURNISSEURS (exclure annulées et payées)
-    const facturesFournisseurs = facturesNonExclues.filter(f => f.type === 'fournisseur' && f.statut !== 'annulee')
+    // Factures FOURNISSEURS (exclure annulées) - UNIQUEMENT fournisseurs (pas sous-traitants)
+    const facturesFournisseurs = facturesNonExclues.filter(f =>
+      f.type === 'fournisseur' &&
+      f.statut !== 'annulee' &&
+      !f.contact?.is_sous_traitant
+    )
     // À payer = en_attente (montant total) + partiellement_payee (montant restant)
     const fournisseursAPayer = facturesFournisseurs.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee')
-    const fournisseursPayees = facturesFournisseurs.filter(f => f.statut === 'payee' || f.statut === 'partiellement_payee')
+
+    // Factures SOUS-TRAITANTS (exclure annulées)
+    const facturesSousTraitants = facturesNonExclues.filter(f =>
+      f.type === 'fournisseur' &&
+      f.statut !== 'annulee' &&
+      f.contact?.is_sous_traitant
+    )
+    // À payer = en_attente (montant total) + partiellement_payee (montant restant)
+    const sousTraitantsAPayer = facturesSousTraitants.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee')
 
     return {
       clientsEnAttente: {
@@ -73,7 +85,7 @@ export default function AdminDashboard() {
         count: clientsPayees.length
       },
       fournisseursEnAttente: {
-        // Montant restant à payer : montant total - montant déjà payé
+        // Montant restant à payer : montant total - montant déjà payé (fournisseurs uniquement)
         montant: fournisseursAPayer.reduce((sum, f) => {
           const montantTotal = parseFloat(f.montant || 0)
           const montantPaye = parseFloat(f.montant_paye || 0)
@@ -81,9 +93,14 @@ export default function AdminDashboard() {
         }, 0),
         count: fournisseursAPayer.length
       },
-      fournisseursPayes: {
-        montant: fournisseursPayees.reduce((sum, f) => sum + parseFloat(f.montant_paye || 0), 0),
-        count: fournisseursPayees.length
+      sousTraitantsEnAttente: {
+        // Montant restant à payer : montant total - montant déjà payé (sous-traitants uniquement)
+        montant: sousTraitantsAPayer.reduce((sum, f) => {
+          const montantTotal = parseFloat(f.montant || 0)
+          const montantPaye = parseFloat(f.montant_paye || 0)
+          return sum + (montantTotal - montantPaye)
+        }, 0),
+        count: sousTraitantsAPayer.length
       }
     }
   }, [factures])
@@ -347,19 +364,19 @@ export default function AdminDashboard() {
               </div>
             </Card>
 
-            {/* Card 4 - Fournisseurs Payé */}
+            {/* Card 4 - Sous-traitants À Payer */}
             <Card>
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-100 rounded-lg flex-shrink-0">
-                  <CheckCircle className="w-6 h-6 text-emerald-600" />
+                <div className="p-3 bg-purple-100 rounded-lg flex-shrink-0">
+                  <Clock className="w-6 h-6 text-purple-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-600 font-medium">Fournisseurs - Payé</p>
+                  <p className="text-sm text-gray-600 font-medium">Sous-traitants - À payer</p>
                   <p className="text-2xl font-bold text-gray-900 truncate">
-                    {formatCurrency(stats.fournisseursPayes.montant)}
+                    {formatCurrency(stats.sousTraitantsEnAttente.montant)}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
-                    {stats.fournisseursPayes.count} facture{stats.fournisseursPayes.count > 1 ? 's' : ''}
+                    {stats.sousTraitantsEnAttente.count} facture{stats.sousTraitantsEnAttente.count > 1 ? 's' : ''}
                   </p>
                 </div>
               </div>
