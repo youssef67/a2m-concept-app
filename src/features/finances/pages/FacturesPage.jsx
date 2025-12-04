@@ -790,8 +790,15 @@ export default function FacturesPage() {
       if (openMenuId) setOpenMenuId(null)
       if (openPdfMenuId) setOpenPdfMenuId(null)
     }
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
+    // Listen on window, document, and capture phase for better mobile support
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true })
+    document.addEventListener('scroll', handleScroll, { passive: true, capture: true })
+    window.addEventListener('touchmove', handleScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', handleScroll, { capture: true })
+      document.removeEventListener('scroll', handleScroll, { capture: true })
+      window.removeEventListener('touchmove', handleScroll)
+    }
   }, [openMenuId, openPdfMenuId])
 
   // Page change handler
