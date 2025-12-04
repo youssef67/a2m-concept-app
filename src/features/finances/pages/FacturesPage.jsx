@@ -50,17 +50,7 @@ import {
 } from '../utils/factureHelpers'
 import { formatNumeroContact, getPaymentTermLabel } from '../../contacts/utils/contactHelpers'
 import {
-  getClientDisplayName as getChantierClientName,
-  getStatutLabel as getChantierStatutLabel,
-  getStatutColor as getChantierStatutColor,
-  calculateFinalisation95,
-  chantierHasRetenueGarantie,
-  calculateTotalRetenuesGarantie,
-  formatCurrency as formatChantierCurrency,
-  formatDate as formatChantierDate,
-  calculateEcheanceFinalisation95,
-  calculateEcheanceRetenues,
-  isEcheancePassee
+  getClientDisplayName as getChantierClientName
 } from '../../chantiers/utils/chantierHelpers'
 import { canFactureBePaid, canFactureBeDeleted } from '../utils/factureValidation'
 import { uploadDocument, deleteDocument, downloadDocument } from '../services/documentService'
@@ -71,6 +61,53 @@ const DEDUCTION_TYPES = [
   { id: 'prorata', label: 'Prorata', pourcentage: 2.00 },
   { id: 'autre', label: 'Autre (personnalisé)', pourcentage: null }
 ]
+
+/**
+ * Agrège les retenues de garantie par chantier
+ * @param {Array} factures - Toutes les factures avec leurs déductions
+ * @returns {Array} Liste des chantiers avec leur total de retenues
+ */
+function getRetenuesParChantier(factures) {
+  if (!factures || !Array.isArray(factures)) return []
+
+  const retenuesMap = new Map()
+
+  factures.forEach(facture => {
+    if (!facture.chantier_id || !facture.chantier || !facture.deductions) return
+
+    // Chercher les déductions de type "Retenue de garantie"
+    const retenueDeductions = facture.deductions.filter(
+      d => d.intitule?.toLowerCase().includes('retenue') && d.intitule?.toLowerCase().includes('garantie')
+    )
+
+    if (retenueDeductions.length === 0) return
+
+    const totalRetenue = retenueDeductions.reduce((sum, d) => sum + parseFloat(d.montant || 0), 0)
+
+    if (retenuesMap.has(facture.chantier_id)) {
+      const existing = retenuesMap.get(facture.chantier_id)
+      existing.totalRetenue += totalRetenue
+      existing.factures.push({
+        ...facture,
+        retenueAmount: totalRetenue
+      })
+    } else {
+      retenuesMap.set(facture.chantier_id, {
+        chantier: facture.chantier,
+        totalRetenue,
+        factures: [{
+          ...facture,
+          retenueAmount: totalRetenue
+        }],
+        isPaid: facture.chantier.retenue_garantie_payee || false
+      })
+    }
+  })
+
+  // Convertir en tableau et trier par montant décroissant
+  return Array.from(retenuesMap.values())
+    .sort((a, b) => b.totalRetenue - a.totalRetenue)
+}
 
 export default function FacturesPage() {
   const navigate = useNavigate()
@@ -107,9 +144,12 @@ export default function FacturesPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [factureToDelete, setFactureToDelete] = useState(null)
 
-  // Marquer comme payé modal (Fin de chantier)
+  // Marquer comme payé modal (Retenue de garantie)
   const [isMarquerPayeModalOpen, setIsMarquerPayeModalOpen] = useState(false)
   const [selectedChantierForPaiement, setSelectedChantierForPaiement] = useState(null)
+
+  // Retenue de garantie - chantiers expandés
+  const [expandedRetenueChantiers, setExpandedRetenueChantiers] = useState(new Set())
 
   // Detail modal state
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
@@ -161,10 +201,6 @@ export default function FacturesPage() {
   const [pourcentageDeduction, setPourcentageDeduction] = useState('')
   const [montantDeduction, setMontantDeduction] = useState('')
 
-  // Finalisation 95% states
-  const [exclueFinalization, setExclueFinalization] = useState(false)
-  const [chantierLie, setChantierLie] = useState(null)
-
   // Exclusion calculs states
   const [exclueCalculs, setExclueCalculs] = useState(false)
   const [raisonExclusion, setRaisonExclusion] = useState('')
@@ -215,7 +251,7 @@ export default function FacturesPage() {
     const type = searchParams.get('type')
     const overdue = searchParams.get('overdue')
 
-    if (tab && ['en_attente', 'payee', 'tous', 'annulee', 'fin_chantier'].includes(tab)) {
+    if (tab && ['en_attente', 'payee', 'tous', 'annulee', 'retenue_garantie'].includes(tab)) {
       setActiveTab(tab)
     }
     if (type && ['client', 'fournisseur', 'sous_traitant'].includes(type)) {
@@ -372,17 +408,12 @@ export default function FacturesPage() {
       }
     ]
 
-    // Ajouter "Fin de chantier" UNIQUEMENT pour les clients
+    // Ajouter "Retenue de garantie" UNIQUEMENT pour les clients
     if (activeType === 'client') {
       allTabs.push({
-        id: 'fin_chantier',
-        label: 'Fin de chantier',
-        count: chantiers.filter(c => {
-          if (c.statut !== 'cloture') return false
-          const hasFinalisation95 = c.finalisation_95
-          const hasRetenue = chantierHasRetenueGarantie(c.id, factures)
-          return hasFinalisation95 || hasRetenue
-        }).length
+        id: 'retenue_garantie',
+        label: 'Retenue de garantie',
+        count: getRetenuesParChantier(factures).length
       })
     }
 
@@ -585,43 +616,28 @@ export default function FacturesPage() {
     })
   }, [factures, activeTab, activeType, showOverdueOnly, selectedContactFilter, selectedChantierFilter, selectedModePaiementFilter, showImportantNotesOnly, searchQuery])
 
-  // Filter and search chantiers (for "Fin de chantier" tab)
-  const filteredChantiers = useMemo(() => {
-    if (activeTab !== 'fin_chantier') return []
+  // Retenues de garantie agrégées par chantier (pour l'onglet "Retenue de garantie")
+  const retenuesParChantier = useMemo(() => {
+    if (activeTab !== 'retenue_garantie') return []
 
-    // 1. Filter: (finalisation_95 OR hasRetenueGarantie) AND statut = 'cloture'
-    // AND au moins un paiement applicable non payé
-    const finChantiers = chantiers.filter(c => {
-      if (c.statut !== 'cloture') return false
+    let retenues = getRetenuesParChantier(factures)
 
-      const hasFinalisation95 = c.finalisation_95
-      const hasRetenue = chantierHasRetenueGarantie(c.id, factures)
+    // Appliquer la recherche
+    if (searchQuery.trim()) {
+      const lowerQuery = searchQuery.toLowerCase()
+      retenues = retenues.filter(item => {
+        const clientName = item.chantier?.clients?.[0]?.contact_type === 'professionnel'
+          ? item.chantier?.clients?.[0]?.company_name || ''
+          : `${item.chantier?.clients?.[0]?.first_name || ''} ${item.chantier?.clients?.[0]?.last_name || ''}`.trim()
 
-      // Le chantier doit avoir au moins une finalisation ou retenue
-      if (!hasFinalisation95 && !hasRetenue) return false
+        return item.chantier?.titre?.toLowerCase().includes(lowerQuery) ||
+               clientName.toLowerCase().includes(lowerQuery) ||
+               item.totalRetenue?.toString().includes(lowerQuery)
+      })
+    }
 
-      // Vérifier si au moins un paiement applicable n'est pas payé
-      const finalisationNonPayee = hasFinalisation95 && !c.finalisation_95_payee
-      const retenueNonPayee = hasRetenue && !c.retenue_garantie_payee
-
-      // Afficher seulement si au moins un paiement applicable n'est pas payé
-      return finalisationNonPayee || retenueNonPayee
-    })
-
-    // 2. Apply search query
-    if (!searchQuery.trim()) return finChantiers
-
-    const lowerQuery = searchQuery.toLowerCase()
-    return finChantiers.filter(chantier => {
-      const clientName = chantier.client?.contact_type === 'professionnel'
-        ? chantier.client?.company_name || ''
-        : `${chantier.client?.first_name || ''} ${chantier.client?.last_name || ''}`.trim()
-
-      return chantier.titre?.toLowerCase().includes(lowerQuery) ||
-             clientName.toLowerCase().includes(lowerQuery) ||
-             chantier.montant_ht?.toString().includes(lowerQuery)
-    })
-  }, [activeTab, chantiers, factures, searchQuery])
+    return retenues
+  }, [activeTab, factures, searchQuery])
 
   // Pagination logic for factures
   const paginatedFactures = useMemo(() => {
@@ -630,15 +646,15 @@ export default function FacturesPage() {
     return filteredFactures.slice(startIndex, endIndex)
   }, [filteredFactures, currentPage, ITEMS_PER_PAGE])
 
-  // Pagination logic for chantiers
-  const paginatedChantiers = useMemo(() => {
+  // Pagination logic for retenues de garantie
+  const paginatedRetenues = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
     const endIndex = startIndex + ITEMS_PER_PAGE
-    return filteredChantiers.slice(startIndex, endIndex)
-  }, [filteredChantiers, currentPage, ITEMS_PER_PAGE])
+    return retenuesParChantier.slice(startIndex, endIndex)
+  }, [retenuesParChantier, currentPage, ITEMS_PER_PAGE])
 
-  const totalPages = activeTab === 'fin_chantier'
-    ? Math.ceil(filteredChantiers.length / ITEMS_PER_PAGE)
+  const totalPages = activeTab === 'retenue_garantie'
+    ? Math.ceil(retenuesParChantier.length / ITEMS_PER_PAGE)
     : Math.ceil(filteredFactures.length / ITEMS_PER_PAGE)
 
   // Auto-calculate deduction amount when percentage or montantHT changes
@@ -763,9 +779,9 @@ export default function FacturesPage() {
     }
   }, [activeType])
 
-  // Redirect if on "fin_chantier" tab with type "fournisseur"
+  // Redirect if on "retenue_garantie" tab with type "fournisseur" or "sous_traitant"
   useEffect(() => {
-    if (activeTab === 'fin_chantier' && activeType === 'fournisseur') {
+    if (activeTab === 'retenue_garantie' && (activeType === 'fournisseur' || activeType === 'sous_traitant')) {
       setActiveTab('en_attente')
     }
   }, [activeType, activeTab])
@@ -886,8 +902,6 @@ export default function FacturesPage() {
       retenue_garantie: false,
       // Champ prorata
       prorata_applicable: false,
-      // Champ exclue de finalisation
-      exclue_finalisation: false,
       // Champs exclusion des calculs
       exclue_calculs: false,
       raison_exclusion: null,
@@ -908,24 +922,22 @@ export default function FacturesPage() {
     data.raison_exclusion = data.exclue_calculs ? (formData.get('raison_exclusion') || null) : null
 
     if (currentType === 'fournisseur') {
-      // Fournisseur: toujours TTC, pas de retenue ni prorata ni exclusion finalisation
+      // Fournisseur: toujours TTC, pas de retenue ni prorata
       data.montant_ttc = parseFloat(formData.get('montant_ttc'))
       data.tva_applicable = true
       data.retenue_garantie = false
       data.prorata_applicable = false
-      data.exclue_finalisation = false
       // Mode de paiement uniquement pour fournisseurs (pas sous-traitants)
       // activeType permet de distinguer fournisseur vs sous_traitant
       if (activeType === 'fournisseur' || (editingFacture && !editingFacture.contact?.is_sous_traitant)) {
         data.mode_paiement = modePaiement || null
       }
     } else {
-      // Client: HT avec ou sans TVA, avec ou sans retenue, avec ou sans prorata, avec ou sans exclusion finalisation
+      // Client: HT avec ou sans TVA, avec ou sans retenue, avec ou sans prorata
       data.montant_ht = parseFloat(formData.get('montant_ht'))
       data.tva_applicable = formData.get('tva_applicable') === 'on'
       data.retenue_garantie = formData.get('retenue_garantie') === 'on'
       data.prorata_applicable = formData.get('prorata_applicable') === 'on'
-      data.exclue_finalisation = formData.get('exclue_finalisation') === 'on'
 
       if (data.tva_applicable) {
         data.montant_ttc = parseFloat(formData.get('montant_ttc'))
@@ -1052,8 +1064,6 @@ export default function FacturesPage() {
     // Initialize prorata states
     setProrataApplicable(facture.prorata_applicable || false)
     setMontantProrata(facture.prorata_applicable && facture.montant_ht ? calculateProrata(facture.montant_ht).toFixed(2) : '')
-    // Initialize finalisation states
-    setExclueFinalization(facture.exclue_finalisation || false)
     // Initialize exclusion calculs states
     setExclueCalculs(facture.exclue_calculs || false)
     setRaisonExclusion(facture.raison_exclusion || '')
@@ -1091,8 +1101,6 @@ export default function FacturesPage() {
     // Reset prorata states
     setProrataApplicable(false)
     setMontantProrata('')
-    // Reset finalisation states
-    setExclueFinalization(false)
     // Reset exclusion calculs states
     setExclueCalculs(false)
     setRaisonExclusion('')
@@ -1361,15 +1369,30 @@ export default function FacturesPage() {
   }
 
   /**
+   * Toggle expanded state for a chantier in retenue de garantie list
+   */
+  const toggleExpandedRetenueChantier = (chantierId) => {
+    setExpandedRetenueChantiers(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(chantierId)) {
+        newSet.delete(chantierId)
+      } else {
+        newSet.add(chantierId)
+      }
+      return newSet
+    })
+  }
+
+  /**
    * Get empty state message based on active tab and search query
    */
   const getEmptyStateMessage = (tab, searchQuery) => {
     if (searchQuery) {
-      return tab === 'fin_chantier' ? 'Aucun chantier trouvé' : 'Aucune facture trouvée'
+      return tab === 'retenue_garantie' ? 'Aucune retenue de garantie trouvée' : 'Aucune facture trouvée'
     }
 
-    if (tab === 'fin_chantier') {
-      return 'Aucun chantier en fin de chantier'
+    if (tab === 'retenue_garantie') {
+      return 'Aucune retenue de garantie'
     }
 
     // Messages pour les factures selon le statut
@@ -1456,8 +1479,8 @@ export default function FacturesPage() {
           <Tabs tabs={statutTabs} activeTab={activeTab} onChange={setActiveTab} />
         </div>
 
-        {/* Tabs - Niveau 2 : Type (masqué pour Fin de chantier) */}
-        {activeTab !== 'fin_chantier' && (
+        {/* Tabs - Niveau 2 : Type (masqué pour Retenue de garantie) */}
+        {activeTab !== 'retenue_garantie' && (
           <div className="mb-6">
             <SubTabs tabs={typeTabs} activeTab={activeType} onChange={setActiveType} />
           </div>
@@ -1477,8 +1500,8 @@ export default function FacturesPage() {
             />
           </div>
 
-          {/* Filters Row - Contact Filter, Chantier Filter, Overdue Button, Clear Button (masqué pour Fin de chantier) */}
-          {activeTab !== 'fin_chantier' ? (
+          {/* Filters Row - Contact Filter, Chantier Filter, Overdue Button, Clear Button (masqué pour Retenue de garantie) */}
+          {activeTab !== 'retenue_garantie' ? (
             <div className="flex flex-col gap-3">
               {/* First row: Contact and Chantier filters */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1625,7 +1648,7 @@ export default function FacturesPage() {
         )}
 
         {/* Empty State - Factures */}
-        {!loading && !error && activeTab !== 'fin_chantier' && filteredFactures.length === 0 && (
+        {!loading && !error && activeTab !== 'retenue_garantie' && filteredFactures.length === 0 && (
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-700 mb-2">
@@ -1639,8 +1662,8 @@ export default function FacturesPage() {
           </div>
         )}
 
-        {/* Empty State - Chantiers */}
-        {!loading && !error && activeTab === 'fin_chantier' && filteredChantiers.length === 0 && (
+        {/* Empty State - Retenues de garantie */}
+        {!loading && !error && activeTab === 'retenue_garantie' && retenuesParChantier.length === 0 && (
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-700 mb-2">
@@ -1649,13 +1672,13 @@ export default function FacturesPage() {
             <p className="text-gray-600">
               {searchQuery
                 ? 'Essayez de modifier votre recherche'
-                : 'Les chantiers en fin de chantier apparaîtront ici'}
+                : 'Les retenues de garantie apparaîtront automatiquement quand des factures avec déductions seront créées'}
             </p>
           </div>
         )}
 
         {/* Factures List */}
-        {!loading && !error && activeTab !== 'fin_chantier' && filteredFactures.length > 0 && (
+        {!loading && !error && activeTab !== 'retenue_garantie' && filteredFactures.length > 0 && (
           <div className="space-y-4">
             {paginatedFactures.map(facture => (
               <div
@@ -1969,138 +1992,119 @@ export default function FacturesPage() {
           </div>
         )}
 
-        {/* Chantiers List (Fin de chantier tab) */}
-        {!loading && !error && activeTab === 'fin_chantier' && filteredChantiers.length > 0 && (
+        {/* Retenues de garantie List */}
+        {!loading && !error && activeTab === 'retenue_garantie' && retenuesParChantier.length > 0 && (
           <div className="space-y-4">
-            {paginatedChantiers.map(chantier => (
-              <div
-                key={chantier.id}
-                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-col gap-4">
-                  {/* Header: Titre et Statut */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {chantier.titre}
-                      </h3>
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-                        <User className="w-4 h-4" />
-                        <span>{getChantierClientName(chantier.client)}</span>
-                      </div>
-                    </div>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${getChantierStatutColor(chantier.statut)}`}>
-                      {getChantierStatutLabel(chantier.statut)}
-                    </span>
-                  </div>
-
-                  {/* Montant HT du chantier */}
-                  <div>
-                    <p className="text-sm text-gray-500">Montant HT du chantier</p>
-                    <p className="text-2xl font-bold text-primary-600">
-                      {formatChantierCurrency(chantier.montant_ht)}
-                    </p>
-                  </div>
-
-                  {/* Montants à finaliser */}
-                  <div className="border-t border-gray-200 pt-3 space-y-3">
-                    {/* Finalisation 95% */}
-                    {chantier.finalisation_95 && (
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                              Finalisation 95%
+            {paginatedRetenues.map(item => {
+              const isExpanded = expandedRetenueChantiers.has(item.chantier.id)
+              return (
+                <div
+                  key={item.chantier.id}
+                  className="bg-white border border-gray-200 rounded-lg overflow-hidden"
+                >
+                  {/* Header cliquable */}
+                  <div
+                    className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => toggleExpandedRetenueChantier(item.chantier.id)}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      {/* Info chantier */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-semibold text-gray-900 truncate">
+                            {item.chantier.titre}
+                          </h3>
+                          {item.isPaid && (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-medium flex items-center gap-1 flex-shrink-0">
+                              <CheckCircle className="w-3 h-3" />
+                              Payé
                             </span>
-                            {chantier.finalisation_95_payee && (
-                              <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-medium flex items-center gap-1">
-                                <CheckCircle className="w-3 h-3" />
-                                Payé
-                              </span>
-                            )}
-                          </div>
-                          <span className={`text-lg font-semibold text-blue-900 ${chantier.finalisation_95_payee ? 'line-through opacity-60' : ''}`}>
-                            {formatChantierCurrency(calculateFinalisation95(chantier.montant_ht))}
-                          </span>
-                        </div>
-                        {/* Date échéance finalisation */}
-                        {chantier.date_fin_reelle && (
-                          <div className="flex items-center gap-2 text-sm pl-3">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            <span className={chantier.finalisation_95_payee ? 'text-gray-400 line-through' : 'text-gray-600'}>
-                              Échéance : {formatChantierDate(calculateEcheanceFinalisation95(chantier.date_fin_reelle))}
-                              {!chantier.finalisation_95_payee && isEcheancePassee(calculateEcheanceFinalisation95(chantier.date_fin_reelle)) && " (dépassée)"}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Retenues de garantie */}
-                    {chantierHasRetenueGarantie(chantier.id, factures) && (
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-medium">
-                              Retenues de garantie
-                            </span>
-                            {chantier.retenue_garantie_payee && (
-                              <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-medium flex items-center gap-1">
-                                <CheckCircle className="w-3 h-3" />
-                                Payé
-                              </span>
-                            )}
-                          </div>
-                          <span className={`text-lg font-semibold text-orange-900 ${chantier.retenue_garantie_payee ? 'line-through opacity-60' : ''}`}>
-                            {formatChantierCurrency(calculateTotalRetenuesGarantie(chantier.id, factures))}
-                          </span>
-                        </div>
-                        {/* Date échéance retenues */}
-                        {chantier.date_fin_reelle && (
-                          <div className="flex items-center gap-2 text-sm pl-3">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            <span className={chantier.retenue_garantie_payee ? 'text-gray-400 line-through' : 'text-gray-600'}>
-                              Échéance : {formatChantierDate(calculateEcheanceRetenues(chantier.date_fin_reelle))}
-                              {!chantier.retenue_garantie_payee && isEcheancePassee(calculateEcheanceRetenues(chantier.date_fin_reelle)) && " (dépassée)"}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Total à finaliser */}
-                    {(chantier.finalisation_95 || chantierHasRetenueGarantie(chantier.id, factures)) && (
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                        <span className="font-medium text-gray-700">Total à finaliser</span>
-                        <span className="text-xl font-bold text-gray-900">
-                          {formatChantierCurrency(
-                            (chantier.finalisation_95 ? calculateFinalisation95(chantier.montant_ht) : 0) +
-                            calculateTotalRetenuesGarantie(chantier.id, factures)
                           )}
-                        </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                          <User className="w-4 h-4" />
+                          <span className="truncate">{getChantierClientName(item.chantier.client)}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {item.factures.length} facture{item.factures.length > 1 ? 's' : ''} avec retenue
+                        </div>
                       </div>
-                    )}
 
-                    {/* Bouton Marquer comme payé */}
-                    <div className="pt-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => handleOpenMarquerPaye(chantier)}
-                        className="w-full flex items-center justify-center gap-2"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        <span>Marquer comme payé</span>
-                      </Button>
+                      {/* Montant et chevron */}
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">Total retenues</p>
+                          <p className={`text-xl font-bold ${item.isPaid ? 'text-gray-400 line-through' : 'text-orange-600'}`}>
+                            {formatCurrency(item.totalRetenue)}
+                          </p>
+                        </div>
+                        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      </div>
                     </div>
                   </div>
+
+                  {/* Détail des factures (expandable) */}
+                  {isExpanded && (
+                    <div className="border-t border-gray-200 bg-gray-50 p-4 space-y-3">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Détail des factures</h4>
+                      {item.factures.map(facture => (
+                        <div
+                          key={facture.id}
+                          className="bg-white rounded-lg p-3 border border-gray-200 flex items-center justify-between cursor-pointer hover:shadow-sm transition-shadow"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleOpenDetail(facture)
+                          }}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">
+                              {facture.numero_facture || 'Facture sans numéro'}
+                            </p>
+                            <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {formatDate(facture.date_emission)}
+                              </span>
+                              <span className="text-gray-500">
+                                Montant HT: {formatCurrency(facture.montant_ht || facture.montant)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <p className="text-sm text-gray-500">Retenue</p>
+                            <p className="font-semibold text-orange-600">
+                              {formatCurrency(facture.retenueAmount)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Bouton Marquer comme payé */}
+                      {!item.isPaid && (
+                        <div className="pt-2">
+                          <Button
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleOpenMarquerPaye(item.chantier)
+                            }}
+                            className="w-full flex items-center justify-center gap-2"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Marquer comme payé</span>
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
         {/* Pagination */}
-        {!loading && !error && ((activeTab !== 'fin_chantier' && filteredFactures.length > 0) || (activeTab === 'fin_chantier' && filteredChantiers.length > 0)) && (
+        {!loading && !error && ((activeTab !== 'retenue_garantie' && filteredFactures.length > 0) || (activeTab === 'retenue_garantie' && retenuesParChantier.length > 0)) && (
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -2498,23 +2502,6 @@ export default function FacturesPage() {
                     )}
                   </div>
                 </div>
-
-                {/* Checkbox Exclure de la finalisation (si chantier avec finalisation_95) */}
-                {chantierLie?.finalisation_95 && (
-                  <div className="flex items-center">
-                    <input
-                      id="exclue_finalisation"
-                      name="exclue_finalisation"
-                      type="checkbox"
-                      checked={exclueFinalization}
-                      onChange={(e) => setExclueFinalization(e.target.checked)}
-                      className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
-                    />
-                    <label htmlFor="exclue_finalisation" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
-                      Exclure cette facture du calcul de finalisation 95%
-                    </label>
-                  </div>
-                )}
               </div>
             )}
 
@@ -2786,7 +2773,7 @@ export default function FacturesPage() {
           onConfirm={handleConfirmDelete}
         />
 
-        {/* Modal Marquer comme payé (Fin de chantier) */}
+        {/* Modal Marquer comme payé (Retenue de garantie) */}
         <MarquerPayeModal
           isOpen={isMarquerPayeModalOpen}
           onClose={() => {
@@ -2794,8 +2781,6 @@ export default function FacturesPage() {
             setSelectedChantierForPaiement(null)
           }}
           chantier={selectedChantierForPaiement}
-          hasFinalisation95={selectedChantierForPaiement?.finalisation_95 || false}
-          hasRetenueGarantie={selectedChantierForPaiement ? chantierHasRetenueGarantie(selectedChantierForPaiement.id, factures) : false}
           onConfirm={handleConfirmMarquerPaye}
         />
 
