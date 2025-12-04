@@ -245,7 +245,11 @@ export default function FacturesPage() {
 
   // Auto-calculate TTC when montantHT, TVA, or deductions change (clients only)
   React.useEffect(() => {
-    if (factureType === 'client' && tvaApplicable && montantHT) {
+    // Only auto-calculate TTC for clients with TVA
+    // Fournisseurs enter TTC directly, so we don't touch their value
+    if (factureType !== 'client') return
+
+    if (tvaApplicable && montantHT) {
       const ht = parseFloat(montantHT)
       if (!isNaN(ht) && ht > 0) {
         let baseCalcul = ht
@@ -277,6 +281,7 @@ export default function FacturesPage() {
         setMontantTTC('')
       }
     } else {
+      // Client sans TVA applicable ou sans montant HT
       setMontantTTC('')
     }
   }, [montantHT, tvaApplicable, factureType, retenueGarantie, montantRetenue, prorataApplicable, montantProrata, deductions])
