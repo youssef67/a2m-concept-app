@@ -46,28 +46,40 @@ export default function AdminDashboard() {
     // Filtrer les factures exclues des calculs
     const facturesNonExclues = filterFacturesNonExclues(factures)
 
-    // Factures CLIENTS (exclure annulées)
+    // Factures CLIENTS (exclure annulées et payées)
     const facturesClients = facturesNonExclues.filter(f => f.type === 'client' && f.statut !== 'annulee')
-    const clientsEnAttente = facturesClients.filter(f => f.statut === 'en_attente')
+    // À recevoir = en_attente (montant total) + partiellement_payee (montant restant)
+    const clientsARecevoir = facturesClients.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee')
     const clientsPayees = facturesClients.filter(f => f.statut === 'payee' || f.statut === 'partiellement_payee')
 
-    // Factures FOURNISSEURS (exclure annulées)
+    // Factures FOURNISSEURS (exclure annulées et payées)
     const facturesFournisseurs = facturesNonExclues.filter(f => f.type === 'fournisseur' && f.statut !== 'annulee')
-    const fournisseursEnAttente = facturesFournisseurs.filter(f => f.statut === 'en_attente')
+    // À payer = en_attente (montant total) + partiellement_payee (montant restant)
+    const fournisseursAPayer = facturesFournisseurs.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee')
     const fournisseursPayees = facturesFournisseurs.filter(f => f.statut === 'payee' || f.statut === 'partiellement_payee')
 
     return {
       clientsEnAttente: {
-        montant: clientsEnAttente.reduce((sum, f) => sum + parseFloat(f.montant || 0), 0),
-        count: clientsEnAttente.length
+        // Montant restant à recevoir : montant total - montant déjà payé
+        montant: clientsARecevoir.reduce((sum, f) => {
+          const montantTotal = parseFloat(f.montant || 0)
+          const montantPaye = parseFloat(f.montant_paye || 0)
+          return sum + (montantTotal - montantPaye)
+        }, 0),
+        count: clientsARecevoir.length
       },
       clientsPayes: {
         montant: clientsPayees.reduce((sum, f) => sum + parseFloat(f.montant_paye || 0), 0),
         count: clientsPayees.length
       },
       fournisseursEnAttente: {
-        montant: fournisseursEnAttente.reduce((sum, f) => sum + parseFloat(f.montant || 0), 0),
-        count: fournisseursEnAttente.length
+        // Montant restant à payer : montant total - montant déjà payé
+        montant: fournisseursAPayer.reduce((sum, f) => {
+          const montantTotal = parseFloat(f.montant || 0)
+          const montantPaye = parseFloat(f.montant_paye || 0)
+          return sum + (montantTotal - montantPaye)
+        }, 0),
+        count: fournisseursAPayer.length
       },
       fournisseursPayes: {
         montant: fournisseursPayees.reduce((sum, f) => sum + parseFloat(f.montant_paye || 0), 0),
