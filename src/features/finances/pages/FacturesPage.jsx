@@ -2193,7 +2193,7 @@ export default function FacturesPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Chantier *
               </label>
-              <Select
+              <SearchableSelect
                 value={selectedChantierId}
                 onChange={setSelectedChantierId}
                 disabled={!selectedContactId}
@@ -2220,11 +2220,13 @@ export default function FacturesPage() {
                     { value: '', label: placeholderLabel },
                     ...filteredChantiers.map(chantier => ({
                       value: chantier.id,
-                      label: chantier.titre
+                      label: chantier.titre,
+                      subtitle: chantier.reference || null
                     }))
                   ]
                 })()}
-                placeholder={!selectedContactId ? 'Sélectionner d\'abord un contact' : 'Sélectionner un chantier...'}
+                placeholder={!selectedContactId ? 'Sélectionner d\'abord un contact' : 'Sélectionner...'}
+                searchPlaceholder="Rechercher un chantier..."
               />
               <input type="hidden" name="chantier_id" value={selectedChantierId} />
             </div>
