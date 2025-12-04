@@ -547,6 +547,24 @@ export default function FacturesPage() {
     return typeFiltered.filter(f => f.has_important_notes).length
   }, [factures, activeTab, activeType])
 
+  // Calculate last client invoice number
+  const lastClientInvoiceNumber = useMemo(() => {
+    if (!factures || factures.length === 0) return null
+
+    // Filter client invoices only
+    const clientFactures = factures.filter(f => f.type === 'client' && f.numero_facture)
+    if (clientFactures.length === 0) return null
+
+    // Sort by numero_facture descending (extract numeric part)
+    const sorted = [...clientFactures].sort((a, b) => {
+      const numA = parseInt(a.numero_facture.split('-').pop(), 10) || 0
+      const numB = parseInt(b.numero_facture.split('-').pop(), 10) || 0
+      return numB - numA
+    })
+
+    return sorted[0]?.numero_facture || null
+  }, [factures])
+
   // Filter and search factures
   const filteredFactures = useMemo(() => {
     // 1. Filtrer par statut (pour "Tous", exclure les annulées)
@@ -1390,9 +1408,14 @@ export default function FacturesPage() {
       <div className="p-4 md:p-6">
         {/* Fixed Header */}
         <StickyPageHeader showBackButton={false}>
-          {/* Left: Title */}
+          {/* Left: Title + Last invoice badge */}
           <div className="flex-1 min-w-0">
             <h1 className="text-xl md:text-2xl font-bold text-gray-900">Finances</h1>
+            {lastClientInvoiceNumber && (
+              <p className="text-xs text-gray-500 mt-0.5">
+                Dernière : <span className="font-medium text-blue-600">{lastClientInvoiceNumber}</span>
+              </p>
+            )}
           </div>
 
           {/* Right: Action buttons */}
