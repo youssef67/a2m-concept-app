@@ -171,6 +171,33 @@ export default function AdminDashboard() {
       })
   }, [factures])
 
+  // Calcul des factures sous-traitants en retard
+  const facturesSousTraitantsEnRetard = useMemo(() => {
+    if (!factures || factures.length === 0) return []
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Filtrer les factures exclues des calculs
+    const facturesNonExclues = filterFacturesNonExclues(factures)
+
+    return facturesNonExclues
+      .filter(f => {
+        // Inclure en_attente ET partiellement_payee (comme la page finances)
+        // Uniquement les sous-traitants
+        if (f.type !== 'fournisseur' || (f.statut !== 'en_attente' && f.statut !== 'partiellement_payee')) return false
+        if (!f.contact?.is_sous_traitant) return false
+
+        const dateEcheance = new Date(f.date_echeance)
+        dateEcheance.setHours(0, 0, 0, 0)
+
+        return dateEcheance < today
+      })
+      .sort((a, b) => {
+        return new Date(a.date_echeance) - new Date(b.date_echeance)
+      })
+  }, [factures])
+
   // Calcul des 3 dernières factures (triées par numéro décroissant)
   const dernieresFactures = useMemo(() => {
     if (!factures || factures.length === 0) return []
@@ -406,6 +433,42 @@ export default function AdminDashboard() {
                 )}
               </div>
               {facturesFournisseursEnRetard.length > 0 && (
+                <ArrowRight className="w-5 h-5 text-gray-400" />
+              )}
+            </div>
+          </Card>
+        )}
+
+        {/* Section: Factures sous-traitants en retard */}
+        {!loading && !error && (
+          <Card
+            onClick={() => facturesSousTraitantsEnRetard.length > 0 && navigate('/dashboard/finances?tab=en_attente&type=sous_traitant&overdue=true')}
+            className={`${facturesSousTraitantsEnRetard.length > 0 ? 'cursor-pointer hover:shadow-lg' : ''} transition-shadow border-l-4 ${facturesSousTraitantsEnRetard.length > 0 ? 'border-l-purple-600' : 'border-l-green-600'}`}
+          >
+            <div className="flex items-center gap-4">
+              <div className={`p-3 ${facturesSousTraitantsEnRetard.length > 0 ? 'bg-purple-100' : 'bg-green-100'} rounded-lg flex-shrink-0`}>
+                {facturesSousTraitantsEnRetard.length > 0 ? (
+                  <AlertTriangle className="w-6 h-6 text-purple-600" />
+                ) : (
+                  <CheckCircle2 className="w-6 h-6 text-green-600" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-600 font-medium">Factures sous-traitants en retard</p>
+                {facturesSousTraitantsEnRetard.length > 0 ? (
+                  <>
+                    <p className="text-2xl font-bold text-purple-600 truncate">
+                      {formatCurrency(facturesSousTraitantsEnRetard.reduce((sum, f) => sum + parseFloat(f.montant || 0), 0))}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {facturesSousTraitantsEnRetard.length} facture{facturesSousTraitantsEnRetard.length > 1 ? 's' : ''}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-base font-medium text-green-700">Aucune facture en retard</p>
+                )}
+              </div>
+              {facturesSousTraitantsEnRetard.length > 0 && (
                 <ArrowRight className="w-5 h-5 text-gray-400" />
               )}
             </div>
