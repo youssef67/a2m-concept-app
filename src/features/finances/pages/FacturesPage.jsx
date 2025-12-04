@@ -29,7 +29,7 @@ import { useFactures } from '../hooks/useFactures'
 import { useContacts } from '../hooks/useContacts'
 import { useDocuments } from '../hooks/useDocuments'
 import { useChantiers } from '../../chantiers/hooks/useChantiers'
-import { getChantierById, updateChantierPaiementStatus } from '../../chantiers/services/chantiersService'
+import { updateChantierPaiementStatus } from '../../chantiers/services/chantiersService'
 import { useToast } from '../../../shared/hooks/useToast'
 import {
   formatDate,
@@ -368,22 +368,7 @@ export default function FacturesPage() {
     }
   }, [montantHT, prorataApplicable, factureType])
 
-  // Load chantier lié when selectedChantierId changes
-  React.useEffect(() => {
-    if (selectedChantierId) {
-      getChantierById(selectedChantierId).then(({ data, error }) => {
-        if (!error && data) {
-          setChantierLie(data)
-        } else {
-          setChantierLie(null)
-        }
-      })
-    } else {
-      setChantierLie(null)
-    }
-  }, [selectedChantierId])
-
-  // Tabs configuration with counts - Niveau 1 : Statut + Fin de chantier
+  // Tabs configuration with counts - Niveau 1 : Statut + Retenue de garantie
   const statutTabs = useMemo(() => {
     const allTabs = [
       {
