@@ -402,94 +402,40 @@ export default function AdminDashboard() {
         )}
 
         {/* Section: Factures clients en retard */}
-        <div className="space-y-4">
-          <div className="border-t-4 border-red-600 bg-red-50 rounded-lg p-4 mb-4">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
-              <h2 className="text-2xl font-bold text-gray-900">
-                Factures clients en retard
-              </h2>
+        {!loading && !error && (
+          <Card
+            onClick={() => facturesClientsEnRetard.length > 0 && navigate('/dashboard/finances?tab=en_attente&type=client&overdue=true')}
+            className={`${facturesClientsEnRetard.length > 0 ? 'cursor-pointer hover:shadow-lg' : ''} transition-shadow border-l-4 ${facturesClientsEnRetard.length > 0 ? 'border-l-red-600' : 'border-l-green-600'}`}
+          >
+            <div className="flex items-center gap-4">
+              <div className={`p-3 ${facturesClientsEnRetard.length > 0 ? 'bg-red-100' : 'bg-green-100'} rounded-lg flex-shrink-0`}>
+                {facturesClientsEnRetard.length > 0 ? (
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                ) : (
+                  <CheckCircle2 className="w-6 h-6 text-green-600" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-600 font-medium">Factures clients en retard</p>
+                {facturesClientsEnRetard.length > 0 ? (
+                  <>
+                    <p className="text-2xl font-bold text-red-600 truncate">
+                      {formatCurrency(facturesClientsEnRetard.reduce((sum, f) => sum + parseFloat(f.montant || 0), 0))}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {facturesClientsEnRetard.length} facture{facturesClientsEnRetard.length > 1 ? 's' : ''}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-base font-medium text-green-700">Aucune facture en retard</p>
+                )}
+              </div>
+              {facturesClientsEnRetard.length > 0 && (
+                <ArrowRight className="w-5 h-5 text-gray-400" />
+              )}
             </div>
-          </div>
-
-          <Card>
-            {/* Loading State */}
-            {loading && (
-              <div className="flex items-center justify-center py-8">
-                <Spinner />
-              </div>
-            )}
-
-            {/* Error State */}
-            {error && (
-              <Alert variant="error">
-                Erreur lors du chargement des factures clients en retard.
-              </Alert>
-            )}
-
-            {/* Empty State - Aucune facture client en retard */}
-            {!loading && !error && facturesClientsEnRetard.length === 0 && (
-              <div className="flex items-center gap-3 px-4 py-6 bg-green-50 border border-green-200 rounded-lg">
-                <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
-                <p className="text-base text-green-800 font-medium">
-                  Aucune facture client en retard
-                </p>
-              </div>
-            )}
-
-            {/* List of Factures clients en retard */}
-            {!loading && !error && facturesClientsEnRetard.length > 0 && (() => {
-              const top3 = facturesClientsEnRetard.slice(0, 3)
-              const remaining = Math.max(0, facturesClientsEnRetard.length - 3)
-
-              return (
-                <div className="space-y-3">
-                  {top3.map(facture => (
-                    <div
-                      key={facture.id}
-                      className="p-4 border border-red-200 bg-red-50 rounded-lg"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-base font-bold text-gray-900">
-                          {facture.numero_facture}
-                        </h3>
-                        <span className="px-3 py-1 bg-red-600 text-white rounded-full text-sm font-medium">
-                          {facture.joursRetard} jour{facture.joursRetard > 1 ? 's' : ''} de retard
-                        </span>
-                      </div>
-
-                      <div className="space-y-1 text-sm text-gray-700">
-                        <p>
-                          <span className="font-medium">Client :</span>{' '}
-                          {getContactDisplayName(facture.contact)}
-                        </p>
-                        <p>
-                          <span className="font-medium">Chantier :</span>{' '}
-                          {facture.chantier?.titre || 'Aucun chantier'}
-                        </p>
-                        <p>
-                          <span className="font-medium">Montant :</span>{' '}
-                          <span className="text-red-700 font-semibold">{formatCurrency(facture.montant)}</span>
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Bouton "Afficher tout" si plus de 3 factures */}
-                  {remaining > 0 && (
-                    <button
-                      onClick={() => navigate('/dashboard/finances?tab=en_attente&type=client&overdue=true')}
-                      className="w-full mt-4 h-12 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                    >
-                      <span>Afficher tout ({remaining})</span>
-                      <ArrowRight className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-              )
-            })()}
           </Card>
-        </div>
+        )}
 
         {/* Section: Factures fournisseurs en retard */}
         <div className="space-y-4">
