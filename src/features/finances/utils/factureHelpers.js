@@ -124,6 +124,7 @@ export function calculateDateEcheance(dateEmission, delaiPaiement) {
 export function isFactureOverdue(facture) {
   if (!facture.date_echeance) return false
   if (facture.statut === 'payee' || facture.statut === 'annulee') return false
+  if (facture.exclue_calculs === true) return false
 
   const today = new Date()
   today.setHours(0, 0, 0, 0) // Reset time to midnight
