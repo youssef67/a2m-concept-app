@@ -154,7 +154,8 @@ export default function AdminDashboard() {
 
     return facturesNonExclues
       .filter(f => {
-        if (f.type !== 'fournisseur' || f.statut !== 'en_attente') return false
+        // Inclure en_attente ET partiellement_payee (comme la page finances)
+        if (f.type !== 'fournisseur' || (f.statut !== 'en_attente' && f.statut !== 'partiellement_payee')) return false
 
         const dateEcheance = new Date(f.date_echeance)
         dateEcheance.setHours(0, 0, 0, 0)
@@ -439,78 +440,40 @@ export default function AdminDashboard() {
         )}
 
         {/* Section: Factures fournisseurs en retard */}
-        <div className="space-y-4">
-          <div className="border-t-4 border-orange-600 bg-orange-50 rounded-lg p-4 mb-4">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-6 h-6 text-orange-600" />
-              <h2 className="text-2xl font-bold text-gray-900">
-                Factures fournisseurs en retard
-              </h2>
+        {!loading && !error && (
+          <Card
+            onClick={() => facturesFournisseursEnRetard.length > 0 && navigate('/dashboard/finances?tab=en_attente&type=fournisseur&overdue=true')}
+            className={`${facturesFournisseursEnRetard.length > 0 ? 'cursor-pointer hover:shadow-lg' : ''} transition-shadow border-l-4 ${facturesFournisseursEnRetard.length > 0 ? 'border-l-orange-600' : 'border-l-green-600'}`}
+          >
+            <div className="flex items-center gap-4">
+              <div className={`p-3 ${facturesFournisseursEnRetard.length > 0 ? 'bg-orange-100' : 'bg-green-100'} rounded-lg flex-shrink-0`}>
+                {facturesFournisseursEnRetard.length > 0 ? (
+                  <AlertTriangle className="w-6 h-6 text-orange-600" />
+                ) : (
+                  <CheckCircle2 className="w-6 h-6 text-green-600" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-600 font-medium">Factures fournisseurs en retard</p>
+                {facturesFournisseursEnRetard.length > 0 ? (
+                  <>
+                    <p className="text-2xl font-bold text-orange-600 truncate">
+                      {formatCurrency(facturesFournisseursEnRetard.reduce((sum, f) => sum + parseFloat(f.montant || 0), 0))}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {facturesFournisseursEnRetard.length} facture{facturesFournisseursEnRetard.length > 1 ? 's' : ''}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-base font-medium text-green-700">Aucune facture en retard</p>
+                )}
+              </div>
+              {facturesFournisseursEnRetard.length > 0 && (
+                <ArrowRight className="w-5 h-5 text-gray-400" />
+              )}
             </div>
-          </div>
-
-          <Card>
-            {/* Loading State */}
-            {loading && (
-              <div className="flex items-center justify-center py-8">
-                <Spinner />
-              </div>
-            )}
-
-            {/* Error State */}
-            {error && (
-              <Alert variant="error">
-                Erreur lors du chargement des factures fournisseurs en retard.
-              </Alert>
-            )}
-
-            {/* Empty State - Aucune facture fournisseur en retard */}
-            {!loading && !error && facturesFournisseursEnRetard.length === 0 && (
-              <div className="flex items-center gap-3 px-4 py-6 bg-green-50 border border-green-200 rounded-lg">
-                <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
-                <p className="text-base text-green-800 font-medium">
-                  Aucune facture fournisseur en retard
-                </p>
-              </div>
-            )}
-
-            {/* List of Factures fournisseurs en retard */}
-            {!loading && !error && facturesFournisseursEnRetard.length > 0 && (
-              <div className="space-y-3">
-                {facturesFournisseursEnRetard.map(facture => (
-                  <div
-                    key={facture.id}
-                    className="p-4 border border-orange-200 bg-orange-50 rounded-lg"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-base font-bold text-gray-900">
-                        {facture.numero_facture}
-                      </h3>
-                      <span className="px-3 py-1 bg-orange-600 text-white rounded-full text-sm font-medium">
-                        {facture.joursRetard} jour{facture.joursRetard > 1 ? 's' : ''} de retard
-                      </span>
-                    </div>
-
-                    <div className="space-y-1 text-sm text-gray-700">
-                      <p>
-                        <span className="font-medium">Fournisseur :</span>{' '}
-                        {getContactDisplayName(facture.contact)}
-                      </p>
-                      <p>
-                        <span className="font-medium">Chantier :</span>{' '}
-                        {facture.chantier?.titre || 'Aucun chantier'}
-                      </p>
-                      <p>
-                        <span className="font-medium">Montant :</span>{' '}
-                        <span className="text-orange-700 font-semibold">{formatCurrency(facture.montant)}</span>
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </Card>
-        </div>
+        )}
 
         {/* Section: Chantiers en retard */}
         <div className="space-y-4">
