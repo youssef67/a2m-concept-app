@@ -23,7 +23,6 @@ export default function ContactsPage() {
   // State
   const [activeTab, setActiveTab] = useState('client')
   const [searchQuery, setSearchQuery] = useState('')
-  const [showSousTraitantsOnly, setShowSousTraitantsOnly] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
@@ -44,17 +43,24 @@ export default function ContactsPage() {
 
   // Filter and search contacts
   const filteredContacts = useMemo(() => {
-    // Filter by active tab (type)
-    let typeFiltered = contacts.filter(contact => contact.type === activeTab)
+    let typeFiltered
 
-    // Filter by sous-traitant if checkbox is enabled (only for fournisseurs)
-    if (activeTab === 'fournisseur' && showSousTraitantsOnly) {
-      typeFiltered = typeFiltered.filter(contact => contact.is_sous_traitant === true)
+    if (activeTab === 'client') {
+      // Onglet Clients : tous les clients
+      typeFiltered = contacts.filter(contact => contact.type === 'client')
+    } else if (activeTab === 'fournisseur') {
+      // Onglet Fournisseurs : fournisseurs NON sous-traitants
+      typeFiltered = contacts.filter(contact => contact.type === 'fournisseur' && !contact.is_sous_traitant)
+    } else if (activeTab === 'sous_traitant') {
+      // Onglet Sous-traitants : fournisseurs sous-traitants
+      typeFiltered = contacts.filter(contact => contact.type === 'fournisseur' && contact.is_sous_traitant)
+    } else {
+      typeFiltered = contacts
     }
 
     // Apply search
     return searchContacts(typeFiltered, searchQuery)
-  }, [contacts, activeTab, searchQuery, showSousTraitantsOnly])
+  }, [contacts, activeTab, searchQuery])
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredContacts.length / ITEMS_PER_PAGE)
@@ -66,24 +72,21 @@ export default function ContactsPage() {
     return filteredContacts.slice(startIndex, endIndex)
   }, [filteredContacts, currentPage])
 
-  // Reset to page 1 when tab, search, or filter changes
+  // Reset to page 1 when tab or search changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [activeTab, searchQuery, showSousTraitantsOnly])
-
-  // Reset sous-traitant filter when switching tabs
-  useEffect(() => {
-    setShowSousTraitantsOnly(false)
-  }, [activeTab])
+  }, [activeTab, searchQuery])
 
   // Count contacts by type
   const clientsCount = contacts.filter(c => c.type === 'client').length
-  const fournisseursCount = contacts.filter(c => c.type === 'fournisseur').length
+  const fournisseursCount = contacts.filter(c => c.type === 'fournisseur' && !c.is_sous_traitant).length
+  const sousTraitantsCount = contacts.filter(c => c.type === 'fournisseur' && c.is_sous_traitant).length
 
   // Tabs configuration
   const tabs = [
     { id: 'client', label: 'Clients', count: clientsCount },
-    { id: 'fournisseur', label: 'Fournisseurs', count: fournisseursCount }
+    { id: 'fournisseur', label: 'Fournisseurs', count: fournisseursCount },
+    { id: 'sous_traitant', label: 'Sous-traitants', count: sousTraitantsCount }
   ]
 
   // Handlers
@@ -218,10 +221,8 @@ export default function ContactsPage() {
           <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
         </div>
 
-        {/* Search bar and filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
         {/* Search bar */}
-        <div className="relative flex-1">
+        <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
@@ -231,26 +232,6 @@ export default function ContactsPage() {
             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
         </div>
-
-        {/* Sous-traitant filter (only visible for fournisseurs) */}
-        {activeTab === 'fournisseur' && (
-          <div className="flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-lg bg-white">
-            <input
-              type="checkbox"
-              id="filter-sous-traitants"
-              checked={showSousTraitantsOnly}
-              onChange={(e) => setShowSousTraitantsOnly(e.target.checked)}
-              className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 focus:ring-2"
-            />
-            <label
-              htmlFor="filter-sous-traitants"
-              className="text-sm font-medium text-gray-700 whitespace-nowrap cursor-pointer"
-            >
-              Sous-traitants uniquement
-            </label>
-          </div>
-        )}
-      </div>
 
       {/* Error state */}
       {error && (

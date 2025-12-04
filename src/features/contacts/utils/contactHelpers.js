@@ -51,7 +51,8 @@ export function getPersonFullName(person) {
 export function getContactTypeLabel(type) {
   const labels = {
     client: 'Client',
-    fournisseur: 'Fournisseur'
+    fournisseur: 'Fournisseur',
+    sous_traitant: 'Sous-traitant'
   }
   return labels[type] || type
 }
