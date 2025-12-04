@@ -251,7 +251,7 @@ export default function FacturesPage() {
     const type = searchParams.get('type')
     const overdue = searchParams.get('overdue')
 
-    if (tab && ['en_attente', 'payee', 'tous', 'annulee', 'retenue_garantie'].includes(tab)) {
+    if (tab && ['en_attente', 'payee', 'tous', 'retenue_garantie'].includes(tab)) {
       setActiveTab(tab)
     }
     if (type && ['client', 'fournisseur', 'sous_traitant'].includes(type)) {
@@ -385,11 +385,6 @@ export default function FacturesPage() {
         id: 'tous',
         label: 'Tous',
         count: factures.filter(f => f.statut !== 'annulee').length
-      },
-      {
-        id: 'annulee',
-        label: 'Annulées',
-        count: factures.filter(f => f.statut === 'annulee').length
       }
     ]
 
