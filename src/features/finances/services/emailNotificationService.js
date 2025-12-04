@@ -12,6 +12,16 @@ import { supabase } from '../../../lib/supabaseClient'
 import { logger } from '../../../shared/utils/logger'
 
 /**
+ * Get display value for invoice number
+ * For supplier invoices, the number may be null if not provided
+ * @param {string|null} numeroFacture - Invoice number
+ * @returns {string} Display value
+ */
+function getNumeroFactureDisplay(numeroFacture) {
+  return numeroFacture || 'Non renseigné'
+}
+
+/**
  * Send payment notification (full or partial)
  *
  * @param {Object} facture - Invoice data with contact info
@@ -32,7 +42,7 @@ export async function sendPaymentNotification(facture, payment, isFullPayment) {
       body: {
         type,
         facture: {
-          numero_facture: facture.numero_facture,
+          numero_facture: getNumeroFactureDisplay(facture.numero_facture),
           montant: facture.montant,
           date_emission: facture.date_emission,
           date_echeance: facture.date_echeance,
@@ -79,7 +89,7 @@ export async function sendInvoiceCreatedNotification(facture) {
       body: {
         type: 'invoice_created',
         facture: {
-          numero_facture: facture.numero_facture,
+          numero_facture: getNumeroFactureDisplay(facture.numero_facture),
           montant: facture.montant,
           date_emission: facture.date_emission,
           date_echeance: facture.date_echeance,
@@ -120,7 +130,7 @@ export async function sendInvoiceDeletedNotification(facture) {
       body: {
         type: 'invoice_deleted',
         facture: {
-          numero_facture: facture.numero_facture,
+          numero_facture: getNumeroFactureDisplay(facture.numero_facture),
           montant: facture.montant,
           date_emission: facture.date_emission,
           statut: facture.statut,
