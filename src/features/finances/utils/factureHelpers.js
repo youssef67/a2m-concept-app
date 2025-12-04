@@ -337,3 +337,42 @@ export function calculateDeductionMontant(montantHT, pourcentage) {
   if (!montantHT || montantHT <= 0 || !pourcentage || pourcentage <= 0) return 0
   return montantHT * (pourcentage / 100)
 }
+
+/**
+ * Get mode de paiement label
+ * @param {string} mode - 'prelevement' or 'virement'
+ * @returns {string} Label to display
+ */
+export function getModePaiementLabel(mode) {
+  const labels = {
+    prelevement: 'Prélèvement',
+    virement: 'Virement'
+  }
+  return labels[mode] || null
+}
+
+/**
+ * Get mode de paiement color (Tailwind classes)
+ * @param {string} mode - 'prelevement' or 'virement'
+ * @returns {string} Tailwind color class
+ */
+export function getModePaiementColor(mode) {
+  const colors = {
+    prelevement: 'text-blue-600',
+    virement: 'text-orange-600'
+  }
+  return colors[mode] || ''
+}
+
+/**
+ * Get mode de paiement background color (Tailwind classes)
+ * @param {string} mode - 'prelevement' or 'virement'
+ * @returns {string} Tailwind background color class
+ */
+export function getModePaiementBgColor(mode) {
+  const colors = {
+    prelevement: 'bg-blue-100 text-blue-700',
+    virement: 'bg-orange-100 text-orange-700'
+  }
+  return colors[mode] || ''
+}

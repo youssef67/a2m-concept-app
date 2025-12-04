@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings, AlertCircle, XCircle, Building2, StickyNote, CheckCircle, Flag } from 'lucide-react'
+import { Euro, Plus, Search, FileText, Calendar, User, Paperclip, Upload, Download, Trash2, Eye, MoreVertical, Edit, Trash, CreditCard, ChevronDown, Settings, AlertCircle, XCircle, Building2, StickyNote, CheckCircle, Flag, ArrowDownCircle, Send } from 'lucide-react'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
 import Button from '../../../shared/components/ui/Button'
@@ -36,7 +36,6 @@ import {
   formatCurrency,
   getContactDisplayName,
   searchFactures,
-  calculateDateEcheance,
   isFactureOverdue,
   calculateDaysOverdue,
   calculateTTC,
@@ -46,7 +45,8 @@ import {
   getMontantLabel,
   validateNumeroFacture,
   calculateTotalDeductions,
-  calculateDeductionMontant
+  calculateDeductionMontant,
+  getModePaiementLabel
 } from '../utils/factureHelpers'
 import { formatNumeroContact, getPaymentTermLabel } from '../../contacts/utils/contactHelpers'
 import {
@@ -84,6 +84,7 @@ export default function FacturesPage() {
   const [selectedChantierFilter, setSelectedChantierFilter] = useState('')
   const [showOverdueOnly, setShowOverdueOnly] = useState(false)
   const [showImportantNotesOnly, setShowImportantNotesOnly] = useState(false)
+  const [selectedModePaiementFilter, setSelectedModePaiementFilter] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingFacture, setEditingFacture] = useState(null)
   const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false)
@@ -170,6 +171,9 @@ export default function FacturesPage() {
 
   // Numero facture state (editable for clients)
   const [numeroFacture, setNumeroFacture] = useState('')
+
+  // Mode de paiement state (fournisseurs only, not sous-traitants)
+  const [modePaiement, setModePaiement] = useState('')
 
   // Hooks
   const { factures, loading, error, createFacture, updateFacture, deleteFacture, deleteMultipleFactures, refreshFactures } = useFactures()
@@ -555,21 +559,26 @@ export default function FacturesPage() {
       ? contactFiltered.filter(facture => facture.chantier?.id === selectedChantierFilter)
       : contactFiltered
 
-    // 6. Filtrer par notes importantes (si activé)
-    const importantNotesFiltered = showImportantNotesOnly
-      ? chantierFiltered.filter(facture => facture.has_important_notes)
+    // 6. Filtrer par mode de paiement (fournisseurs uniquement)
+    const modePaiementFiltered = selectedModePaiementFilter
+      ? chantierFiltered.filter(facture => facture.mode_paiement === selectedModePaiementFilter)
       : chantierFiltered
 
-    // 7. Appliquer la recherche
+    // 7. Filtrer par notes importantes (si activé)
+    const importantNotesFiltered = showImportantNotesOnly
+      ? modePaiementFiltered.filter(facture => facture.has_important_notes)
+      : modePaiementFiltered
+
+    // 8. Appliquer la recherche
     const searched = searchFactures(importantNotesFiltered, searchQuery)
 
-    // 8. Trier par numéro de facture (du plus élevé au plus bas)
+    // 9. Trier par numéro de facture (du plus élevé au plus bas)
     return searched.sort((a, b) => {
       const numA = a.numero_facture ? parseInt(a.numero_facture.split('-').pop(), 10) || 0 : 0
       const numB = b.numero_facture ? parseInt(b.numero_facture.split('-').pop(), 10) || 0 : 0
       return numB - numA // Tri décroissant
     })
-  }, [factures, activeTab, activeType, showOverdueOnly, selectedContactFilter, selectedChantierFilter, showImportantNotesOnly, searchQuery])
+  }, [factures, activeTab, activeType, showOverdueOnly, selectedContactFilter, selectedChantierFilter, selectedModePaiementFilter, showImportantNotesOnly, searchQuery])
 
   // Filter and search chantiers (for "Fin de chantier" tab)
   const filteredChantiers = useMemo(() => {
@@ -728,6 +737,7 @@ export default function FacturesPage() {
     setSelectedChantierFilter('')
     setShowOverdueOnly(false)
     setShowImportantNotesOnly(false)
+    setSelectedModePaiementFilter('')
   }
 
   // Reset contact and chantier filters when type or tab changes
@@ -739,7 +749,14 @@ export default function FacturesPage() {
   // Reset page when filter or search changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [activeTab, activeType, selectedContactFilter, selectedChantierFilter, searchQuery, showOverdueOnly, showImportantNotesOnly])
+  }, [activeTab, activeType, selectedContactFilter, selectedChantierFilter, selectedModePaiementFilter, searchQuery, showOverdueOnly, showImportantNotesOnly])
+
+  // Reset mode paiement filter when switching away from fournisseur tab
+  useEffect(() => {
+    if (activeType !== 'fournisseur') {
+      setSelectedModePaiementFilter('')
+    }
+  }, [activeType])
 
   // Redirect if on "fin_chantier" tab with type "fournisseur"
   useEffect(() => {
@@ -870,7 +887,9 @@ export default function FacturesPage() {
       exclue_calculs: false,
       raison_exclusion: null,
       // Numero facture (for clients, optional - auto-generated if empty)
-      numero_facture: null
+      numero_facture: null,
+      // Mode de paiement (fournisseurs only, not sous-traitants)
+      mode_paiement: null
     }
 
     // Gérer le numero facture (clients only)
@@ -890,6 +909,11 @@ export default function FacturesPage() {
       data.retenue_garantie = false
       data.prorata_applicable = false
       data.exclue_finalisation = false
+      // Mode de paiement uniquement pour fournisseurs (pas sous-traitants)
+      // activeType permet de distinguer fournisseur vs sous_traitant
+      if (activeType === 'fournisseur' || (editingFacture && !editingFacture.contact?.is_sous_traitant)) {
+        data.mode_paiement = modePaiement || null
+      }
     } else {
       // Client: HT avec ou sans TVA, avec ou sans retenue, avec ou sans prorata, avec ou sans exclusion finalisation
       data.montant_ht = parseFloat(formData.get('montant_ht'))
@@ -1030,6 +1054,8 @@ export default function FacturesPage() {
     setRaisonExclusion(facture.raison_exclusion || '')
     // Initialize numero facture (for clients only)
     setNumeroFacture(facture.numero_facture || '')
+    // Initialize mode paiement (for fournisseurs only)
+    setModePaiement(facture.mode_paiement || '')
     // Initialize deductions (new system)
     setDeductions(facture.deductions || [])
     setFormKey(prev => prev + 1)
@@ -1067,6 +1093,8 @@ export default function FacturesPage() {
     setRaisonExclusion('')
     // Reset numero facture
     setNumeroFacture('')
+    // Reset mode paiement
+    setModePaiement('')
     // Reset deductions (new system)
     setDeductions([])
     setSelectedDeductionType('')
@@ -1516,13 +1544,27 @@ export default function FacturesPage() {
                   )}
                 </button>
 
+                {/* Mode de paiement Filter (Fournisseurs only) */}
+                {activeType === 'fournisseur' && (
+                  <Select
+                    value={selectedModePaiementFilter}
+                    onChange={setSelectedModePaiementFilter}
+                    options={[
+                      { value: '', label: 'Mode paiement' },
+                      { value: 'prelevement', label: 'Prélèvement' },
+                      { value: 'virement', label: 'Virement' }
+                    ]}
+                    className="h-12"
+                  />
+                )}
+
                 {/* Clear Filters Button */}
                 <button
                   onClick={handleClearFilters}
-                  disabled={!searchQuery && !selectedContactFilter && !selectedChantierFilter && !showOverdueOnly && !showImportantNotesOnly}
+                  disabled={!searchQuery && !selectedContactFilter && !selectedChantierFilter && !showOverdueOnly && !showImportantNotesOnly && !selectedModePaiementFilter}
                   className={`
                     h-12 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
-                    ${(!searchQuery && !selectedContactFilter && !selectedChantierFilter && !showOverdueOnly && !showImportantNotesOnly)
+                    ${(!searchQuery && !selectedContactFilter && !selectedChantierFilter && !showOverdueOnly && !showImportantNotesOnly && !selectedModePaiementFilter)
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                     }
@@ -1682,6 +1724,24 @@ export default function FacturesPage() {
                               <div className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium" title="Exclue des calculs">
                                 <XCircle className="w-3 h-3" />
                                 <span>Exclue</span>
+                              </div>
+                            )}
+                            {/* Mode de paiement icon (fournisseurs only, not sous-traitants) */}
+                            {facture.type === 'fournisseur' && !facture.contact?.is_sous_traitant && facture.mode_paiement && (
+                              <div
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                  facture.mode_paiement === 'prelevement'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : 'bg-orange-100 text-orange-700'
+                                }`}
+                                title={getModePaiementLabel(facture.mode_paiement)}
+                              >
+                                {facture.mode_paiement === 'prelevement' ? (
+                                  <ArrowDownCircle className="w-3 h-3" />
+                                ) : (
+                                  <Send className="w-3 h-3" />
+                                )}
+                                <span>{getModePaiementLabel(facture.mode_paiement)}</span>
                               </div>
                             )}
                           </div>
@@ -2179,6 +2239,24 @@ export default function FacturesPage() {
                 className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
+
+            {/* Mode de paiement - Fournisseurs uniquement (pas sous-traitants) */}
+            {(activeType === 'fournisseur' || (editingFacture?.type === 'fournisseur' && !editingFacture?.contact?.is_sous_traitant)) && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mode de paiement
+                </label>
+                <Select
+                  value={modePaiement}
+                  onChange={setModePaiement}
+                  options={[
+                    { value: '', label: 'Non renseigné' },
+                    { value: 'prelevement', label: 'Prélèvement' },
+                    { value: 'virement', label: 'Virement' }
+                  ]}
+                />
+              </div>
+            )}
 
             {/* Montant - Logique conditionnelle selon type */}
             {factureType === 'fournisseur' ? (

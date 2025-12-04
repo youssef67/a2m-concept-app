@@ -1,5 +1,5 @@
 import React from 'react'
-import { FileText, User, Calendar, CreditCard, AlertTriangle, Edit2 } from 'lucide-react'
+import { FileText, User, Calendar, CreditCard, AlertTriangle, Edit2, ArrowDownCircle, Send } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import Button from '../../../shared/components/ui/Button'
 import {
@@ -7,7 +7,8 @@ import {
   formatDate,
   getStatutLabel,
   getStatutColor,
-  getContactDisplayName
+  getContactDisplayName,
+  getModePaiementLabel
 } from '../utils/factureHelpers'
 
 /**
@@ -72,6 +73,21 @@ export default function FactureDetailModal({
               }`}>
                 {facture.type === 'client' ? 'Client' : 'Fournisseur'}
               </span>
+              {/* Mode de paiement badge (fournisseurs only, not sous-traitants) */}
+              {facture.type === 'fournisseur' && !facture.contact?.is_sous_traitant && facture.mode_paiement && (
+                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                  facture.mode_paiement === 'prelevement'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-orange-100 text-orange-700'
+                }`}>
+                  {facture.mode_paiement === 'prelevement' ? (
+                    <ArrowDownCircle className="w-3 h-3" />
+                  ) : (
+                    <Send className="w-3 h-3" />
+                  )}
+                  {getModePaiementLabel(facture.mode_paiement)}
+                </span>
+              )}
               {isOverdue && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700">
                   <AlertTriangle className="w-3 h-3" />
