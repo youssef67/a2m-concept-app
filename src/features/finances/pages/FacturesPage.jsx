@@ -214,7 +214,7 @@ export default function FacturesPage() {
     if (tab && ['en_attente', 'payee', 'tous', 'annulee', 'fin_chantier'].includes(tab)) {
       setActiveTab(tab)
     }
-    if (type && ['client', 'fournisseur'].includes(type)) {
+    if (type && ['client', 'fournisseur', 'sous_traitant'].includes(type)) {
       setActiveType(type)
     }
     if (overdue === 'true') {
@@ -399,24 +399,51 @@ export default function FacturesPage() {
       {
         id: 'fournisseur',
         label: 'Fournisseurs',
-        count: statutFiltered.filter(f => f.type === 'fournisseur').length
+        count: statutFiltered.filter(f => f.type === 'fournisseur' && !f.contact?.is_sous_traitant).length
+      },
+      {
+        id: 'sous_traitant',
+        label: 'Sous-traitants',
+        count: statutFiltered.filter(f => f.type === 'fournisseur' && f.contact?.is_sous_traitant).length
       }
     ]
   }, [factures, activeTab])
 
   // Available contacts filtered by current type
   const availableContacts = useMemo(() => {
-    return contacts.filter(c => c.type === activeType)
+    if (activeType === 'client') {
+      return contacts.filter(c => c.type === 'client')
+    } else if (activeType === 'fournisseur') {
+      return contacts.filter(c => c.type === 'fournisseur' && !c.is_sous_traitant)
+    } else if (activeType === 'sous_traitant') {
+      return contacts.filter(c => c.type === 'fournisseur' && c.is_sous_traitant)
+    }
+    return contacts
   }, [contacts, activeType])
+
+  // Helper function to filter factures by activeType
+  const filterFacturesByType = (facturesList) => {
+    if (activeType === 'client') {
+      return facturesList.filter(f => f.type === 'client')
+    } else if (activeType === 'fournisseur') {
+      return facturesList.filter(f => f.type === 'fournisseur' && !f.contact?.is_sous_traitant)
+    } else if (activeType === 'sous_traitant') {
+      return facturesList.filter(f => f.type === 'fournisseur' && f.contact?.is_sous_traitant)
+    }
+    return facturesList
+  }
 
   // Contact filter options for SearchableSelect component - filtered by active tab
   const contactFilterOptions = useMemo(() => {
-    // Filtrer les factures par onglet actif et type
-    const facturesForTab = activeTab === 'tous'
-      ? factures.filter(f => f.statut !== 'annulee' && f.type === activeType)
+    // Filtrer les factures par onglet actif
+    const statutFiltered = activeTab === 'tous'
+      ? factures.filter(f => f.statut !== 'annulee')
       : activeTab === 'en_attente'
-        ? factures.filter(f => (f.statut === 'en_attente' || f.statut === 'partiellement_payee') && f.type === activeType)
-        : factures.filter(f => f.statut === activeTab && f.type === activeType)
+        ? factures.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee')
+        : factures.filter(f => f.statut === activeTab)
+
+    // Filtrer par type (client, fournisseur, sous_traitant)
+    const facturesForTab = filterFacturesByType(statutFiltered)
 
     // Extraire les contact_ids uniques
     const contactIdsWithFactures = new Set(facturesForTab.map(f => f.contact_id))
@@ -426,7 +453,7 @@ export default function FacturesPage() {
 
     const allOption = {
       value: '',
-      label: activeType === 'client' ? 'Tous les clients' : 'Tous les fournisseurs'
+      label: activeType === 'client' ? 'Tous les clients' : activeType === 'fournisseur' ? 'Tous les fournisseurs' : 'Tous les sous-traitants'
     }
 
     const contactOptions = filteredContacts.map(contact => ({
@@ -444,12 +471,15 @@ export default function FacturesPage() {
       label: 'Tous les chantiers'
     }
 
-    // Filtrer les factures par onglet actif et type
-    const facturesForTab = activeTab === 'tous'
-      ? factures.filter(f => f.statut !== 'annulee' && f.type === activeType && f.chantier)
+    // Filtrer les factures par onglet actif
+    const statutFiltered = activeTab === 'tous'
+      ? factures.filter(f => f.statut !== 'annulee' && f.chantier)
       : activeTab === 'en_attente'
-        ? factures.filter(f => (f.statut === 'en_attente' || f.statut === 'partiellement_payee') && f.type === activeType && f.chantier)
-        : factures.filter(f => f.statut === activeTab && f.type === activeType && f.chantier)
+        ? factures.filter(f => (f.statut === 'en_attente' || f.statut === 'partiellement_payee') && f.chantier)
+        : factures.filter(f => f.statut === activeTab && f.chantier)
+
+    // Filtrer par type (client, fournisseur, sous_traitant)
+    const facturesForTab = filterFacturesByType(statutFiltered)
 
     // Get unique chantiers
     const uniqueChantierIds = new Set()
@@ -480,7 +510,7 @@ export default function FacturesPage() {
       : activeTab === 'en_attente'
         ? factures.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee')
         : factures.filter(f => f.statut === activeTab)
-    const typeFiltered = statutFiltered.filter(f => f.type === activeType)
+    const typeFiltered = filterFacturesByType(statutFiltered)
     return typeFiltered.filter(f => isFactureOverdue(f)).length
   }, [factures, activeTab, activeType])
 
@@ -493,7 +523,7 @@ export default function FacturesPage() {
       : activeTab === 'en_attente'
         ? factures.filter(f => f.statut === 'en_attente' || f.statut === 'partiellement_payee')
         : factures.filter(f => f.statut === activeTab)
-    const typeFiltered = statutFiltered.filter(f => f.type === activeType)
+    const typeFiltered = filterFacturesByType(statutFiltered)
     return typeFiltered.filter(f => f.has_important_notes).length
   }, [factures, activeTab, activeType])
 
@@ -507,8 +537,8 @@ export default function FacturesPage() {
         ? factures.filter(facture => facture.statut === 'en_attente' || facture.statut === 'partiellement_payee')
         : factures.filter(facture => facture.statut === activeTab)
 
-    // 2. Filtrer par type
-    const typeFiltered = statutFiltered.filter(facture => facture.type === activeType)
+    // 2. Filtrer par type (client, fournisseur, sous_traitant)
+    const typeFiltered = filterFacturesByType(statutFiltered)
 
     // 3. Filtrer par factures en retard (si activé)
     const overdueFiltered = showOverdueOnly
@@ -1018,8 +1048,8 @@ export default function FacturesPage() {
     setDateEmission(new Date().toISOString().split('T')[0])
     setDateEcheance('')
     setFactureStatut('en_attente')
-    // Reset TVA states
-    setFactureType(activeType)
+    // Reset TVA states - pour sous_traitant, le type DB reste 'fournisseur'
+    setFactureType(activeType === 'sous_traitant' ? 'fournisseur' : activeType)
     setTvaApplicable(false)
     setMontantHT('')
     setMontantTTC('')
@@ -1424,7 +1454,7 @@ export default function FacturesPage() {
                   value={selectedContactFilter}
                   onChange={setSelectedContactFilter}
                   options={contactFilterOptions}
-                  placeholder={activeType === 'client' ? 'Tous les clients' : 'Tous les fournisseurs'}
+                  placeholder={activeType === 'client' ? 'Tous les clients' : activeType === 'fournisseur' ? 'Tous les fournisseurs' : 'Tous les sous-traitants'}
                   searchPlaceholder="Rechercher un contact..."
                 />
 
@@ -2067,13 +2097,19 @@ export default function FacturesPage() {
             {/* Contact */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {activeType === 'client' ? 'Client' : 'Fournisseur'} *
+                {activeType === 'client' ? 'Client' : activeType === 'fournisseur' ? 'Fournisseur' : 'Sous-traitant'} *
               </label>
               <SearchableSelect
                 value={selectedContactId}
                 onChange={setSelectedContactId}
                 options={sortedContacts
-                  .filter(c => c.type === (editingFacture?.type || activeType))
+                  .filter(c => {
+                    const currentType = editingFacture?.type || activeType
+                    if (currentType === 'client') return c.type === 'client'
+                    if (currentType === 'fournisseur') return c.type === 'fournisseur' && !c.is_sous_traitant
+                    if (currentType === 'sous_traitant') return c.type === 'fournisseur' && c.is_sous_traitant
+                    return false
+                  })
                   .map(contact => ({
                     value: contact.id,
                     label: getContactDisplayName(contact),

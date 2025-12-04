@@ -71,7 +71,8 @@ export async function getAllFactures(type = null) {
           first_name,
           last_name,
           phone,
-          email
+          email,
+          is_sous_traitant
         ),
         chantier:chantiers(
           id,
@@ -170,7 +171,8 @@ export async function getFactureById(factureId) {
           first_name,
           last_name,
           phone,
-          email
+          email,
+          is_sous_traitant
         ),
         deductions:facture_deductions(
           id,
@@ -218,7 +220,8 @@ export async function createFacture(factureData, deductions = []) {
           first_name,
           last_name,
           phone,
-          email
+          email,
+          is_sous_traitant
         ),
         deductions:facture_deductions(
           id,
@@ -343,7 +346,8 @@ export async function updateFacture(factureId, factureData, deductions = null) {
           first_name,
           last_name,
           phone,
-          email
+          email,
+          is_sous_traitant
         ),
         chantier:chantiers(
           id,
