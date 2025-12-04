@@ -117,7 +117,8 @@ export default function AdminDashboard() {
 
     return facturesNonExclues
       .filter(f => {
-        if (f.type !== 'client' || f.statut !== 'en_attente') return false
+        // Inclure en_attente ET partiellement_payee (comme la page finances)
+        if (f.type !== 'client' || (f.statut !== 'en_attente' && f.statut !== 'partiellement_payee')) return false
 
         const dateEcheance = new Date(f.date_echeance)
         dateEcheance.setHours(0, 0, 0, 0)
