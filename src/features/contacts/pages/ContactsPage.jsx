@@ -6,7 +6,7 @@ import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader
 import Button from '../../../shared/components/ui/Button'
 import Tabs from '../../../shared/components/ui/Tabs'
 import Pagination from '../../../shared/components/ui/Pagination'
-import ContactCard from '../components/ContactCard'
+import ContactListItem from '../components/ContactListItem'
 import ContactModal from '../components/ContactModal'
 import ContactDetailModal from '../components/ContactDetailModal'
 import DeleteConfirmModal from '../components/DeleteConfirmModal'
@@ -14,8 +14,8 @@ import { useContacts } from '../hooks/useContacts'
 import { searchContacts, getContactTypeLabel } from '../utils/contactHelpers'
 import { useToast } from '../../../shared/hooks/useToast'
 
-// Nombre de contacts par page
-const ITEMS_PER_PAGE = 9
+// Nombre de contacts par page (augmenté pour la vue liste)
+const ITEMS_PER_PAGE = 15
 
 export default function ContactsPage() {
   const navigate = useNavigate()
@@ -289,9 +289,9 @@ export default function ContactsPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
+              <div className="flex flex-col gap-2">
                 {paginatedContacts.map((contact) => (
-                  <ContactCard
+                  <ContactListItem
                     key={contact.id}
                     contact={contact}
                     onView={handleViewContact}
