@@ -1528,7 +1528,7 @@ export default function FacturesPage() {
               </div>
 
               {/* Second row: Overdue and Clear buttons */}
-              <div className="flex flex-row gap-3 md:justify-start">
+              <div className="grid grid-cols-2 md:flex md:flex-row gap-3 md:justify-start">
                 {/* Overdue Filter Button */}
                 <button
                   onClick={() => setShowOverdueOnly(!showOverdueOnly)}
