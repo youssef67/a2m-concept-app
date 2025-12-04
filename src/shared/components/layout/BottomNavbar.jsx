@@ -51,7 +51,7 @@ export default function BottomNavbar() {
   )
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 w-full max-w-full bg-white border-t border-gray-200 shadow-lg z-30 overflow-x-hidden">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 w-full max-w-full bg-white border-t border-gray-200 shadow-lg z-50 overflow-x-hidden">
       <ul className="flex items-center justify-between h-16">
         {visibleModules.map((module) => {
           const Icon = module.icon
