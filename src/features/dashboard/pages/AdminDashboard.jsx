@@ -311,7 +311,10 @@ export default function AdminDashboard() {
             {/* Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Card 1 - Clients À Recevoir */}
-            <Card>
+            <Card
+              onClick={() => navigate('/dashboard/finances?tab=en_attente&type=client')}
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+            >
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-blue-100 rounded-lg flex-shrink-0">
                   <Clock className="w-6 h-6 text-blue-600" />
@@ -325,11 +328,15 @@ export default function AdminDashboard() {
                     {stats.clientsEnAttente.count} facture{stats.clientsEnAttente.count > 1 ? 's' : ''}
                   </p>
                 </div>
+                <ArrowRight className="w-5 h-5 text-gray-400" />
               </div>
             </Card>
 
             {/* Card 2 - Clients Reçu */}
-            <Card>
+            <Card
+              onClick={() => navigate('/dashboard/finances?tab=payee&type=client')}
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+            >
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-green-100 rounded-lg flex-shrink-0">
                   <CheckCircle className="w-6 h-6 text-green-600" />
@@ -343,11 +350,15 @@ export default function AdminDashboard() {
                     {stats.clientsPayes.count} facture{stats.clientsPayes.count > 1 ? 's' : ''}
                   </p>
                 </div>
+                <ArrowRight className="w-5 h-5 text-gray-400" />
               </div>
             </Card>
 
             {/* Card 3 - Fournisseurs À Payer */}
-            <Card>
+            <Card
+              onClick={() => navigate('/dashboard/finances?tab=en_attente&type=fournisseur')}
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+            >
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-orange-100 rounded-lg flex-shrink-0">
                   <Clock className="w-6 h-6 text-orange-600" />
@@ -361,11 +372,15 @@ export default function AdminDashboard() {
                     {stats.fournisseursEnAttente.count} facture{stats.fournisseursEnAttente.count > 1 ? 's' : ''}
                   </p>
                 </div>
+                <ArrowRight className="w-5 h-5 text-gray-400" />
               </div>
             </Card>
 
             {/* Card 4 - Sous-traitants À Payer */}
-            <Card>
+            <Card
+              onClick={() => navigate('/dashboard/finances?tab=en_attente&type=sous_traitant')}
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+            >
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-purple-100 rounded-lg flex-shrink-0">
                   <Clock className="w-6 h-6 text-purple-600" />
@@ -379,6 +394,7 @@ export default function AdminDashboard() {
                     {stats.sousTraitantsEnAttente.count} facture{stats.sousTraitantsEnAttente.count > 1 ? 's' : ''}
                   </p>
                 </div>
+                <ArrowRight className="w-5 h-5 text-gray-400" />
               </div>
             </Card>
             </div>
