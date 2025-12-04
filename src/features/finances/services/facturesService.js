@@ -360,6 +360,18 @@ export async function updateFacture(factureId, factureData, deductions = null) {
           pourcentage,
           montant,
           ordre
+        ),
+        documents:facture_documents(
+          id,
+          nom_fichier,
+          nom_original,
+          storage_path,
+          taille_fichier,
+          created_at
+        ),
+        notes:facture_notes(
+          id,
+          is_important
         )
       `)
       .single()
@@ -376,10 +388,22 @@ export async function updateFacture(factureId, factureData, deductions = null) {
     const montantAPayer = getMontantAPayer(data)
     const montantRestant = montantAPayer - montantPaye
 
+    // Extract first document (limit 1 PDF per facture)
+    const document = data.documents && data.documents.length > 0
+      ? data.documents[0]
+      : null
+
+    // Count notes and check for important ones
+    const notesCount = data.notes?.length || 0
+    const hasImportantNotes = data.notes?.some(n => n.is_important) || false
+
     const factureWithPaiements = {
       ...data,
       montant_paye: montantPaye,
-      montant_restant: Math.max(0, montantRestant)
+      montant_restant: Math.max(0, montantRestant),
+      document,
+      notes_count: notesCount,
+      has_important_notes: hasImportantNotes
     }
 
     return { data: factureWithPaiements, error: null, success: true }
