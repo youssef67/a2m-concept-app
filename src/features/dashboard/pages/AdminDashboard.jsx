@@ -155,7 +155,9 @@ export default function AdminDashboard() {
     return facturesNonExclues
       .filter(f => {
         // Inclure en_attente ET partiellement_payee (comme la page finances)
+        // Exclure les sous-traitants (uniquement fournisseurs)
         if (f.type !== 'fournisseur' || (f.statut !== 'en_attente' && f.statut !== 'partiellement_payee')) return false
+        if (f.contact?.is_sous_traitant) return false
 
         const dateEcheance = new Date(f.date_echeance)
         dateEcheance.setHours(0, 0, 0, 0)
