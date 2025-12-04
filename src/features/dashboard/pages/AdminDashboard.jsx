@@ -1,18 +1,9 @@
 import React, { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Clock, CheckCircle, AlertTriangle, Calendar, CheckCircle2, TrendingUp, FileText, LogOut, ArrowRight } from 'lucide-react'
+import { Clock, CheckCircle, AlertTriangle, CheckCircle2, TrendingUp, FileText, LogOut, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { useFactures } from '../../finances/hooks/useFactures'
-import { useChantiers } from '../../chantiers/hooks/useChantiers'
 import { formatCurrency, filterFacturesNonExclues } from '../../finances/utils/factureHelpers'
-import {
-  calculateEcheanceFinalisation95,
-  calculateEcheanceRetenues,
-  isEcheancePassee,
-  chantierHasRetenueGarantie,
-  formatDate as formatChantierDate,
-  getClientDisplayName as getChantierClientName
-} from '../../chantiers/utils/chantierHelpers'
 import { getContactDisplayName } from '../../contacts/utils/contactHelpers'
 import AppLayout from '../../../shared/components/layout/AppLayout'
 import StickyPageHeader from '../../../shared/components/layout/StickyPageHeader'
@@ -30,7 +21,6 @@ export default function AdminDashboard() {
     navigate('/login')
   }
   const { factures, loading, error } = useFactures()
-  const { chantiers, loading: chantiersLoading, error: chantiersError } = useChantiers('cloture')
 
   // Calculs des statistiques
   const stats = useMemo(() => {
@@ -180,61 +170,6 @@ export default function AdminDashboard() {
         return new Date(a.date_echeance) - new Date(b.date_echeance)
       })
   }, [factures])
-
-  // Calcul des chantiers en retard (finalisation 95% et/ou retenues de garantie)
-  const chantiersEnRetard = useMemo(() => {
-    if (!chantiers || !factures) return []
-
-    return chantiers
-      .filter(chantier => {
-        // Doit avoir une date de fin réelle
-        if (!chantier.date_fin_reelle) return false
-
-        // Vérifie si finalisation 95% en retard ET non payée
-        const hasFinalisationRetard =
-          chantier.finalisation_95 &&
-          !chantier.finalisation_95_payee &&
-          isEcheancePassee(calculateEcheanceFinalisation95(chantier.date_fin_reelle))
-
-        // Vérifie si retenues de garantie en retard ET non payées
-        const hasRetenuesRetard =
-          chantierHasRetenueGarantie(chantier.id, factures) &&
-          !chantier.retenue_garantie_payee &&
-          isEcheancePassee(calculateEcheanceRetenues(chantier.date_fin_reelle))
-
-        return hasFinalisationRetard || hasRetenuesRetard
-      })
-      .map(chantier => {
-        const echeanceFinalisation = calculateEcheanceFinalisation95(chantier.date_fin_reelle)
-        const echeanceRetenues = calculateEcheanceRetenues(chantier.date_fin_reelle)
-
-        return {
-          ...chantier,
-          finalisationRetard:
-            chantier.finalisation_95 &&
-            !chantier.finalisation_95_payee &&
-            isEcheancePassee(echeanceFinalisation),
-          retenuesRetard:
-            chantierHasRetenueGarantie(chantier.id, factures) &&
-            !chantier.retenue_garantie_payee &&
-            isEcheancePassee(echeanceRetenues),
-          echeanceFinalisation,
-          echeanceRetenues
-        }
-      })
-      .sort((a, b) => {
-        // Trier par échéance la plus ancienne (plus en retard) en premier
-        const dateA = Math.min(
-          a.finalisationRetard ? new Date(a.echeanceFinalisation).getTime() : Infinity,
-          a.retenuesRetard ? new Date(a.echeanceRetenues).getTime() : Infinity
-        )
-        const dateB = Math.min(
-          b.finalisationRetard ? new Date(b.echeanceFinalisation).getTime() : Infinity,
-          b.retenuesRetard ? new Date(b.echeanceRetenues).getTime() : Infinity
-        )
-        return dateA - dateB
-      })
-  }, [chantiers, factures])
 
   // Calcul des 3 dernières factures (triées par numéro décroissant)
   const dernieresFactures = useMemo(() => {
@@ -476,96 +411,6 @@ export default function AdminDashboard() {
             </div>
           </Card>
         )}
-
-        {/* Section: Chantiers en retard */}
-        <div className="space-y-4">
-          <div className="border-t-4 border-red-600 bg-red-50 rounded-lg p-4 mb-4">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
-              <h2 className="text-2xl font-bold text-gray-900">
-                RG et finalisation 95% en retard
-              </h2>
-            </div>
-          </div>
-
-          <Card>
-
-          {/* Loading State */}
-          {chantiersLoading && (
-            <div className="flex items-center justify-center py-8">
-              <Spinner />
-            </div>
-          )}
-
-          {/* Error State */}
-          {chantiersError && (
-            <Alert variant="error">
-              Erreur lors du chargement des chantiers en retard.
-            </Alert>
-          )}
-
-          {/* Empty State - Aucun chantier en retard */}
-          {!chantiersLoading && !chantiersError && chantiersEnRetard.length === 0 && (
-            <div className="flex items-center gap-3 px-4 py-6 bg-green-50 border border-green-200 rounded-lg">
-              <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
-              <p className="text-base text-green-800 font-medium">
-                Aucune finalisation ou retenue en retard
-              </p>
-            </div>
-          )}
-
-          {/* List of Chantiers en retard */}
-          {!chantiersLoading && !chantiersError && chantiersEnRetard.length > 0 && (
-            <div className="space-y-4">
-              {chantiersEnRetard.map(chantier => (
-                <div
-                  key={chantier.id}
-                  className="p-4 border border-red-200 bg-red-50 rounded-lg space-y-3"
-                >
-                  {/* Titre + Client */}
-                  <div>
-                    <h3 className="text-base font-semibold text-gray-900">
-                      {chantier.titre}
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {getChantierClientName(chantier.client)}
-                    </p>
-                  </div>
-
-                  {/* Badges de retard */}
-                  <div className="space-y-2">
-                    {/* Finalisation 95% en retard */}
-                    {chantier.finalisationRetard && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="px-3 py-1 bg-red-600 text-white rounded-full font-medium">
-                          Finalisation 95%
-                        </span>
-                        <div className="flex items-center gap-1 text-gray-700">
-                          <Calendar className="w-4 h-4" />
-                          <span>Échéance : {formatChantierDate(chantier.echeanceFinalisation)}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Retenues de garantie en retard */}
-                    {chantier.retenuesRetard && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="px-3 py-1 bg-red-600 text-white rounded-full font-medium">
-                          Retenues de garantie
-                        </span>
-                        <div className="flex items-center gap-1 text-gray-700">
-                          <Calendar className="w-4 h-4" />
-                          <span>Échéance : {formatChantierDate(chantier.echeanceRetenues)}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          </Card>
-        </div>
 
         {/* Section: Dernières factures */}
         <div className="space-y-4">
