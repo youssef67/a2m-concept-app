@@ -555,10 +555,18 @@ export default function FacturesPage() {
     const clientFactures = factures.filter(f => f.type === 'client' && f.numero_facture)
     if (clientFactures.length === 0) return null
 
-    // Sort by numero_facture descending (extract numeric part)
+    // Sort by year first, then by invoice number (both descending)
+    // Format: FAC/C-YYYY-NNNNN
     const sorted = [...clientFactures].sort((a, b) => {
-      const numA = parseInt(a.numero_facture.split('-').pop(), 10) || 0
-      const numB = parseInt(b.numero_facture.split('-').pop(), 10) || 0
+      const partsA = a.numero_facture.split('-')
+      const partsB = b.numero_facture.split('-')
+      const yearA = parseInt(partsA[1], 10) || 0
+      const yearB = parseInt(partsB[1], 10) || 0
+      const numA = parseInt(partsA[2], 10) || 0
+      const numB = parseInt(partsB[2], 10) || 0
+
+      // First compare by year, then by number
+      if (yearA !== yearB) return yearB - yearA
       return numB - numA
     })
 
