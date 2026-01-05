@@ -286,9 +286,10 @@ export function filterFacturesNonExclues(factures) {
 /**
  * Validate the format of a client invoice number
  * @param {string} numeroFacture - Invoice number to validate
+ * @param {boolean} isEditing - If true, skip year validation (for existing invoices)
  * @returns {Object} { valid: boolean, error: string|null }
  */
-export function validateNumeroFacture(numeroFacture) {
+export function validateNumeroFacture(numeroFacture, isEditing = false) {
   // If empty, valid (auto-generation)
   if (!numeroFacture || numeroFacture.trim() === '') {
     return { valid: true, error: null }
@@ -304,14 +305,17 @@ export function validateNumeroFacture(numeroFacture) {
     }
   }
 
-  // Check that year is current year only (strict validation)
-  const year = parseInt(numeroFacture.split('-')[1], 10)
-  const currentYear = new Date().getFullYear()
+  // Check that year is current year only for NEW invoices
+  // Skip this check when editing existing invoices
+  if (!isEditing) {
+    const year = parseInt(numeroFacture.split('-')[1], 10)
+    const currentYear = new Date().getFullYear()
 
-  if (year !== currentYear) {
-    return {
-      valid: false,
-      error: `L'année doit être ${currentYear} (année courante)`
+    if (year !== currentYear) {
+      return {
+        valid: false,
+        error: `L'année doit être ${currentYear} (année courante)`
+      }
     }
   }
 

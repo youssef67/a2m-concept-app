@@ -992,8 +992,9 @@ export default function FacturesPage() {
     }
 
     // Validation numero facture (for clients only)
+    // Pass isEditing=true when modifying existing invoice to skip year validation
     if (currentType === 'client' && data.numero_facture) {
-      const validation = validateNumeroFacture(data.numero_facture)
+      const validation = validateNumeroFacture(data.numero_facture, !!editingFacture)
       if (!validation.valid) {
         showToast(validation.error, 'error')
         return
